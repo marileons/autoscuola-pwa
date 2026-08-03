@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a84ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Autoscuola">
+  <title>Autoscuola</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>Autoscuola</h1>
+  </header>
+
+  <main class="app-main">
+    <section id="listView" class="view">
+      <div class="toolbar">
+        <input id="searchInput" type="search" placeholder="Cerca allievo" autocomplete="off">
+        <button id="newStudentButton" type="button">Nuovo allievo</button>
+      </div>
+
+      <ul id="studentList" class="student-list" aria-live="polite"></ul>
+      <p id="emptyListMessage" class="empty-message">Nessun allievo presente.</p>
+
+      <section class="card backup-card" aria-labelledby="backupTitle">
+        <h2 id="backupTitle">Backup</h2>
+        <div class="button-row">
+          <button id="backupButton" type="button">Backup JSON</button>
+          <label class="file-button" for="restoreInput">Ripristino JSON</label>
+          <input id="restoreInput" type="file" accept="application/json,.json" hidden>
+        </div>
+      </section>
+    </section>
+
+    <section id="studentView" class="view hidden">
+      <div class="top-actions">
+        <button id="backButton" type="button" class="secondary">Indietro</button>
+        <button id="saveButton" type="button">Salva</button>
+      </div>
+
+      <section class="card" aria-labelledby="studentTitle">
+        <h2 id="studentTitle">Scheda allievo</h2>
+
+        <label for="firstNameInput">Nome</label>
+        <input id="firstNameInput" type="text" autocomplete="given-name">
+
+        <label for="lastNameInput">Cognome</label>
+        <input id="lastNameInput" type="text" autocomplete="family-name">
+
+        <label for="phoneInput">Telefono</label>
+        <input id="phoneInput" type="tel" autocomplete="tel">
+
+        <label for="licenseInput">Categoria patente</label>
+        <input id="licenseInput" type="text" autocomplete="off">
+      </section>
+
+      <section class="card" aria-labelledby="checklistTitle">
+        <div class="section-title-row">
+          <h2 id="checklistTitle">Checklist personalizzata</h2>
+          <button id="addChecklistButton" type="button" class="compact">Aggiungi voce</button>
+        </div>
+        <div id="checklistContainer"></div>
+      </section>
+
+      <section class="card" aria-labelledby="notesTitle">
+        <h2 id="notesTitle">Note guida</h2>
+        <textarea id="notesInput" rows="8"></textarea>
+      </section>
+
+      <section class="card" aria-labelledby="routeTitle">
+        <h2 id="routeTitle">Percorso</h2>
+        <div class="button-row">
+          <button id="startGpsButton" type="button">Avvia GPS</button>
+          <button id="stopGpsButton" type="button" class="secondary" disabled>Ferma GPS</button>
+        </div>
+        <p id="gpsStatus" class="status-text">GPS non attivo.</p>
+        <div id="map" aria-label="Mappa del percorso"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>

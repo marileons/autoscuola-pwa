@@ -1,0 +1,11 @@
+{
+  "name": "Autoscuola",
+  "short_name": "Autoscuola",
+  "description": "Gestione allievi autoscuola",
+  "lang": "it",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#0a84ff"
+}
