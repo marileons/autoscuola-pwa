@@ -15,16 +15,23 @@
 <main>
   <section id="homeView" class="view active">
     <header><h1>Autoscuola</h1></header>
+
     <div class="tabs">
-      <button id="activeTab" class="tab active">Allievi</button>
-      <button id="archiveTab" class="tab">Archivio</button>
+      <button id="activeTab" class="tab active" type="button">Allievi</button>
+      <button id="archiveTab" class="tab" type="button">Archivio</button>
     </div>
+
     <div class="content">
+      <button id="manageChecklistButton" class="secondary full" type="button">Gestione checklist</button>
+      <button id="importStudentButton" class="secondary full" type="button">Importa allievo</button>
+      <input id="importStudentInput" type="file" accept=".json,application/json" hidden>
+
       <input id="searchInput" type="search" placeholder="Cerca allievo">
       <div class="new-row">
         <input id="newStudentInput" type="text" placeholder="Nome nuovo allievo">
-        <button id="newStudentButton" class="primary">Aggiungi</button>
+        <button id="newStudentButton" class="primary" type="button">Aggiungi</button>
       </div>
+
       <div id="studentList"></div>
       <p id="emptyList" class="empty hidden">Nessun allievo.</p>
     </div>
@@ -32,16 +39,19 @@
 
   <section id="studentView" class="view">
     <header class="bar">
-      <button id="backHome" class="link">‹ Indietro</button>
+      <button id="backHome" class="link" type="button">‹ Indietro</button>
       <h2 id="studentName"></h2>
       <span></span>
     </header>
+
     <div class="content">
-      <button id="newLessonButton" class="primary">Nuova guida</button>
+      <button id="newLessonButton" class="primary" type="button">Nuova guida</button>
+
       <div class="two">
-        <button id="archiveButton" class="secondary">Sposta in archivio</button>
-        <button id="restoreButton" class="secondary hidden">Ripristina</button>
-        <button id="deleteButton" class="danger">Cancella</button>
+        <button id="shareStudentButton" class="secondary" type="button">Condividi allievo</button>
+        <button id="archiveButton" class="secondary" type="button">Sposta in archivio</button>
+        <button id="restoreButton" class="secondary hidden" type="button">Ripristina</button>
+        <button id="deleteButton" class="danger" type="button">Cancella</button>
       </div>
 
       <section class="card">
@@ -57,27 +67,51 @@
     </div>
   </section>
 
+  <section id="checklistManagerView" class="view">
+    <header class="bar">
+      <button id="backChecklistManager" class="link" type="button">‹ Indietro</button>
+      <h2>Gestione checklist</h2>
+      <span></span>
+    </header>
+
+    <div class="content">
+      <div class="new-row">
+        <input id="newChecklistItemInput" type="text" placeholder="Nuova voce checklist">
+        <button id="addChecklistItemButton" class="primary" type="button">Aggiungi</button>
+      </div>
+      <div id="checklistManagerList"></div>
+      <p id="emptyChecklistManager" class="empty hidden">Nessuna voce.</p>
+    </div>
+  </section>
+
   <section id="lessonView" class="view">
     <header class="bar">
-      <button id="backStudent" class="link">‹ Indietro</button>
+      <button id="backStudent" class="link" type="button">‹ Indietro</button>
       <h2>Nuova guida</h2>
       <span></span>
     </header>
+
     <div class="content">
-      <label>Note</label>
-      <textarea id="lessonNotes" placeholder="Scrivi le note della guida"></textarea>
+      <label for="lessonNotes">Note</label>
+      <div class="voice-row">
+        <textarea id="lessonNotes" placeholder="Scrivi o detta le note della guida"></textarea>
+        <button id="voiceButton" class="secondary voice" type="button">🎤 Detta</button>
+      </div>
+      <p id="voiceStatus" class="muted hidden"></p>
+
       <section class="card">
         <h3>GPS</h3>
         <p id="gpsStatus">GPS non attivo</p>
-        <button id="gpsButton" class="secondary">Avvia GPS</button>
+        <button id="gpsButton" class="secondary" type="button">Avvia GPS</button>
       </section>
-      <button id="saveLessonButton" class="primary">Salva guida</button>
+
+      <button id="saveLessonButton" class="primary" type="button">Salva guida</button>
     </div>
   </section>
 
   <section id="mapView" class="view">
     <header class="bar">
-      <button id="backMap" class="link">‹ Indietro</button>
+      <button id="backMap" class="link" type="button">‹ Indietro</button>
       <h2>Percorso</h2>
       <span></span>
     </header>
