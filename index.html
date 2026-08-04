@@ -1,91 +1,92 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0a84ff">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f2f2f7">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Autoscuola">
   <title>Autoscuola</title>
-
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="app-header">
-    <h1>Autoscuola</h1>
-  </header>
+<main>
+  <section id="homeView" class="view active">
+    <header><h1>Autoscuola</h1></header>
+    <div class="tabs">
+      <button id="activeTab" class="tab active">Allievi</button>
+      <button id="archiveTab" class="tab">Archivio</button>
+    </div>
+    <div class="content">
+      <input id="searchInput" type="search" placeholder="Cerca allievo">
+      <div class="new-row">
+        <input id="newStudentInput" type="text" placeholder="Nome nuovo allievo">
+        <button id="newStudentButton" class="primary">Aggiungi</button>
+      </div>
+      <div id="studentList"></div>
+      <p id="emptyList" class="empty hidden">Nessun allievo.</p>
+    </div>
+  </section>
 
-  <main class="app-main">
-    <section id="listView" class="view">
-      <div class="toolbar">
-        <input id="searchInput" type="search" placeholder="Cerca allievo" autocomplete="off">
-        <button id="newStudentButton" type="button">Nuovo allievo</button>
+  <section id="studentView" class="view">
+    <header class="bar">
+      <button id="backHome" class="link">‹ Indietro</button>
+      <h2 id="studentName"></h2>
+      <span></span>
+    </header>
+    <div class="content">
+      <button id="newLessonButton" class="primary">Nuova guida</button>
+      <div class="two">
+        <button id="archiveButton" class="secondary">Sposta in archivio</button>
+        <button id="restoreButton" class="secondary hidden">Ripristina</button>
+        <button id="deleteButton" class="danger">Cancella</button>
       </div>
 
-      <ul id="studentList" class="student-list" aria-live="polite"></ul>
-      <p id="emptyListMessage" class="empty-message">Nessun allievo presente.</p>
-
-      <section class="card backup-card" aria-labelledby="backupTitle">
-        <h2 id="backupTitle">Backup</h2>
-        <div class="button-row">
-          <button id="backupButton" type="button">Backup JSON</button>
-          <label class="file-button" for="restoreInput">Ripristino JSON</label>
-          <input id="restoreInput" type="file" accept="application/json,.json" hidden>
-        </div>
-      </section>
-    </section>
-
-    <section id="studentView" class="view hidden">
-      <div class="top-actions">
-        <button id="backButton" type="button" class="secondary">Indietro</button>
-        <button id="saveButton" type="button">Salva</button>
-      </div>
-
-      <section class="card" aria-labelledby="studentTitle">
-        <h2 id="studentTitle">Scheda allievo</h2>
-
-        <label for="firstNameInput">Nome</label>
-        <input id="firstNameInput" type="text" autocomplete="given-name">
-
-        <label for="lastNameInput">Cognome</label>
-        <input id="lastNameInput" type="text" autocomplete="family-name">
-
-        <label for="phoneInput">Telefono</label>
-        <input id="phoneInput" type="tel" autocomplete="tel">
-
-        <label for="licenseInput">Categoria patente</label>
-        <input id="licenseInput" type="text" autocomplete="off">
-      </section>
-
-      <section class="card" aria-labelledby="checklistTitle">
-        <div class="section-title-row">
-          <h2 id="checklistTitle">Checklist personalizzata</h2>
-          <button id="addChecklistButton" type="button" class="compact">Aggiungi voce</button>
-        </div>
+      <section class="card">
+        <h3>Checklist</h3>
         <div id="checklistContainer"></div>
       </section>
 
-      <section class="card" aria-labelledby="notesTitle">
-        <h2 id="notesTitle">Note guida</h2>
-        <textarea id="notesInput" rows="8"></textarea>
+      <section class="card">
+        <h3>Guide</h3>
+        <div id="lessonList"></div>
+        <p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p>
       </section>
+    </div>
+  </section>
 
-      <section class="card" aria-labelledby="routeTitle">
-        <h2 id="routeTitle">Percorso</h2>
-        <div class="button-row">
-          <button id="startGpsButton" type="button">Avvia GPS</button>
-          <button id="stopGpsButton" type="button" class="secondary" disabled>Ferma GPS</button>
-        </div>
-        <p id="gpsStatus" class="status-text">GPS non attivo.</p>
-        <div id="map" aria-label="Mappa del percorso"></div>
+  <section id="lessonView" class="view">
+    <header class="bar">
+      <button id="backStudent" class="link">‹ Indietro</button>
+      <h2>Nuova guida</h2>
+      <span></span>
+    </header>
+    <div class="content">
+      <label>Note</label>
+      <textarea id="lessonNotes" placeholder="Scrivi le note della guida"></textarea>
+      <section class="card">
+        <h3>GPS</h3>
+        <p id="gpsStatus">GPS non attivo</p>
+        <button id="gpsButton" class="secondary">Avvia GPS</button>
       </section>
-    </section>
-  </main>
+      <button id="saveLessonButton" class="primary">Salva guida</button>
+    </div>
+  </section>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js"></script>
+  <section id="mapView" class="view">
+    <header class="bar">
+      <button id="backMap" class="link">‹ Indietro</button>
+      <h2>Percorso</h2>
+      <span></span>
+    </header>
+    <div id="map"></div>
+    <p id="mapNotice" class="notice hidden"></p>
+  </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

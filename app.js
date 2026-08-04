@@ -1,431 +1,268 @@
 "use strict";
 
-const STORAGE_KEY = "autoscuola_students_v1";
+const STORAGE_KEY = "autoscuola_students_v2";
+const OLD_STORAGE_KEY = "autoscuola_students_v1";
+const CHECKLIST = [
+  "Bolzaneto","Ge Ovest","Nervi, Quinto, Quarto","Retromarcia lunga",
+  "Park di punta","Rapallo","Ge Nervi","Chiavari","Aeroporto","Check list",
+  "Ge Est","Park in linea","Park a L","Recco","Inversioni di marcia",
+  "Extraurbana","Partenze in salita","Uso cambio","Uso volante",
+  "Spiegazione auto","Uso frizione"
+];
 
-const state = {
-  students: loadStudents(),
-  currentStudentId: null,
-  watchId: null,
-  map: null,
-  routeLayer: null,
-  startMarker: null,
-  endMarker: null
-};
+let students = loadStudents();
+let currentStudentId = null;
+let currentTab = "active";
+let gpsWatchId = null;
+let gpsActive = false;
+let gpsPoints = [];
+let lessonStartedAt = null;
+let map = null, routeLayer = null, startMarker = null, endMarker = null;
 
-const elements = {
-  listView: document.getElementById("listView"),
-  studentView: document.getElementById("studentView"),
-  searchInput: document.getElementById("searchInput"),
-  newStudentButton: document.getElementById("newStudentButton"),
-  studentList: document.getElementById("studentList"),
-  emptyListMessage: document.getElementById("emptyListMessage"),
-  backupButton: document.getElementById("backupButton"),
-  restoreInput: document.getElementById("restoreInput"),
-  backButton: document.getElementById("backButton"),
-  saveButton: document.getElementById("saveButton"),
-  firstNameInput: document.getElementById("firstNameInput"),
-  lastNameInput: document.getElementById("lastNameInput"),
-  phoneInput: document.getElementById("phoneInput"),
-  licenseInput: document.getElementById("licenseInput"),
-  checklistContainer: document.getElementById("checklistContainer"),
-  addChecklistButton: document.getElementById("addChecklistButton"),
-  notesInput: document.getElementById("notesInput"),
-  startGpsButton: document.getElementById("startGpsButton"),
-  stopGpsButton: document.getElementById("stopGpsButton"),
-  gpsStatus: document.getElementById("gpsStatus")
-};
+const $ = id => document.getElementById(id);
+
+function id() {
+  return crypto.randomUUID ? crypto.randomUUID() : Date.now()+"_"+Math.random().toString(36).slice(2);
+}
 
 function loadStudents() {
+  const currentRaw = localStorage.getItem(STORAGE_KEY);
+  const oldRaw = localStorage.getItem(OLD_STORAGE_KEY);
+  const raw = currentRaw || oldRaw || "[]";
+
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed.map(normalizeStudent) : [];
+    const parsed = JSON.parse(raw);
+    const cleaned = Array.isArray(parsed)
+      ? parsed.map(normalizeStudent).filter(student => student.name.trim() !== "")
+      : [];
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+    return cleaned;
   } catch {
     return [];
   }
 }
 
-function normalizeStudent(student) {
+function normalizeStudent(s) {
+  const oldChecklist = Array.isArray(s.checklist) ? s.checklist : [];
+  const doneByName = new Map(oldChecklist.map(x => [x.text || x.label, Boolean(x.done)]));
+  let lessons = Array.isArray(s.lessons) ? s.lessons : [];
+  if (!lessons.length && (s.notes || (Array.isArray(s.route) && s.route.length))) {
+    lessons = [{id:id(),createdAt:Date.now(),notes:s.notes||"",route:s.route||[]}];
+  }
   return {
-    id: typeof student.id === "string" ? student.id : createId(),
-    firstName: typeof student.firstName === "string" ? student.firstName : "",
-    lastName: typeof student.lastName === "string" ? student.lastName : "",
-    phone: typeof student.phone === "string" ? student.phone : "",
-    license: typeof student.license === "string" ? student.license : "",
-    checklist: Array.isArray(student.checklist)
-      ? student.checklist.map(item => ({
-          id: typeof item.id === "string" ? item.id : createId(),
-          text: typeof item.text === "string" ? item.text : "",
-          done: Boolean(item.done)
-        }))
-      : [],
-    notes: typeof student.notes === "string" ? student.notes : "",
-    route: Array.isArray(student.route)
-      ? student.route
-          .filter(point => Number.isFinite(point.lat) && Number.isFinite(point.lng))
-          .map(point => ({
-            lat: point.lat,
-            lng: point.lng,
-            accuracy: Number.isFinite(point.accuracy) ? point.accuracy : null,
-            timestamp: Number.isFinite(point.timestamp) ? point.timestamp : Date.now()
-          }))
-      : []
+    id: typeof s.id === "string" ? s.id : id(),
+    name: (s.name || [s.firstName,s.lastName].filter(Boolean).join(" ")).trim(),
+    archived: Boolean(s.archived),
+    checklist: CHECKLIST.map(label => ({label,done:doneByName.get(label)||false})),
+    lessons: lessons.map(l => ({
+      id: l.id || id(),
+      createdAt: Number(l.createdAt || l.timestamp || Date.now()),
+      notes: String(l.notes || ""),
+      route: Array.isArray(l.route) ? l.route.filter(p => Number.isFinite(p.lat)&&Number.isFinite(p.lng)) : []
+    }))
   };
 }
 
-function createId() {
-  if (crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+function save() {
+  students = students.filter(student => student.name.trim() !== "");
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
 }
 
-function saveStudents() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.students));
+function show(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  $(name+"View").classList.add("active");
+  window.scrollTo(0,0);
 }
 
-function getCurrentStudent() {
-  return state.students.find(student => student.id === state.currentStudentId) || null;
+function currentStudent() {
+  return students.find(s => s.id === currentStudentId);
 }
 
-function createEmptyStudent() {
-  return {
-    id: createId(),
-    firstName: "",
-    lastName: "",
-    phone: "",
-    license: "",
-    checklist: [],
-    notes: "",
-    route: []
-  };
+function escapeHtml(v) {
+  return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
 
-function renderStudentList() {
-  const query = elements.searchInput.value.trim().toLocaleLowerCase("it");
-  const filtered = state.students
-    .filter(student => {
-      const searchable = `${student.firstName} ${student.lastName} ${student.phone} ${student.license}`
-        .toLocaleLowerCase("it");
-      return searchable.includes(query);
-    })
-    .sort((a, b) => {
-      const nameA = `${a.lastName} ${a.firstName}`.trim();
-      const nameB = `${b.lastName} ${b.firstName}`.trim();
-      return nameA.localeCompare(nameB, "it", { sensitivity: "base" });
-    });
-
-  elements.studentList.innerHTML = "";
-  elements.emptyListMessage.hidden = filtered.length > 0;
-
-  for (const student of filtered) {
-    const item = document.createElement("li");
-    item.className = "student-item";
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.studentId = student.id;
-
-    const name = document.createElement("strong");
-    name.className = "student-name";
-    name.textContent = `${student.lastName} ${student.firstName}`.trim() || "Allievo senza nome";
-
-    const details = document.createElement("span");
-    details.className = "student-details";
-    details.textContent = [student.phone, student.license].filter(Boolean).join(" · ");
-
-    button.append(name, details);
-    item.appendChild(button);
-    elements.studentList.appendChild(item);
-  }
-}
-
-function showListView() {
-  stopGps();
-  state.currentStudentId = null;
-  elements.studentView.classList.add("hidden");
-  elements.listView.classList.remove("hidden");
-  renderStudentList();
-}
-
-function showStudentView(studentId) {
-  const student = state.students.find(item => item.id === studentId);
-  if (!student) {
-    return;
-  }
-
-  stopGps();
-  state.currentStudentId = studentId;
-  elements.firstNameInput.value = student.firstName;
-  elements.lastNameInput.value = student.lastName;
-  elements.phoneInput.value = student.phone;
-  elements.licenseInput.value = student.license;
-  elements.notesInput.value = student.notes;
-  elements.gpsStatus.textContent = "GPS non attivo.";
-
-  renderChecklist(student);
-  elements.listView.classList.add("hidden");
-  elements.studentView.classList.remove("hidden");
-
-  requestAnimationFrame(() => {
-    initializeMap();
-    renderRoute(student.route);
-    state.map.invalidateSize();
+function renderHome() {
+  const archived = currentTab === "archive";
+  $("activeTab").classList.toggle("active", !archived);
+  $("archiveTab").classList.toggle("active", archived);
+  const q = $("searchInput").value.trim().toLowerCase();
+  const list = students.filter(s => s.archived === archived && s.name.toLowerCase().includes(q))
+    .sort((a,b)=>a.name.localeCompare(b.name,"it"));
+  $("studentList").innerHTML = "";
+  list.forEach(s => {
+    const b = document.createElement("button");
+    b.className = "student-card";
+    b.innerHTML = `<span><strong>${escapeHtml(s.name)}</strong><span class="muted">${s.lessons.length} guide</span></span><span class="chev">›</span>`;
+    b.onclick = () => openStudent(s.id);
+    $("studentList").appendChild(b);
   });
+  $("emptyList").classList.toggle("hidden", list.length > 0);
 }
 
-function saveCurrentStudent() {
-  const student = getCurrentStudent();
-  if (!student) {
-    return;
-  }
-
-  student.firstName = elements.firstNameInput.value.trim();
-  student.lastName = elements.lastNameInput.value.trim();
-  student.phone = elements.phoneInput.value.trim();
-  student.license = elements.licenseInput.value.trim();
-  student.notes = elements.notesInput.value;
-
-  const rows = [...elements.checklistContainer.querySelectorAll(".checklist-row")];
-  student.checklist = rows.map(row => ({
-    id: row.dataset.itemId,
-    text: row.querySelector('input[type="text"]').value.trim(),
-    done: row.querySelector('input[type="checkbox"]').checked
-  }));
-
-  saveStudents();
-  showListView();
+function addStudent() {
+  const name = $("newStudentInput").value.trim();
+  if (!name) return;
+  students.push({id:id(),name,archived:false,checklist:CHECKLIST.map(label=>({label,done:false})),lessons:[]});
+  $("newStudentInput").value = "";
+  currentTab = "active";
+  save(); renderHome();
 }
 
-function renderChecklist(student) {
-  elements.checklistContainer.innerHTML = "";
-  for (const item of student.checklist) {
-    addChecklistRow(item);
-  }
+function openStudent(studentId) {
+  currentStudentId = studentId;
+  renderStudent(); show("student");
 }
 
-function addChecklistRow(item = { id: createId(), text: "", done: false }) {
-  const row = document.createElement("div");
-  row.className = "checklist-row";
-  row.dataset.itemId = item.id;
+function renderStudent() {
+  const s = currentStudent();
+  if (!s) return show("home");
+  $("studentName").textContent = s.name;
+  $("archiveButton").classList.toggle("hidden", s.archived);
+  $("restoreButton").classList.toggle("hidden", !s.archived);
 
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.checked = item.done;
-  checkbox.setAttribute("aria-label", "Voce completata");
-
-  const text = document.createElement("input");
-  text.type = "text";
-  text.value = item.text;
-  text.placeholder = "Voce checklist";
-
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.className = "remove-checklist-button";
-  remove.textContent = "×";
-  remove.setAttribute("aria-label", "Rimuovi voce");
-  remove.addEventListener("click", () => row.remove());
-
-  row.append(checkbox, text, remove);
-  elements.checklistContainer.appendChild(row);
-  text.focus();
-}
-
-function initializeMap() {
-  if (state.map) {
-    return;
-  }
-
-  state.map = L.map("map", {
-    zoomControl: true,
-    attributionControl: true
-  }).setView([41.9028, 12.4964], 6);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap"
-  }).addTo(state.map);
-}
-
-function clearRouteLayers() {
-  for (const layer of [state.routeLayer, state.startMarker, state.endMarker]) {
-    if (layer && state.map) {
-      state.map.removeLayer(layer);
-    }
-  }
-  state.routeLayer = null;
-  state.startMarker = null;
-  state.endMarker = null;
-}
-
-function renderRoute(route) {
-  initializeMap();
-  clearRouteLayers();
-
-  if (!route.length) {
-    state.map.setView([41.9028, 12.4964], 6);
-    return;
-  }
-
-  const coordinates = route.map(point => [point.lat, point.lng]);
-  state.routeLayer = L.polyline(coordinates, { weight: 5 }).addTo(state.map);
-  state.startMarker = L.marker(coordinates[0]).addTo(state.map).bindPopup("Inizio percorso");
-  state.endMarker = L.marker(coordinates[coordinates.length - 1]).addTo(state.map).bindPopup("Fine percorso");
-
-  if (coordinates.length === 1) {
-    state.map.setView(coordinates[0], 17);
-  } else {
-    state.map.fitBounds(state.routeLayer.getBounds(), { padding: [24, 24] });
-  }
-}
-
-function startGps() {
-  const student = getCurrentStudent();
-  if (!student || state.watchId !== null) {
-    return;
-  }
-
-  if (!navigator.geolocation) {
-    elements.gpsStatus.textContent = "GPS non disponibile su questo dispositivo.";
-    return;
-  }
-
-  elements.gpsStatus.textContent = "Richiesta accesso al GPS…";
-
-  state.watchId = navigator.geolocation.watchPosition(
-    position => {
-      const point = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
-        timestamp: position.timestamp
-      };
-
-      student.route.push(point);
-      saveStudents();
-      renderRoute(student.route);
-      elements.gpsStatus.textContent = "Registrazione percorso attiva.";
-    },
-    error => {
-      const messages = {
-        1: "Permesso GPS negato.",
-        2: "Posizione non disponibile.",
-        3: "Tempo di acquisizione GPS scaduto."
-      };
-      elements.gpsStatus.textContent = messages[error.code] || "Errore GPS.";
-      stopGps(false);
-    },
-    {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 15000
-    }
-  );
-
-  elements.startGpsButton.disabled = true;
-  elements.stopGpsButton.disabled = false;
-}
-
-function stopGps(updateStatus = true) {
-  if (state.watchId !== null && navigator.geolocation) {
-    navigator.geolocation.clearWatch(state.watchId);
-  }
-
-  state.watchId = null;
-  elements.startGpsButton.disabled = false;
-  elements.stopGpsButton.disabled = true;
-
-  if (updateStatus && !elements.studentView.classList.contains("hidden")) {
-    elements.gpsStatus.textContent = "GPS non attivo.";
-  }
-}
-
-function backupJson() {
-  const payload = {
-    app: "Autoscuola",
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    students: state.students
-  };
-
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: "application/json"
+  $("checklistContainer").innerHTML = "";
+  s.checklist.forEach((item,i) => {
+    const row = document.createElement("label");
+    row.className = "check-row";
+    row.innerHTML = `<input type="checkbox" ${item.done?"checked":""}><span>${escapeHtml(item.label)}</span>`;
+    row.querySelector("input").onchange = e => { s.checklist[i].done=e.target.checked; save(); };
+    $("checklistContainer").appendChild(row);
   });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  const date = new Date().toISOString().slice(0, 10);
 
-  link.href = url;
-  link.download = `autoscuola-backup-${date}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  $("lessonList").innerHTML = "";
+  [...s.lessons].sort((a,b)=>b.createdAt-a.createdAt).forEach(l => {
+    const card = document.createElement("div");
+    card.className = "lesson-card";
+    const routeButton = l.route.length > 1 ? `<button class="route">Visualizza percorso</button>` : "";
+    card.innerHTML = `<strong>${new Intl.DateTimeFormat("it-IT",{dateStyle:"medium",timeStyle:"short"}).format(new Date(l.createdAt))}</strong>${l.notes?`<div class="lesson-note">${escapeHtml(l.notes)}</div>`:""}${routeButton}`;
+    if (l.route.length > 1) card.querySelector(".route").onclick = () => showRoute(l.route);
+    $("lessonList").appendChild(card);
+  });
+  $("emptyLessons").classList.toggle("hidden", s.lessons.length > 0);
 }
 
-async function restoreJson(file) {
-  if (!file) {
-    return;
-  }
+function moveStudent(archived) {
+  const s=currentStudent(); if(!s)return;
+  s.archived=archived; save(); currentTab=archived?"archive":"active"; renderHome(); show("home");
+}
 
+function deleteStudent() {
+  const s=currentStudent(); if(!s)return;
+  if(!confirm(`Cancellare definitivamente ${s.name}?`)) return;
+  students=students.filter(x=>x.id!==s.id); save(); currentStudentId=null; renderHome(); show("home");
+}
+
+function newLesson() {
+  lessonStartedAt=Date.now(); gpsPoints=[]; stopGps();
+  $("lessonNotes").value=""; updateGps(); show("lesson");
+}
+
+function toggleGps() {
+  if(gpsActive){ stopGps(); updateGps(); return; }
+  if(!navigator.geolocation){ alert("GPS non disponibile."); return; }
+  gpsActive=true; updateGps();
+  gpsWatchId=navigator.geolocation.watchPosition(pos=>{
+    const p={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,time:pos.timestamp};
+    if(p.accuracy>80)return;
+    const prev=gpsPoints[gpsPoints.length-1];
+    if(!prev || distance(prev,p)>=8){ gpsPoints.push(p); updateGps(); }
+  },err=>{
+    stopGps(); updateGps();
+    alert(err.code===1?"Permesso GPS non concesso.":"Impossibile leggere il GPS.");
+  },{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+}
+
+function stopGps() {
+  if(gpsWatchId!==null && navigator.geolocation) navigator.geolocation.clearWatch(gpsWatchId);
+  gpsWatchId=null; gpsActive=false;
+}
+
+function updateGps() {
+  $("gpsButton").textContent=gpsActive?"Ferma GPS":"Avvia GPS";
+  $("gpsStatus").textContent=gpsActive?`GPS attivo · ${gpsPoints.length} punti`:gpsPoints.length>1?`Percorso registrato · ${gpsPoints.length} punti`:"GPS non attivo";
+  $("gpsStatus").classList.toggle("recording",gpsActive);
+}
+
+function saveLesson() {
+  const s=currentStudent(); if(!s)return;
+  stopGps();
+  s.lessons.unshift({id:id(),createdAt:lessonStartedAt||Date.now(),notes:$("lessonNotes").value.trim(),route:[...gpsPoints]});
+  save(); gpsPoints=[]; lessonStartedAt=null; renderStudent(); show("student");
+}
+
+function distance(a,b) {
+  const R=6371000, p1=a.lat*Math.PI/180, p2=b.lat*Math.PI/180;
+  const dp=(b.lat-a.lat)*Math.PI/180, dl=(b.lng-a.lng)*Math.PI/180;
+  const h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+}
+
+async function showRoute(points) {
+  show("map"); $("mapNotice").classList.add("hidden"); initMap();
+  clearLayers(); draw(points.map(p=>[p.lat,p.lng]));
   try {
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    const source = Array.isArray(parsed) ? parsed : parsed.students;
-
-    if (!Array.isArray(source)) {
-      throw new Error("Formato non valido");
-    }
-
-    state.students = source.map(normalizeStudent);
-    saveStudents();
-    renderStudentList();
-    alert("Ripristino completato.");
+    const road=await roadRoute(points);
+    if(road.length>1){ clearLayers(); draw(road); }
   } catch {
-    alert("Il file JSON non è valido.");
-  } finally {
-    elements.restoreInput.value = "";
+    $("mapNotice").textContent="Percorso stradale non disponibile: visualizzo la traccia GPS.";
+    $("mapNotice").classList.remove("hidden");
   }
 }
 
-elements.searchInput.addEventListener("input", renderStudentList);
-
-elements.newStudentButton.addEventListener("click", () => {
-  const student = createEmptyStudent();
-  state.students.push(student);
-  saveStudents();
-  showStudentView(student.id);
-});
-
-elements.studentList.addEventListener("click", event => {
-  const button = event.target.closest("button[data-student-id]");
-  if (button) {
-    showStudentView(button.dataset.studentId);
-  }
-});
-
-elements.backButton.addEventListener("click", showListView);
-elements.saveButton.addEventListener("click", saveCurrentStudent);
-elements.addChecklistButton.addEventListener("click", () => addChecklistRow());
-elements.startGpsButton.addEventListener("click", startGps);
-elements.stopGpsButton.addEventListener("click", () => stopGps());
-elements.backupButton.addEventListener("click", backupJson);
-elements.restoreInput.addEventListener("change", event => restoreJson(event.target.files[0]));
-
-window.addEventListener("beforeunload", () => stopGps(false));
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden" && state.watchId !== null) {
-    const student = getCurrentStudent();
-    if (student) {
-      saveStudents();
-    }
-  }
-});
-
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js").catch(() => {});
-  });
+function initMap() {
+  if(map){setTimeout(()=>map.invalidateSize(),80);return;}
+  map=L.map("map");
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
 }
 
-renderStudentList();
+function clearLayers() {
+  [routeLayer,startMarker,endMarker].forEach(x=>{if(x&&map)map.removeLayer(x)});
+  routeLayer=startMarker=endMarker=null;
+}
+
+function draw(latlngs) {
+  routeLayer=L.polyline(latlngs,{weight:6,opacity:.85}).addTo(map);
+  startMarker=L.marker(latlngs[0]).addTo(map).bindPopup("Partenza");
+  endMarker=L.marker(latlngs[latlngs.length-1]).addTo(map).bindPopup("Arrivo");
+  map.fitBounds(routeLayer.getBounds(),{padding:[24,24]}); setTimeout(()=>map.invalidateSize(),80);
+}
+
+async function roadRoute(points) {
+  const sampled=sample(points,45);
+  const coords=sampled.map(p=>`${p.lng},${p.lat}`).join(";");
+  const res=await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`);
+  if(!res.ok)throw new Error();
+  const data=await res.json();
+  const c=data?.routes?.[0]?.geometry?.coordinates;
+  if(!Array.isArray(c))throw new Error();
+  return c.map(([lng,lat])=>[lat,lng]);
+}
+
+function sample(points,max) {
+  if(points.length<=max)return points;
+  const out=[],step=(points.length-1)/(max-1);
+  for(let i=0;i<max;i++)out.push(points[Math.round(i*step)]);
+  return out;
+}
+
+$("activeTab").onclick=()=>{currentTab="active";renderHome()};
+$("archiveTab").onclick=()=>{currentTab="archive";renderHome()};
+$("searchInput").oninput=renderHome;
+$("newStudentButton").onclick=addStudent;
+$("newStudentInput").onkeydown=e=>{if(e.key==="Enter")addStudent()};
+$("backHome").onclick=()=>{renderHome();show("home")};
+$("newLessonButton").onclick=newLesson;
+$("archiveButton").onclick=()=>moveStudent(true);
+$("restoreButton").onclick=()=>moveStudent(false);
+$("deleteButton").onclick=deleteStudent;
+$("backStudent").onclick=()=>{stopGps();renderStudent();show("student")};
+$("gpsButton").onclick=toggleGps;
+$("saveLessonButton").onclick=saveLesson;
+$("backMap").onclick=()=>{renderStudent();show("student")};
+window.addEventListener("pagehide",stopGps);
+
+if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));
+
+save(); renderHome();
