@@ -15,38 +15,47 @@
 <main>
   <section id="homeView" class="view active">
     <header><h1>Autoscuola</h1></header>
-
     <div class="tabs">
       <button id="activeTab" class="tab active" type="button">Allievi</button>
       <button id="archiveTab" class="tab" type="button">Archivio</button>
     </div>
-
     <div class="content">
       <button id="manageChecklistButton" class="secondary full" type="button">Gestione checklist</button>
       <button id="importStudentButton" class="secondary full" type="button">Importa allievo</button>
       <input id="importStudentInput" type="file" accept=".json,application/json" hidden>
-
       <input id="searchInput" type="search" placeholder="Cerca allievo">
-      <div class="new-row">
-        <input id="newStudentInput" type="text" placeholder="Nome nuovo allievo">
-        <button id="newStudentButton" class="primary" type="button">Aggiungi</button>
-      </div>
-
+      <button id="openNewStudentButton" class="primary full" type="button">Nuovo allievo</button>
       <div id="studentList"></div>
       <p id="emptyList" class="empty hidden">Nessun allievo.</p>
+    </div>
+  </section>
+
+  <section id="newStudentView" class="view">
+    <header class="bar">
+      <button id="backNewStudent" class="link" type="button">‹ Indietro</button>
+      <h2>Nuovo allievo</h2><span></span>
+    </header>
+    <div class="content form-grid">
+      <label>Nome<input id="studentFirstName" type="text"></label>
+      <label>Cognome<input id="studentLastName" type="text"></label>
+      <label>Telefono<input id="studentPhone" type="tel"></label>
+      <label>Patente<input id="studentLicense" type="text" placeholder="Es. B"></label>
+      <button id="saveStudentButton" class="primary" type="button">Salva allievo</button>
     </div>
   </section>
 
   <section id="studentView" class="view">
     <header class="bar">
       <button id="backHome" class="link" type="button">‹ Indietro</button>
-      <h2 id="studentName"></h2>
-      <span></span>
+      <h2 id="studentName"></h2><span></span>
     </header>
-
     <div class="content">
-      <button id="newLessonButton" class="primary" type="button">Nuova guida</button>
+      <section class="card">
+        <h3>Dati allievo</h3>
+        <div id="studentDetails"></div>
+      </section>
 
+      <button id="newLessonButton" class="primary" type="button">Nuova guida</button>
       <div class="two">
         <button id="shareStudentButton" class="secondary" type="button">Condividi allievo</button>
         <button id="archiveButton" class="secondary" type="button">Sposta in archivio</button>
@@ -70,31 +79,26 @@
   <section id="checklistManagerView" class="view">
     <header class="bar">
       <button id="backChecklistManager" class="link" type="button">‹ Indietro</button>
-      <h2>Gestione checklist</h2>
-      <span></span>
+      <h2>Gestione checklist</h2><span></span>
     </header>
-
     <div class="content">
       <div class="new-row">
         <input id="newChecklistItemInput" type="text" placeholder="Nuova voce checklist">
         <button id="addChecklistItemButton" class="primary" type="button">Aggiungi</button>
       </div>
       <div id="checklistManagerList"></div>
-      <p id="emptyChecklistManager" class="empty hidden">Nessuna voce.</p>
     </div>
   </section>
 
   <section id="lessonView" class="view">
     <header class="bar">
       <button id="backStudent" class="link" type="button">‹ Indietro</button>
-      <h2>Nuova guida</h2>
-      <span></span>
+      <h2>Nuova guida</h2><span></span>
     </header>
-
     <div class="content">
-      <label for="lessonNotes">Note</label>
+      <label>Note</label>
       <div class="voice-row">
-        <textarea id="lessonNotes" placeholder="Scrivi o detta le note della guida"></textarea>
+        <textarea id="lessonNotes" placeholder="Scrivi o detta le note"></textarea>
         <button id="voiceButton" class="secondary voice" type="button">🎤 Detta</button>
       </div>
       <p id="voiceStatus" class="muted hidden"></p>
@@ -103,6 +107,7 @@
         <h3>GPS</h3>
         <p id="gpsStatus">GPS non attivo</p>
         <button id="gpsButton" class="secondary" type="button">Avvia GPS</button>
+        <div id="liveMap" class="live-map hidden"></div>
       </section>
 
       <button id="saveLessonButton" class="primary" type="button">Salva guida</button>
@@ -112,14 +117,12 @@
   <section id="mapView" class="view">
     <header class="bar">
       <button id="backMap" class="link" type="button">‹ Indietro</button>
-      <h2>Percorso</h2>
-      <span></span>
+      <h2>Percorso</h2><span></span>
     </header>
     <div id="map"></div>
     <p id="mapNotice" class="notice hidden"></p>
   </section>
 </main>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js"></script>
 </body>
