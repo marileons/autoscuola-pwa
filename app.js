@@ -1,123 +1,55 @@
 "use strict";
-const STORAGE_KEY="autoscuola_students_v3";
-const OLD_KEYS=["autoscuola_students_v2","autoscuola_students_v1"];
-const CHECKLIST_KEY="autoscuola_checklist_v1";
-const DEFAULT_CHECKLIST=["Bolzaneto","Ge Ovest","Nervi, Quinto, Quarto","Retromarcia lunga","Park di punta","Rapallo","Ge Nervi","Chiavari","Aeroporto","Check list","Ge Est","Park in linea","Park a L","Recco","Inversioni di marcia","Extraurbana","Partenze in salita","Uso cambio","Uso volante","Spiegazione auto","Uso frizione"];
-
-let checklistItems=loadChecklist();
-let students=loadStudents();
-let currentStudentId=null,currentTab="active";
-let gpsWatchId=null,gpsActive=false,gpsPoints=[],lessonStartedAt=null;
-let liveMap=null,liveLine=null,liveMarker=null;
-let map=null,routeLayer=null,startMarker=null,endMarker=null;
-let recognition=null,recognizing=false;
-const $=id=>document.getElementById(id);
-const newId=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+"_"+Math.random().toString(36).slice(2);
-
-function loadChecklist(){try{const s=JSON.parse(localStorage.getItem(CHECKLIST_KEY));if(Array.isArray(s)&&s.length)return s;}catch{}const x=DEFAULT_CHECKLIST.map(label=>({id:newId(),label}));localStorage.setItem(CHECKLIST_KEY,JSON.stringify(x));return x}
-function saveChecklist(){localStorage.setItem(CHECKLIST_KEY,JSON.stringify(checklistItems))}
-function loadStudents(){
-  let raw=localStorage.getItem(STORAGE_KEY);
-  if(!raw)for(const key of OLD_KEYS){raw=localStorage.getItem(key);if(raw)break}
-  try{return (JSON.parse(raw||"[]")||[]).map(normalizeStudent).filter(s=>s.firstName||s.lastName)}catch{return []}
-}
-function normalizeStudent(s){
-  const full=String(s.name||"").trim().split(/\s+/);
-  const firstName=String(s.firstName||full.shift()||"").trim();
-  const lastName=String(s.lastName||full.join(" ")||"").trim();
-  const old=Array.isArray(s.checklist)?s.checklist:[];
-  const byId=new Map(old.filter(x=>x.itemId).map(x=>[String(x.itemId),!!x.done]));
-  const byLabel=new Map(old.map(x=>[x.label||x.text,!!x.done]));
-  return{
-    id:String(s.id||newId()),firstName,lastName,phone:String(s.phone||""),
-    license:String(s.license||s.patente||""),archived:!!s.archived,
-    checklist:checklistItems.map(i=>({itemId:i.id,label:i.label,done:byId.has(i.id)?byId.get(i.id):(byLabel.get(i.label)||false)})),
-    lessons:Array.isArray(s.lessons)?s.lessons.map(l=>({id:l.id||newId(),createdAt:Number(l.createdAt||Date.now()),notes:String(l.notes||""),route:Array.isArray(l.route)?l.route:[]})):[]
-  }
-}
-function fullName(s){return [s.firstName,s.lastName].filter(Boolean).join(" ")}
-function save(){students=students.map(normalizeStudent);localStorage.setItem(STORAGE_KEY,JSON.stringify(students))}
-function show(name){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(name+"View").classList.add("active");window.scrollTo(0,0)}
-function current(){return students.find(s=>s.id===currentStudentId)}
-function esc(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
-
-function renderHome(){
-  const archived=currentTab==="archive",q=$("searchInput").value.toLowerCase().trim();
-  $("activeTab").classList.toggle("active",!archived);$("archiveTab").classList.toggle("active",archived);
-  const list=students.filter(s=>s.archived===archived&&fullName(s).toLowerCase().includes(q)).sort((a,b)=>fullName(a).localeCompare(fullName(b),"it"));
-  $("studentList").innerHTML="";
-  list.forEach(s=>{const b=document.createElement("button");b.className="student-card";b.innerHTML=`<span><strong>${esc(fullName(s))}</strong><span class="muted">${s.lessons.length} guide</span></span><span class="chev">›</span>`;b.onclick=()=>{currentStudentId=s.id;renderStudent();show("student")};$("studentList").appendChild(b)});
-  $("emptyList").classList.toggle("hidden",list.length>0)
-}
-function saveNewStudent(){
-  const firstName=$("studentFirstName").value.trim(),lastName=$("studentLastName").value.trim();
-  if(!firstName&&!lastName){alert("Inserisci nome o cognome.");return}
-  students.push({id:newId(),firstName,lastName,phone:$("studentPhone").value.trim(),license:$("studentLicense").value.trim(),archived:false,checklist:checklistItems.map(i=>({itemId:i.id,label:i.label,done:false})),lessons:[]});
-  ["studentFirstName","studentLastName","studentPhone","studentLicense"].forEach(id=>$(id).value="");
-  save();renderHome();show("home")
-}
-function renderStudent(){
-  const s=current();if(!s)return show("home");
-  $("studentName").textContent=fullName(s);
-  $("studentDetails").innerHTML=`<div class="detail-row"><span class="detail-label">Nome:</span> ${esc(s.firstName)}</div><div class="detail-row"><span class="detail-label">Cognome:</span> ${esc(s.lastName)}</div><div class="detail-row"><span class="detail-label">Telefono:</span> ${esc(s.phone||"-")}</div><div class="detail-row"><span class="detail-label">Patente:</span> ${esc(s.license||"-")}</div>`;
-  $("archiveButton").classList.toggle("hidden",s.archived);$("restoreButton").classList.toggle("hidden",!s.archived);
-  $("checklistContainer").innerHTML="";
-  s.checklist.forEach((i,n)=>{const r=document.createElement("label");r.className="check-row";r.innerHTML=`<input type="checkbox" ${i.done?"checked":""}><span>${esc(i.label)}</span>`;r.querySelector("input").onchange=e=>{s.checklist[n].done=e.target.checked;save()};$("checklistContainer").appendChild(r)});
-  $("lessonList").innerHTML="";
-  [...s.lessons].sort((a,b)=>b.createdAt-a.createdAt).forEach(l=>{const c=document.createElement("div");c.className="lesson-card";c.innerHTML=`<strong>${new Intl.DateTimeFormat("it-IT",{dateStyle:"medium",timeStyle:"short"}).format(new Date(l.createdAt))}</strong>${l.notes?`<div class="lesson-note">${esc(l.notes)}</div>`:""}${l.route.length>1?'<button class="route">Visualizza percorso</button>':""}`;if(l.route.length>1)c.querySelector(".route").onclick=()=>showRoute(l.route);$("lessonList").appendChild(c)});
-  $("emptyLessons").classList.toggle("hidden",s.lessons.length>0)
-}
-function moveStudent(a){const s=current();s.archived=a;save();currentTab=a?"archive":"active";renderHome();show("home")}
-function deleteStudent(){const s=current();if(confirm(`Cancellare definitivamente ${fullName(s)}?`)){students=students.filter(x=>x.id!==s.id);save();renderHome();show("home")}}
-
-function renderChecklistManager(){
-  $("checklistManagerList").innerHTML="";
-  checklistItems.forEach((i,n)=>{const r=document.createElement("div");r.className="manager-row";r.innerHTML=`<div>${esc(i.label)}</div><div class="manager-actions"><button class="small up">↑</button><button class="small down">↓</button><button class="small rename">Rinomina</button><button class="small danger remove">Elimina</button></div>`;r.querySelector(".up").onclick=()=>moveItem(n,-1);r.querySelector(".down").onclick=()=>moveItem(n,1);r.querySelector(".rename").onclick=()=>renameItem(i.id);r.querySelector(".remove").onclick=()=>removeItem(i.id);$("checklistManagerList").appendChild(r)})
-}
-function syncChecklist(){students=students.map(normalizeStudent);save()}
-function addItem(){const label=$("newChecklistItemInput").value.trim();if(!label)return;checklistItems.push({id:newId(),label});$("newChecklistItemInput").value="";saveChecklist();syncChecklist();renderChecklistManager()}
-function renameItem(id){const i=checklistItems.find(x=>x.id===id),v=prompt("Nuovo nome",i.label);if(v&&v.trim()){i.label=v.trim();saveChecklist();syncChecklist();renderChecklistManager()}}
-function removeItem(id){const i=checklistItems.find(x=>x.id===id);if(confirm(`Eliminare "${i.label}"?`)){checklistItems=checklistItems.filter(x=>x.id!==id);saveChecklist();syncChecklist();renderChecklistManager()}}
-function moveItem(n,d){const t=n+d;if(t<0||t>=checklistItems.length)return;[checklistItems[n],checklistItems[t]]=[checklistItems[t],checklistItems[n]];saveChecklist();syncChecklist();renderChecklistManager()}
-
-function startLesson(){lessonStartedAt=Date.now();gpsPoints=[];stopGps();$("lessonNotes").value="";updateGps();resetLiveMap();show("lesson")}
-function toggleGps(){
-  if(gpsActive){stopGps();updateGps();return}
-  if(!navigator.geolocation){alert("GPS non disponibile");return}
-  gpsActive=true;updateGps();$("liveMap").classList.remove("hidden");initLiveMap();setTimeout(()=>liveMap.invalidateSize(),250);
-  gpsWatchId=navigator.geolocation.watchPosition(p=>{
-    const point={lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy,time:p.timestamp};
-    const prev=gpsPoints.at(-1);
-    if(!prev){gpsPoints.push(point);updateGps();updateLiveMap(point);return}
-    if(point.accuracy>80)return;
-    if(distance(prev,point)>=8){gpsPoints.push(point);updateGps();updateLiveMap(point)}
-  },e=>{stopGps();updateGps();alert(e.code===1?"Permesso GPS non concesso":"Impossibile leggere il GPS")},{enableHighAccuracy:true,maximumAge:0,timeout:15000})
-}
-function stopGps(){if(gpsWatchId!==null)navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;gpsActive=false}
-function updateGps(){$("gpsButton").textContent=gpsActive?"Ferma GPS":"Avvia GPS";$("gpsStatus").textContent=gpsActive?`GPS attivo · ${gpsPoints.length} punti`:gpsPoints.length>1?`Percorso registrato · ${gpsPoints.length} punti`:"GPS non attivo";$("gpsStatus").classList.toggle("recording",gpsActive)}
-function initLiveMap(){if(!liveMap){liveMap=L.map("liveMap").setView([44.4056,8.9463],13);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(liveMap)}setTimeout(()=>liveMap.invalidateSize(),150)}
-function resetLiveMap(){if(liveMap){if(liveLine)liveMap.removeLayer(liveLine);if(liveMarker)liveMap.removeLayer(liveMarker)}liveLine=liveMarker=null;$("liveMap").classList.add("hidden")}
-function updateLiveMap(p){initLiveMap();const pts=gpsPoints.map(x=>[x.lat,x.lng]);if(liveLine)liveMap.removeLayer(liveLine);liveLine=L.polyline(pts,{weight:5}).addTo(liveMap);if(liveMarker)liveMap.removeLayer(liveMarker);liveMarker=L.marker([p.lat,p.lng]).addTo(liveMap);liveMap.setView([p.lat,p.lng],Math.max(liveMap.getZoom(),16))}
-function saveLesson(){const s=current();stopGps();s.lessons.unshift({id:newId(),createdAt:lessonStartedAt||Date.now(),notes:$("lessonNotes").value.trim(),route:[...gpsPoints]});save();renderStudent();show("student")}
+const KEY="autoscuola_v3_completa";
+const LIST_KEY="autoscuola_v3_checklists_v2";
+const LABELS={auto:"Auto",moto:"Moto","quad-leggero":"Quadriciclo leggero AM","quad-pesante":"Quadriciclo pesante","corso-moto":"Corso Moto",perfezionamento:"Perfezionamento"};
+const DEFAULT_LISTS={
+ auto:["Spiegazione auto","Posizione mani sul volante","Uso cambio","Uso frizione","Uso volante","Partenza in salita","Extraurbana","Nervi Quinto Quarto","Autostrada Nervi","Autostrada Recco","Autostrada Rapallo","Autostrada Chiavari","Autostrada Est","Autostrada Bolzaneto","Autostrada Aeroporto","Autostrada Ovest","Park a L","Park a S","Park di punta","Retromarcia lunga","Inversioni di marcia"],
+ moto:["Piazzale Marassi","Via Dodecaneso","Albaro","Villa Bombrini birilli lento","Villa Bombrini birilli veloce","Inversione IKEA","Inversione Villa Bombrini","Inversione Borzoli","Inversione Ponte Morandi","Cornigliano Budello","Cornigliano Via","Sampierdarena Anania","Corso Perrone","Ponte Morandi","Borzoli ingresso parcheggio","Borzoli strada chiusa","Borzoli Sestri","IKEA","Fiumara","Guido Rossa"],
+ "quad-leggero":["Villa Bombrini percorso birilli"],
+ "quad-pesante":["Villa Bombrini percorso birilli"],
+ "corso-moto":["3 ore teoria + Villa Bombrini","2 ore Guido Rossa","2 ore Bargagli"]
+};
+const STATES=["none","repeat","good"];
+function loadLists(){try{const x=JSON.parse(localStorage.getItem(LIST_KEY));if(x&&Object.keys(DEFAULT_LISTS).every(k=>Array.isArray(x[k])))return x}catch{}return JSON.parse(JSON.stringify(DEFAULT_LISTS))}
+let LISTS=loadLists();
+function saveLists(){localStorage.setItem(LIST_KEY,JSON.stringify(LISTS))}
+const $=id=>document.getElementById(id),uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+"_"+Math.random();
+let state={students:load(),studentId:null,lessonId:null,editingStudent:null,filter:"all",managerType:"auto",watch:null,tempRoute:[],liveMap:null,liveLine:null,liveMarker:null,savedMap:null,savedLine:null,recognition:null,recognizing:false};
+function typeOf(c){return c==="perfezionamento"?"auto":(LISTS[c]?c:"auto")}
+function oldStatus(x){if(x?.status&&STATES.includes(x.status))return x.status;return x?.done?"good":"none"}
+function normalizeItems(items,type){const byLabel=new Map((items||[]).map(x=>[x.label,oldStatus(x)]));return LISTS[type].map(label=>({id:uid(),label,status:byLabel.get(label)||"none"}))}
+function normalizeStudent(s){const c=LABELS[s.category]?s.category:"auto",t=typeOf(c);return{id:String(s.id||uid()),category:c,firstName:String(s.firstName||""),lastName:String(s.lastName||""),phone:String(s.phone||""),license:String(s.license||""),notes:String(s.notes||s.studentNotes||""),checklist:normalizeItems(s.checklist,t),lessons:Array.isArray(s.lessons)?s.lessons.map(l=>normalizeLesson(l,t)):[]}}
+function normalizeLesson(l,t){return{id:String(l.id||uid()),createdAt:Number(l.createdAt||Date.now()),notes:String(l.notes||""),route:Array.isArray(l.route)?l.route.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)):[],checklist:normalizeItems(l.checklist,t)}}
+function load(){try{const a=JSON.parse(localStorage.getItem(KEY)||"[]");return Array.isArray(a)?a.map(normalizeStudent):[]}catch{return []}}
+function save(){state.students=state.students.map(normalizeStudent);localStorage.setItem(KEY,JSON.stringify(state.students))}
+function show(id){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(id).classList.add("active");scrollTo(0,0)}
+function student(){return state.students.find(s=>s.id===state.studentId)}function lesson(){return student()?.lessons.find(l=>l.id===state.lessonId)}
+function nameOf(s){return[s.firstName,s.lastName].filter(Boolean).join(" ")}function esc(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+function stateIcon(v){return v==="repeat"?"🟡":v==="good"?"✅":"⬜"}function nextState(v){return STATES[(STATES.indexOf(v)+1)%STATES.length]}
+function renderStateItems(items,box,onchange){box.innerHTML="";items.forEach((it,i)=>{const r=document.createElement("div");r.className="state-row";const b=document.createElement("button");b.type="button";b.className=`state-btn ${it.status}`;b.textContent=stateIcon(it.status);b.onclick=()=>{it.status=nextState(it.status);b.textContent=stateIcon(it.status);b.className=`state-btn ${it.status}`;onchange(i,it.status)};const s=document.createElement("span");s.textContent=it.label;r.append(b,s);box.appendChild(r)})}
+function renderStudents(){const q=$("search").value.trim().toLowerCase(),a=state.students.filter(s=>state.filter==="all"||s.category===state.filter).filter(s=>(nameOf(s)+" "+s.phone+" "+s.license).toLowerCase().includes(q)).sort((a,b)=>nameOf(a).localeCompare(nameOf(b),"it"));$("students").innerHTML="";$("emptyStudents").classList.toggle("hidden",a.length>0);a.forEach(s=>{const b=document.createElement("button");b.className="student-card";b.innerHTML=`<strong>${esc(nameOf(s)||"Senza nome")}</strong><span class="meta">${LABELS[s.category]} · ${esc(s.license||"Patente non indicata")} · ${s.lessons.length} guide</span>`;b.onclick=()=>openStudent(s.id);$("students").appendChild(b)})}
+function openStudent(id){state.studentId=id;const s=student();$("studentName").textContent=nameOf(s)||"Allievo";$("studentDetails").innerHTML=`<div class="detail-row"><span class="detail-label">Nome:</span> ${esc(s.firstName||"-")}</div><div class="detail-row"><span class="detail-label">Cognome:</span> ${esc(s.lastName||"-")}</div><div class="detail-row"><span class="detail-label">Categoria:</span> ${LABELS[s.category]}</div><div class="detail-row"><span class="detail-label">Telefono:</span> ${esc(s.phone||"-")}</div><div class="detail-row"><span class="detail-label">Patente:</span> ${esc(s.license||"-")}</div><div class="detail-row"><span class="detail-label">Note:</span> ${esc(s.notes||"-")}</div>`;$("checklistType").textContent=`Checklist ${LABELS[typeOf(s.category)]}`;renderStateItems(s.checklist,$("studentChecklist"),(i,v)=>{s.checklist[i].status=v;save()});renderLessons();show("student")}
+function renderLessons(){const s=student();$("lessons").innerHTML="";$("emptyLessons").classList.toggle("hidden",s.lessons.length>0);[...s.lessons].sort((a,b)=>b.createdAt-a.createdAt).forEach(l=>{const b=document.createElement("button");b.className="lesson-card";const marked=l.checklist.filter(x=>x.status!=="none").length;b.innerHTML=`<strong>${new Date(l.createdAt).toLocaleString("it-IT")}</strong><span>${esc(l.notes||"Nessuna nota")}</span><span class="meta">${marked} voci segnate · ${l.route.length>1?"GPS presente":"GPS non usato"} · Tocca per aprire</span>`;b.onclick=()=>openLesson(l.id);$("lessons").appendChild(b)})}
+function newStudent(){state.editingStudent=null;$("studentFormTitle").textContent="Nuovo allievo";$("category").value="auto";["firstName","lastName","phone","license","studentNotes"].forEach(id=>$(id).value="");show("studentForm")}
+function editStudent(){const s=student();state.editingStudent=s.id;$("studentFormTitle").textContent="Modifica allievo";$("category").value=s.category;$("firstName").value=s.firstName;$("lastName").value=s.lastName;$("phone").value=s.phone;$("license").value=s.license;$("studentNotes").value=s.notes;show("studentForm")}
+function saveStudent(){const c=$("category").value,first=$("firstName").value.trim(),last=$("lastName").value.trim();if(!first&&!last)return alert("Inserisci nome o cognome.");if(state.editingStudent){const s=state.students.find(x=>x.id===state.editingStudent),oldType=typeOf(s.category),newType=typeOf(c);Object.assign(s,{category:c,firstName:first,lastName:last,phone:$("phone").value.trim(),license:$("license").value.trim(),notes:$("studentNotes").value.trim()});if(oldType!==newType){s.checklist=normalizeItems([],newType);s.lessons=s.lessons.map(l=>({...l,checklist:normalizeItems([],newType)}))}save();openStudent(s.id)}else{const s=normalizeStudent({id:uid(),category:c,firstName:first,lastName:last,phone:$("phone").value.trim(),license:$("license").value.trim(),notes:$("studentNotes").value.trim(),checklist:[],lessons:[]});state.students.push(s);save();openStudent(s.id)}}
+function deleteStudent(){const s=student();if(confirm(`Eliminare definitivamente ${nameOf(s)}?`)){state.students=state.students.filter(x=>x.id!==s.id);save();renderStudents();show("home")}}
+function renderLessonChecklist(items){$("lessonChecklist").dataset.items=JSON.stringify(items);renderStateItems(items,$("lessonChecklist"),(i,v)=>{const a=JSON.parse($("lessonChecklist").dataset.items);a[i].status=v;$("lessonChecklist").dataset.items=JSON.stringify(a)})}
+function newLesson(){state.lessonId=null;const now=new Date(),items=student().checklist.map(x=>({...x}));$("lessonTitle").textContent="Nuova guida";$("lessonDate").value=now.toISOString().slice(0,10);$("lessonTime").value=now.toTimeString().slice(0,5);$("lessonNotes").value="";$("deleteLesson").classList.add("hidden");$("openSavedRoute").classList.add("hidden");state.tempRoute=[];renderLessonChecklist(items);resetGps();show("lesson")}
+function openLesson(id){state.lessonId=id;const l=lesson(),d=new Date(l.createdAt);$("lessonTitle").textContent="Modifica guida";$("lessonDate").value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;$("lessonTime").value=`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;$("lessonNotes").value=l.notes;$("deleteLesson").classList.remove("hidden");$("openSavedRoute").classList.toggle("hidden",l.route.length<2);state.tempRoute=[...l.route];renderLessonChecklist(l.checklist.map(x=>({...x})));resetGps();show("lesson")}
+function saveLesson(){stopGps();const stamp=new Date(`${$("lessonDate").value}T${$("lessonTime").value||"00:00"}:00`).getTime(),data={createdAt:stamp,notes:$("lessonNotes").value.trim(),route:[...state.tempRoute],checklist:JSON.parse($("lessonChecklist").dataset.items||"[]")};if(state.lessonId)Object.assign(lesson(),data);else student().lessons.push({id:uid(),...data});save();openStudent(state.studentId)}
+function deleteLesson(){if(confirm("Eliminare questa guida?")){student().lessons=student().lessons.filter(x=>x.id!==state.lessonId);save();openStudent(state.studentId)}}
+function initLiveMap(){if(!state.liveMap){state.liveMap=L.map("liveMap").setView([44.4056,8.9463],13);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(state.liveMap)}setTimeout(()=>state.liveMap.invalidateSize(),80)}
+function drawLive(){initLiveMap();if(state.liveLine)state.liveMap.removeLayer(state.liveLine);if(state.liveMarker)state.liveMap.removeLayer(state.liveMarker);if(!state.tempRoute.length)return;const p=state.tempRoute.map(x=>[x.lat,x.lng]);state.liveLine=L.polyline(p,{weight:5}).addTo(state.liveMap);state.liveMarker=L.marker(p.at(-1)).addTo(state.liveMap);p.length===1?state.liveMap.setView(p[0],17):state.liveMap.fitBounds(state.liveLine.getBounds(),{padding:[20,20]})}
+function startGps(){if(!navigator.geolocation||state.watch!==null)return;$("gpsStatus").textContent="GPS in acquisizione…";$("startGps").disabled=true;$("stopGps").disabled=false;state.watch=navigator.geolocation.watchPosition(pos=>{const p={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,time:pos.timestamp},prev=state.tempRoute.at(-1);if(!prev||distance(prev,p)>=5){state.tempRoute.push(p);drawLive()}$("gpsStatus").textContent=`GPS attivo · ${state.tempRoute.length} punti`},err=>{$("gpsStatus").textContent=err.code===1?"Permesso GPS negato.":"Errore GPS.";stopGps()},{enableHighAccuracy:true,maximumAge:0,timeout:15000})}
+function stopGps(){if(state.watch!==null)navigator.geolocation.clearWatch(state.watch);state.watch=null;$("startGps").disabled=false;$("stopGps").disabled=true}function resetGps(){stopGps();$("gpsStatus").textContent=state.tempRoute.length?`Percorso presente · ${state.tempRoute.length} punti`:"GPS non attivo.";drawLive()}
 function distance(a,b){const R=6371000,p1=a.lat*Math.PI/180,p2=b.lat*Math.PI/180,dp=(b.lat-a.lat)*Math.PI/180,dl=(b.lng-a.lng)*Math.PI/180,h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return 2*R*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))}
-
-async function showRoute(points){show("map");initMap();draw(points.map(p=>[p.lat,p.lng]));try{const road=await roadRoute(points);if(road.length>1)draw(road)}catch{$("mapNotice").textContent="Mostro la traccia GPS registrata.";$("mapNotice").classList.remove("hidden")}}
-function initMap(){if(!map){map=L.map("map");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map)}setTimeout(()=>map.invalidateSize(),100)}
-function draw(pts){[routeLayer,startMarker,endMarker].forEach(x=>{if(x)map.removeLayer(x)});routeLayer=L.polyline(pts,{weight:6}).addTo(map);startMarker=L.marker(pts[0]).addTo(map).bindPopup("Partenza");endMarker=L.marker(pts.at(-1)).addTo(map).bindPopup("Arrivo");map.fitBounds(routeLayer.getBounds(),{padding:[20,20]})}
-async function roadRoute(points){const sample=points.length<=40?points:Array.from({length:40},(_,i)=>points[Math.round(i*(points.length-1)/39)]);const coords=sample.map(p=>`${p.lng},${p.lat}`).join(";");const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);const d=await r.json();return d.routes[0].geometry.coordinates.map(([lng,lat])=>[lat,lng])}
-
-function initSpeech(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;const r=new SR();r.lang="it-IT";r.continuous=true;r.onresult=e=>{let t="";for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)t+=e.results[i][0].transcript+" ";$("lessonNotes").value+=t};r.onend=()=>{recognizing=false;$("voiceButton").textContent="🎤 Detta"};return r}
-function toggleVoice(){if(recognizing){recognition.stop();return}if(!recognition)recognition=initSpeech();if(!recognition){alert("Usa il microfono della tastiera.");return}recognition.start();recognizing=true;$("voiceButton").textContent="⏹ Ferma"}
-
-async function shareStudent(){const s=current(),blob=new Blob([JSON.stringify({type:"autoscuola-student",student:s},null,2)],{type:"application/json"}),file=new File([blob],fullName(s).replace(/[\\\\/:*?"<>|]/g,"_")+".json",{type:"application/json"});if(navigator.canShare?.({files:[file]}))try{return await navigator.share({files:[file],title:fullName(s)})}catch{}const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=file.name;a.click()}
-function importFile(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{const p=JSON.parse(r.result);const s=normalizeStudent(p.student);s.id=newId();students.push(s);save();renderHome();alert("Allievo importato")}catch{alert("File non valido")}};r.readAsText(file)}
-
-$("activeTab").onclick=()=>{currentTab="active";renderHome()};$("archiveTab").onclick=()=>{currentTab="archive";renderHome()};
-$("openNewStudentButton").onclick=()=>show("newStudent");$("backNewStudent").onclick=()=>show("home");$("saveStudentButton").onclick=saveNewStudent;
-$("manageChecklistButton").onclick=()=>{renderChecklistManager();show("checklistManager")};$("backChecklistManager").onclick=()=>show("home");$("addChecklistItemButton").onclick=addItem;
-$("importStudentButton").onclick=()=>$("importStudentInput").click();$("importStudentInput").onchange=e=>importFile(e.target.files[0]);
-$("searchInput").oninput=renderHome;$("backHome").onclick=()=>show("home");$("newLessonButton").onclick=startLesson;$("shareStudentButton").onclick=shareStudent;
-$("archiveButton").onclick=()=>moveStudent(true);$("restoreButton").onclick=()=>moveStudent(false);$("deleteButton").onclick=deleteStudent;
-$("backStudent").onclick=()=>{stopGps();show("student")};$("gpsButton").onclick=toggleGps;$("voiceButton").onclick=toggleVoice;$("saveLessonButton").onclick=saveLesson;$("backMap").onclick=()=>show("student");
-if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js").catch(()=>{});
-saveChecklist();save();renderHome();
+function showSavedRoute(){const l=lesson();if(!l||l.route.length<2)return;show("savedMapView");if(!state.savedMap){state.savedMap=L.map("savedMap");L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(state.savedMap)}if(state.savedLine)state.savedMap.removeLayer(state.savedLine);const p=l.route.map(x=>[x.lat,x.lng]);state.savedLine=L.polyline(p,{weight:6}).addTo(state.savedMap);state.savedMap.fitBounds(state.savedLine.getBounds(),{padding:[20,20]});setTimeout(()=>state.savedMap.invalidateSize(),80)}
+function syncLists(type){state.students.forEach(s=>{if(typeOf(s.category)!==type)return;s.checklist=normalizeItems(s.checklist,type);s.lessons=s.lessons.map(l=>({...l,checklist:normalizeItems(l.checklist,type)}))});saveLists();save()}
+function renderChecklistManager(){document.querySelectorAll(".check-tabs button").forEach(b=>b.classList.toggle("active",b.dataset.list===state.managerType));const box=$("checklistManagerList");box.innerHTML="";LISTS[state.managerType].forEach((label,i)=>{const r=document.createElement("div");r.className="manager-row";r.innerHTML=`<div class="manager-label">${esc(label)}</div><div class="manager-actions"><button class="secondary up" ${i===0?"disabled":""}>↑</button><button class="secondary down" ${i===LISTS[state.managerType].length-1?"disabled":""}>↓</button><button class="secondary rename">Rinomina</button><button class="danger remove">Elimina</button></div>`;r.querySelector(".up").onclick=()=>moveChecklist(i,-1);r.querySelector(".down").onclick=()=>moveChecklist(i,1);r.querySelector(".rename").onclick=()=>renameChecklist(i);r.querySelector(".remove").onclick=()=>removeChecklist(i);box.appendChild(r)})}
+function addChecklist(){const input=$("newChecklistLabel"),label=input.value.trim();if(!label)return;if(LISTS[state.managerType].some(x=>x.toLowerCase()===label.toLowerCase()))return alert("Questa voce esiste già.");LISTS[state.managerType].push(label);input.value="";syncLists(state.managerType);renderChecklistManager()}
+function renameChecklist(i){const old=LISTS[state.managerType][i],next=prompt("Nuovo nome",old);if(next===null||!next.trim())return;LISTS[state.managerType][i]=next.trim();state.students.forEach(s=>{if(typeOf(s.category)!==state.managerType)return;(s.checklist||[]).forEach(x=>{if(x.label===old)x.label=next.trim()});(s.lessons||[]).forEach(l=>(l.checklist||[]).forEach(x=>{if(x.label===old)x.label=next.trim()}))});saveLists();save();renderChecklistManager()}
+function removeChecklist(i){const label=LISTS[state.managerType][i];if(!confirm(`Eliminare "${label}" da tutte le schede?`))return;LISTS[state.managerType].splice(i,1);syncLists(state.managerType);renderChecklistManager()}function moveChecklist(i,d){const t=i+d;if(t<0||t>=LISTS[state.managerType].length)return;[LISTS[state.managerType][i],LISTS[state.managerType][t]]=[LISTS[state.managerType][t],LISTS[state.managerType][i]];syncLists(state.managerType);renderChecklistManager()}
+function toggleVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return alert("Usa il microfono della tastiera del telefono.");if(!state.recognition){state.recognition=new SR();state.recognition.lang="it-IT";state.recognition.continuous=true;state.recognition.onresult=e=>{let t="";for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)t+=e.results[i][0].transcript+" ";$("lessonNotes").value+=t};state.recognition.onend=()=>{state.recognizing=false;$("voice").textContent="🎤 Detta"}}if(state.recognizing)state.recognition.stop();else{state.recognition.start();state.recognizing=true;$("voice").textContent="⏹ Ferma dettatura"}}
+$("search").oninput=renderStudents;$("newStudent").onclick=newStudent;document.querySelectorAll(".categories button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".categories button").forEach(x=>x.classList.remove("active"));b.classList.add("active");state.filter=b.dataset.f;renderStudents()});$("backStudentForm").onclick=()=>state.editingStudent?openStudent(state.editingStudent):show("home");$("saveStudent").onclick=saveStudent;$("backHome").onclick=()=>{renderStudents();show("home")};$("editStudent").onclick=editStudent;$("deleteStudent").onclick=deleteStudent;$("newLesson").onclick=newLesson;$("backLesson").onclick=()=>{stopGps();openStudent(state.studentId)};$("saveLesson").onclick=saveLesson;$("deleteLesson").onclick=deleteLesson;$("startGps").onclick=startGps;$("stopGps").onclick=stopGps;$("voice").onclick=toggleVoice;$("openSavedRoute").onclick=showSavedRoute;$("backSavedMap").onclick=()=>show("lesson");$("manageChecklists").onclick=()=>{renderChecklistManager();show("checklistManager")};$("backChecklistManager").onclick=()=>{renderStudents();show("home")};document.querySelectorAll(".check-tabs button").forEach(b=>b.onclick=()=>{state.managerType=b.dataset.list;renderChecklistManager()});$("addChecklistItem").onclick=addChecklist;$("newChecklistLabel").onkeydown=e=>{if(e.key==="Enter")addChecklist()};
+saveLists();save();if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));renderStudents();

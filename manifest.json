@@ -1,10 +1,1 @@
-{
-  "name": "Autoscuola",
-  "short_name": "Autoscuola",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#f2f2f7",
-  "theme_color": "#f2f2f7",
-  "orientation": "portrait"
-}
+{"name":"Autoscuola","short_name":"Autoscuola","start_url":"./","scope":"./","display":"standalone","background_color":"#f2f2f7","theme_color":"#0a84ff","orientation":"portrait"}

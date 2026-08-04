@@ -1,129 +1,82 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f2f2f7">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Autoscuola">
-  <title>Autoscuola</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a84ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Autoscuola</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+<header><h1>Autoscuola</h1></header>
 <main>
-  <section id="homeView" class="view active">
-    <header><h1>Autoscuola</h1></header>
-    <div class="tabs">
-      <button id="activeTab" class="tab active" type="button">Allievi</button>
-      <button id="archiveTab" class="tab" type="button">Archivio</button>
+<section id="home" class="view active">
+  <div class="toolbar"><input id="search" type="search" placeholder="Cerca allievo"><button id="newStudent">➕ Nuovo allievo</button></div>
+  <div class="categories">
+    <button data-f="all" class="active">Tutti</button>
+    <button data-f="auto">🚗 Auto</button>
+    <button data-f="moto">🏍 Moto</button>
+    <button data-f="quad-leggero">🛵 Quadriciclo leggero AM</button>
+    <button data-f="quad-pesante">🚙 Quadriciclo pesante</button>
+    <button data-f="corso-moto">🏁 Corso Moto</button>
+    <button data-f="perfezionamento">⭐ Perfezionamento</button>
+  </div>
+  <button id="manageChecklists" class="secondary full">Gestisci checklist</button>
+  <div id="students"></div><p id="emptyStudents" class="empty hidden">Nessun allievo.</p>
+</section>
+
+<section id="studentForm" class="view">
+  <div class="top"><button id="backStudentForm" class="secondary">Indietro</button><button id="saveStudent">Salva allievo</button></div>
+  <div class="card form"><h2 id="studentFormTitle">Nuovo allievo</h2>
+    <label>Categoria<select id="category">
+      <option value="auto">Auto</option><option value="moto">Moto</option>
+      <option value="quad-leggero">Quadriciclo leggero AM</option><option value="quad-pesante">Quadriciclo pesante</option>
+      <option value="corso-moto">Corso Moto</option><option value="perfezionamento">Perfezionamento</option>
+    </select></label>
+    <label>Nome<input id="firstName"></label><label>Cognome<input id="lastName"></label>
+    <label>Telefono<input id="phone" type="tel"></label><label>Patente<input id="license" placeholder="Es. B, A1, A2, AM"></label>
+    <label>Note<textarea id="studentNotes" rows="5"></textarea></label>
+  </div>
+</section>
+
+<section id="student" class="view">
+  <div class="top"><button id="backHome" class="secondary">Indietro</button><button id="editStudent">Modifica dati</button></div>
+  <div class="card"><h2 id="studentName"></h2><div id="studentDetails"></div></div>
+  <div class="card"><h2>Checklist</h2><p id="checklistType" class="muted"></p><div id="studentChecklist"></div></div>
+  <button id="newLesson" class="full">Nuova guida</button>
+  <div class="card"><h2>Guide salvate</h2><div id="lessons"></div><p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p></div>
+  <button id="deleteStudent" class="danger full">Elimina allievo</button>
+</section>
+
+<section id="lesson" class="view">
+  <div class="top"><button id="backLesson" class="secondary">Indietro</button><button id="saveLesson">Salva guida</button></div>
+  <div class="card form"><h2 id="lessonTitle">Nuova guida</h2>
+    <label>Data<input id="lessonDate" type="date"></label><label>Ora<input id="lessonTime" type="time"></label>
+    <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><button id="voice" class="secondary">🎤 Detta</button>
+  </div>
+  <div class="card"><h2>Checklist della guida</h2><div id="lessonChecklist"></div></div>
+  <div class="card"><h2>GPS</h2><div class="top"><button id="startGps">Avvia GPS</button><button id="stopGps" class="secondary" disabled>Ferma GPS</button></div><p id="gpsStatus" class="muted">GPS non attivo.</p><div id="liveMap" class="map"></div></div>
+  <button id="openSavedRoute" class="secondary full hidden">Apri percorso salvato</button>
+  <button id="deleteLesson" class="danger full hidden">Elimina guida</button>
+</section>
+
+<section id="checklistManager" class="view">
+  <div class="top"><button id="backChecklistManager" class="secondary">Indietro</button></div>
+  <div class="card"><h2>Gestione checklist</h2>
+    <div class="check-tabs">
+      <button data-list="auto" class="active">Auto</button><button data-list="moto">Moto</button>
+      <button data-list="quad-leggero">Quadriciclo leggero</button><button data-list="quad-pesante">Quadriciclo pesante</button>
+      <button data-list="corso-moto">Corso Moto</button>
     </div>
-    <div class="content">
-      <button id="manageChecklistButton" class="secondary full" type="button">Gestione checklist</button>
-      <button id="importStudentButton" class="secondary full" type="button">Importa allievo</button>
-      <input id="importStudentInput" type="file" accept=".json,application/json" hidden>
-      <input id="searchInput" type="search" placeholder="Cerca allievo">
-      <button id="openNewStudentButton" class="primary full" type="button">Nuovo allievo</button>
-      <div id="studentList"></div>
-      <p id="emptyList" class="empty hidden">Nessun allievo.</p>
-    </div>
-  </section>
+    <div class="toolbar checklist-add"><input id="newChecklistLabel" placeholder="Nuova voce"><button id="addChecklistItem">Aggiungi</button></div>
+    <div id="checklistManagerList"></div>
+  </div>
+</section>
 
-  <section id="newStudentView" class="view">
-    <header class="bar">
-      <button id="backNewStudent" class="link" type="button">‹ Indietro</button>
-      <h2>Nuovo allievo</h2><span></span>
-    </header>
-    <div class="content form-grid">
-      <label>Nome<input id="studentFirstName" type="text"></label>
-      <label>Cognome<input id="studentLastName" type="text"></label>
-      <label>Telefono<input id="studentPhone" type="tel"></label>
-      <label>Patente<input id="studentLicense" type="text" placeholder="Es. B"></label>
-      <button id="saveStudentButton" class="primary" type="button">Salva allievo</button>
-    </div>
-  </section>
-
-  <section id="studentView" class="view">
-    <header class="bar">
-      <button id="backHome" class="link" type="button">‹ Indietro</button>
-      <h2 id="studentName"></h2><span></span>
-    </header>
-    <div class="content">
-      <section class="card">
-        <h3>Dati allievo</h3>
-        <div id="studentDetails"></div>
-      </section>
-
-      <button id="newLessonButton" class="primary" type="button">Nuova guida</button>
-      <div class="two">
-        <button id="shareStudentButton" class="secondary" type="button">Condividi allievo</button>
-        <button id="archiveButton" class="secondary" type="button">Sposta in archivio</button>
-        <button id="restoreButton" class="secondary hidden" type="button">Ripristina</button>
-        <button id="deleteButton" class="danger" type="button">Cancella</button>
-      </div>
-
-      <section class="card">
-        <h3>Checklist</h3>
-        <div id="checklistContainer"></div>
-      </section>
-
-      <section class="card">
-        <h3>Guide</h3>
-        <div id="lessonList"></div>
-        <p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p>
-      </section>
-    </div>
-  </section>
-
-  <section id="checklistManagerView" class="view">
-    <header class="bar">
-      <button id="backChecklistManager" class="link" type="button">‹ Indietro</button>
-      <h2>Gestione checklist</h2><span></span>
-    </header>
-    <div class="content">
-      <div class="new-row">
-        <input id="newChecklistItemInput" type="text" placeholder="Nuova voce checklist">
-        <button id="addChecklistItemButton" class="primary" type="button">Aggiungi</button>
-      </div>
-      <div id="checklistManagerList"></div>
-    </div>
-  </section>
-
-  <section id="lessonView" class="view">
-    <header class="bar">
-      <button id="backStudent" class="link" type="button">‹ Indietro</button>
-      <h2>Nuova guida</h2><span></span>
-    </header>
-    <div class="content">
-      <label>Note</label>
-      <div class="voice-row">
-        <textarea id="lessonNotes" placeholder="Scrivi o detta le note"></textarea>
-        <button id="voiceButton" class="secondary voice" type="button">🎤 Detta</button>
-      </div>
-      <p id="voiceStatus" class="muted hidden"></p>
-
-      <section class="card">
-        <h3>GPS</h3>
-        <p id="gpsStatus">GPS non attivo</p>
-        <button id="gpsButton" class="secondary" type="button">Avvia GPS</button>
-        <div id="liveMap" class="live-map hidden"></div>
-      </section>
-
-      <button id="saveLessonButton" class="primary" type="button">Salva guida</button>
-    </div>
-  </section>
-
-  <section id="mapView" class="view">
-    <header class="bar">
-      <button id="backMap" class="link" type="button">‹ Indietro</button>
-      <h2>Percorso</h2><span></span>
-    </header>
-    <div id="map"></div>
-    <p id="mapNotice" class="notice hidden"></p>
-  </section>
+<section id="savedMapView" class="view"><div class="top"><button id="backSavedMap" class="secondary">Indietro</button></div><div id="savedMap" class="saved-map"></div></section>
 </main>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="app.js"></script>
-</body>
-</html>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js"></script>
+</body></html>
