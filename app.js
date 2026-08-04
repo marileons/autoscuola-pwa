@@ -84,16 +84,18 @@ function startLesson(){lessonStartedAt=Date.now();gpsPoints=[];stopGps();$("less
 function toggleGps(){
   if(gpsActive){stopGps();updateGps();return}
   if(!navigator.geolocation){alert("GPS non disponibile");return}
-  gpsActive=true;updateGps();$("liveMap").classList.remove("hidden");initLiveMap();
+  gpsActive=true;updateGps();$("liveMap").classList.remove("hidden");initLiveMap();setTimeout(()=>liveMap.invalidateSize(),250);
   gpsWatchId=navigator.geolocation.watchPosition(p=>{
     const point={lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy,time:p.timestamp};
+    const prev=gpsPoints.at(-1);
+    if(!prev){gpsPoints.push(point);updateGps();updateLiveMap(point);return}
     if(point.accuracy>80)return;
-    const prev=gpsPoints.at(-1);if(!prev||distance(prev,point)>=8){gpsPoints.push(point);updateGps();updateLiveMap(point)}
+    if(distance(prev,point)>=8){gpsPoints.push(point);updateGps();updateLiveMap(point)}
   },e=>{stopGps();updateGps();alert(e.code===1?"Permesso GPS non concesso":"Impossibile leggere il GPS")},{enableHighAccuracy:true,maximumAge:0,timeout:15000})
 }
 function stopGps(){if(gpsWatchId!==null)navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;gpsActive=false}
 function updateGps(){$("gpsButton").textContent=gpsActive?"Ferma GPS":"Avvia GPS";$("gpsStatus").textContent=gpsActive?`GPS attivo · ${gpsPoints.length} punti`:gpsPoints.length>1?`Percorso registrato · ${gpsPoints.length} punti`:"GPS non attivo";$("gpsStatus").classList.toggle("recording",gpsActive)}
-function initLiveMap(){if(!liveMap){liveMap=L.map("liveMap");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(liveMap)}setTimeout(()=>liveMap.invalidateSize(),100)}
+function initLiveMap(){if(!liveMap){liveMap=L.map("liveMap").setView([44.4056,8.9463],13);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(liveMap)}setTimeout(()=>liveMap.invalidateSize(),150)}
 function resetLiveMap(){if(liveMap){if(liveLine)liveMap.removeLayer(liveLine);if(liveMarker)liveMap.removeLayer(liveMarker)}liveLine=liveMarker=null;$("liveMap").classList.add("hidden")}
 function updateLiveMap(p){initLiveMap();const pts=gpsPoints.map(x=>[x.lat,x.lng]);if(liveLine)liveMap.removeLayer(liveLine);liveLine=L.polyline(pts,{weight:5}).addTo(liveMap);if(liveMarker)liveMap.removeLayer(liveMarker);liveMarker=L.marker([p.lat,p.lng]).addTo(liveMap);liveMap.setView([p.lat,p.lng],Math.max(liveMap.getZoom(),16))}
 function saveLesson(){const s=current();stopGps();s.lessons.unshift({id:newId(),createdAt:lessonStartedAt||Date.now(),notes:$("lessonNotes").value.trim(),route:[...gpsPoints]});save();renderStudent();show("student")}
