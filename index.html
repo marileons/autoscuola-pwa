@@ -59,13 +59,15 @@
 <section id="lesson" class="view">
   <div class="top"><button id="backLesson" class="secondary">Indietro</button></div>
   <div class="card form"><h2 id="lessonTitle">Nuova guida</h2>
-    <label>Data<input id="lessonDate" type="date"></label><label>Ora<input id="lessonTime" type="time"></label>
+    <label>Data<input id="lessonDate" type="date"></label>
+<label>Ora<select id="lessonTime"><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option></select></label>
+<label>Durata<select id="lessonDuration"><option>1 ora</option><option>2 ore</option><option>3 ore</option></select></label>
     <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><button id="voice" class="secondary">🎤 Detta</button>
   </div>
   <div class="card"><h2>Checklist della guida</h2><div id="lessonChecklist"></div></div>
   <div class="card"><h2>GPS</h2><div class="top"><button id="startGps">Avvia GPS</button><button id="stopGps" class="secondary" disabled>Ferma GPS</button></div><p id="gpsStatus" class="muted">GPS non attivo.</p><div id="liveMap" class="map"></div></div>
   <button id="openSavedRoute" class="secondary full hidden">Apri percorso salvato</button>
-  <button id="saveLesson" class="full">💾 Salva guida</button>
+  <div style="margin-bottom:90px"><button id="saveLesson" class="full">💾 Salva guida</button></div>
   <button id="deleteLesson" class="danger full hidden">Elimina guida</button>
 </section>
 
