@@ -1,8 +1,9 @@
-const CACHE="agenda-istruttore-v1-1";
+const CACHE="agenda-istruttore-v1-2";
 const FILES=[
   "./",
   "./index.html",
   "./style.css",
+  "./auth.css",
   "./app.js",
   "./manifest.json",
   "./logo.jpg",

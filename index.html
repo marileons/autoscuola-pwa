@@ -10,8 +10,25 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="auth.css">
 </head>
 <body>
+<section id="loginScreen" class="auth-screen">
+  <div class="auth-card">
+    <img src="logo.jpg" alt="Logo" class="auth-logo">
+    <h1>AGENDA ISTRUTTORE</h1>
+    <p class="muted auth-version">Versione 1.0.0</p>
+    <p class="muted">Inserisci la password per accedere.</p>
+    <form id="loginForm" class="form">
+      <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required autofocus></label>
+      <label class="remember-row"><input id="rememberDevice" type="checkbox"> <span>Ricorda questo dispositivo</span></label>
+      <p id="loginError" class="auth-error hidden" role="alert">Password non corretta.</p>
+      <button type="submit" class="full">Accedi</button>
+    </form>
+    <p class="muted auth-credit">Realizzata da Mario Leoni</p>
+  </div>
+</section>
+<div id="appShell" class="hidden">
 <header style="text-align:center;padding:12px"><img src="logo.jpg" alt="Logo" style="max-width:220px;width:90%;border-radius:12px"><h1>AGENDA ISTRUTTORE</h1><div style="color:#555">Gestione Allievi e Guide</div></header>
 <main>
 <section id="home" class="view active">
@@ -29,6 +46,7 @@
   </div>
   <button id="manageChecklists" class="secondary full">Gestisci checklist</button>
   <button id="openExaminers" class="secondary full">👨‍💼 Esaminatori</button>
+  <button id="openSettings" class="secondary full">Impostazioni</button>
   <div id="students"></div><p id="emptyStudents" class="empty hidden">Nessun allievo.</p>
 </section>
 
@@ -107,6 +125,21 @@
 </section>
 
 <section id="savedMapView" class="view"><div class="top"><button id="backSavedMap" class="secondary">Indietro</button></div><div id="savedMap" class="saved-map"></div></section>
+
+<section id="settings" class="view">
+  <div class="top"><button id="backSettings" class="secondary">Indietro</button></div>
+  <div class="card form"><h2>Impostazioni</h2>
+    <h3>Cambia password utente</h3>
+    <label>Password attuale<input id="currentPassword" type="password" autocomplete="current-password"></label>
+    <label>Nuova password<input id="newPassword" type="password" autocomplete="new-password"></label>
+    <label>Conferma nuova password<input id="confirmPassword" type="password" autocomplete="new-password"></label>
+    <p id="passwordMessage" class="muted hidden" role="status"></p>
+    <button id="changePassword" type="button">Cambia password</button>
+    <p class="muted">La password Master rimane sempre valida e non può essere modificata.</p>
+  </div>
+  <button id="logout" class="secondary full">Disconnetti</button>
+</section>
 </main>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js"></script>
 </body></html>
