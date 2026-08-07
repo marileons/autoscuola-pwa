@@ -7,9 +7,12 @@ const AUTH_REMEMBER_KEY="autoscuola_auth_remembered";
 const AUTH_SESSION_KEY="autoscuola_auth_session";
 const DEFAULT_USER_PASSWORD="Autoscuola1923";
 const MASTER_PASSWORD="ZenaMaster1964";
-const LABELS={auto:"Auto",moto:"Moto","quad-leggero":"Quadriciclo leggero AM","quad-pesante":"Quadriciclo pesante B1","corso-moto":"Corso Moto ad accesso graduale A2 e A",perfezionamento:"Perfezionamento","esame-revisione":"Esame Revisione","esame-esperimento":"Esame Esperimento"};
+const APP_NAME="Agenda Istruttore";
+const APP_VERSION="1.0.1";
+const LABELS={auto:"Auto","guida-accompagnata":"Guida Accompagnata",moto:"Moto","quad-leggero":"Quadriciclo leggero AM","quad-pesante":"Quadriciclo pesante B1","corso-moto":"Corso Moto ad accesso graduale A2 e A",perfezionamento:"Perfezionamento","esame-revisione":"Esame Revisione","esame-esperimento":"Esame Esperimento"};
 const DEFAULT_LISTS={
  auto:["Spiegazione auto","Posizione mani sul volante","Uso cambio","Uso frizione","Uso volante","Partenza in salita","Extraurbana","Nervi Quinto Quarto","Autostrada Nervi","Autostrada Recco","Autostrada Rapallo","Autostrada Chiavari","Autostrada Est","Autostrada Bolzaneto","Autostrada Aeroporto","Autostrada Ovest","Park a L","Park a S","Park di punta","Retromarcia lunga","Inversioni di marcia"],
+ "guida-accompagnata":["Spiegazione auto","Posizione mani sul volante","Uso cambio","Uso frizione","Uso volante","Partenza in salita","Extraurbana","Nervi Quinto Quarto","Autostrada Nervi","Autostrada Recco","Autostrada Rapallo","Autostrada Chiavari","Autostrada Est","Autostrada Bolzaneto","Autostrada Aeroporto","Autostrada Ovest","Park a L","Park a S","Park di punta","Retromarcia lunga","Inversioni di marcia"],
  moto:["Piazzale Marassi","Via Dodecaneso","Albaro","Villa Bombrini birilli lento","Villa Bombrini birilli veloce","Inversione IKEA","Inversione Villa Bombrini","Inversione Borzoli","Inversione Ponte Morandi","Cornigliano Budello","Cornigliano Via","Sampierdarena Anania","Corso Perrone","Ponte Morandi","Borzoli ingresso parcheggio","Borzoli strada chiusa","Borzoli Sestri","IKEA","Fiumara","Guido Rossa"],
  "quad-leggero":["Villa Bombrini percorso birilli"],
  "quad-pesante":["Villa Bombrini percorso birilli"],
@@ -22,13 +25,13 @@ function loadLists(){const merged=JSON.parse(JSON.stringify(DEFAULT_LISTS));try{
 let LISTS=loadLists();
 function saveLists(){localStorage.setItem(LIST_KEY,JSON.stringify(LISTS))}
 const $=id=>document.getElementById(id),uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+"_"+Math.random();
-let state={students:load(),examiners:loadExaminers(),studentId:null,lessonId:null,editingStudent:null,examinerId:null,editingExaminer:null,habitDraft:[],filter:"all",managerType:"auto",watch:null,tempRoute:[],liveMap:null,liveLine:null,liveMarker:null,savedMap:null,savedLine:null,recognition:null,recognizing:false};
+let state={students:load(),examiners:loadExaminers(),studentId:null,lessonId:null,editingStudent:null,examinerId:null,editingExaminer:null,habitDraft:[],filter:"auto",managerType:"auto",watch:null,tempRoute:[],liveMap:null,liveLine:null,liveMarker:null,savedMap:null,savedLine:null,recognition:null,recognizing:false};
 function typeOf(c){return c==="perfezionamento"?"auto":(LISTS[c]?c:"auto")}
 function loadExaminers(){try{const a=JSON.parse(localStorage.getItem(EXAMINERS_KEY)||"[]");return Array.isArray(a)?a.map(x=>({id:String(x.id||uid()),firstName:String(x.firstName||""),lastName:String(x.lastName||""),notes:String(x.notes||""),habits:Array.isArray(x.habits)?x.habits.map(String):[]})):[]}catch{return []}}
 function saveExaminers(){localStorage.setItem(EXAMINERS_KEY,JSON.stringify(state.examiners))}
 function oldStatus(x){if(x?.status&&STATES.includes(x.status))return x.status;return x?.done?"good":"none"}
 function normalizeItems(items,type){const byLabel=new Map((items||[]).map(x=>[x.label,oldStatus(x)]));return LISTS[type].map(label=>({id:uid(),label,status:byLabel.get(label)||"none"}))}
-function normalizeStudent(s){const c=LABELS[s.category]?s.category:"auto",t=typeOf(c);return{id:String(s.id||uid()),category:c,firstName:String(s.firstName||""),lastName:String(s.lastName||""),phone:String(s.phone||""),license:String(s.license||""),notes:String(s.notes||s.studentNotes||""),checklist:normalizeItems(s.checklist,t),lessons:Array.isArray(s.lessons)?s.lessons.map(l=>normalizeLesson(l,t)):[]}}
+function normalizeStudent(s){const c=LABELS[s.category]?s.category:"auto",t=typeOf(c);return{id:String(s.id||uid()),category:c,firstName:String(s.firstName||""),lastName:String(s.lastName||""),phone:String(s.phone||""),license:String(s.license||""),pinkSlipIssueDate:String(s.pinkSlipIssueDate||""),notes:String(s.notes||s.studentNotes||""),checklist:normalizeItems(s.checklist,t),lessons:Array.isArray(s.lessons)?s.lessons.map(l=>normalizeLesson(l,t)):[]}}
 function normalizeLesson(l,t){return{id:String(l.id||uid()),createdAt:Number(l.createdAt||Date.now()),notes:String(l.notes||""),route:Array.isArray(l.route)?l.route.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)).map(p=>({...p,breakBefore:!!p.breakBefore})):[],checklist:normalizeItems(l.checklist,t)}}
 function load(){try{const a=JSON.parse(localStorage.getItem(KEY)||"[]");return Array.isArray(a)?a.map(normalizeStudent):[]}catch{return []}}
 function save(){state.students=state.students.map(normalizeStudent);localStorage.setItem(KEY,JSON.stringify(state.students))}
@@ -46,14 +49,17 @@ function nameOf(s){return[s.firstName,s.lastName].filter(Boolean).join(" ")}func
 function stateIcon(v){return v==="repeat"?"🟡":v==="good"?"✅":"⬜"}function nextState(v){return STATES[(STATES.indexOf(v)+1)%STATES.length]}
 function renderStateItems(items,box,onchange){box.innerHTML="";items.forEach((it,i)=>{const r=document.createElement("div");r.className="state-row";const b=document.createElement("button");b.type="button";b.className=`state-btn ${it.status}`;b.textContent=stateIcon(it.status);b.onclick=()=>{it.status=nextState(it.status);b.textContent=stateIcon(it.status);b.className=`state-btn ${it.status}`;onchange(i,it.status)};const s=document.createElement("span");s.textContent=it.label;r.append(b,s);box.appendChild(r)})}
 function renderStudents(){const q=$("search").value.trim().toLowerCase(),a=state.students.filter(s=>state.filter==="all"||s.category===state.filter).filter(s=>(nameOf(s)+" "+s.phone+" "+s.license).toLowerCase().includes(q)).sort((a,b)=>nameOf(a).localeCompare(nameOf(b),"it"));$("students").innerHTML="";$("emptyStudents").classList.toggle("hidden",a.length>0);a.forEach(s=>{const b=document.createElement("button");b.className="student-card";b.innerHTML=`<strong>${esc(nameOf(s)||"Senza nome")}</strong><span class="meta">${LABELS[s.category]} · ${esc(s.license||"Patente non indicata")} · ${s.lessons.length} guide</span>`;b.onclick=()=>openStudent(s.id);$("students").appendChild(b)})}
-function openStudent(id){state.studentId=id;const s=student();$("studentName").textContent=nameOf(s)||"Allievo";$("studentDetails").innerHTML=`<div class="detail-row"><span class="detail-label">Nome:</span> ${esc(s.firstName||"-")}</div><div class="detail-row"><span class="detail-label">Cognome:</span> ${esc(s.lastName||"-")}</div><div class="detail-row"><span class="detail-label">Categoria:</span> ${LABELS[s.category]}</div><div class="detail-row"><span class="detail-label">Telefono:</span> ${esc(s.phone||"-")}</div><div class="detail-row"><span class="detail-label">Patente:</span> ${esc(s.license||"-")}</div><div class="detail-row"><span class="detail-label">Note:</span> ${esc(s.notes||"-")}</div>`;$("checklistType").textContent=`Checklist ${LABELS[typeOf(s.category)]}`;renderStateItems(s.checklist,$("studentChecklist"),(i,v)=>{s.checklist[i].status=v;save()});renderLessons();show("student")}
-function renderLessons(){const s=student();$("lessons").innerHTML="";$("emptyLessons").classList.toggle("hidden",s.lessons.length>0);[...s.lessons].sort((a,b)=>b.createdAt-a.createdAt).forEach(l=>{const b=document.createElement("button");b.className="lesson-card";const marked=l.checklist.filter(x=>x.status!=="none").length;b.innerHTML=`<strong>${new Date(l.createdAt).toLocaleString("it-IT")}</strong><span>${esc(l.notes||"Nessuna nota")}</span><span class="meta">${marked} voci segnate · ${l.route.length>1?"GPS presente":"GPS non usato"} · Tocca per aprire</span>`;b.onclick=()=>openLesson(l.id);$("lessons").appendChild(b)})}
-function newStudent(){state.editingStudent=null;$("studentFormTitle").textContent="Nuovo allievo";$("category").value=state.filter||"auto";try{$("category").closest("label").style.display="none"}catch(e){}["firstName","lastName","phone","license","studentNotes"].forEach(id=>$(id).value="");show("studentForm")}
-function editStudent(){const s=student();state.editingStudent=s.id;try{$("category").closest("label").style.display=""}catch(e){}$("studentFormTitle").textContent="Modifica allievo";$("category").value=s.category;$("firstName").value=s.firstName;$("lastName").value=s.lastName;$("phone").value=s.phone;$("license").value=s.license;$("studentNotes").value=s.notes;show("studentForm")}
-function saveStudent(){const c=$("category").value,first=$("firstName").value.trim(),last=$("lastName").value.trim();if(!first&&!last)return alert("Inserisci nome o cognome.");if(state.editingStudent){const s=state.students.find(x=>x.id===state.editingStudent),oldType=typeOf(s.category),newType=typeOf(c);Object.assign(s,{category:c,firstName:first,lastName:last,phone:$("phone").value.trim(),license:$("license").value.trim(),notes:$("studentNotes").value.trim()});if(oldType!==newType){s.checklist=normalizeItems([],newType);s.lessons=s.lessons.map(l=>({...l,checklist:normalizeItems([],newType)}))}save();openStudent(s.id)}else{const s=normalizeStudent({id:uid(),category:c,firstName:first,lastName:last,phone:$("phone").value.trim(),license:$("license").value.trim(),notes:$("studentNotes").value.trim(),checklist:[],lessons:[]});state.students.push(s);save();openStudent(s.id)}}
+function pinkSlipExpiryDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(value||""))return"";const [year,month,day]=value.split("-").map(Number),lastDay=new Date(year+1,month,0).getDate();return`${year+1}-${String(month).padStart(2,"0")}-${String(Math.min(day,lastDay)).padStart(2,"0")}`}
+function formatStoredDate(value){if(!value)return"-";const [year,month,day]=value.split("-").map(Number);return new Date(year,month-1,day).toLocaleDateString("it-IT")}
+function updatePinkSlipExpiry(){const value=$("pinkSlipIssueDate").value,expiry=pinkSlipExpiryDate(value);$("pinkSlipExpiry").textContent=`Scadenza foglio rosa: ${expiry?formatStoredDate(expiry):"—"}`}
+function openStudent(id){state.studentId=id;const s=student(),expiry=pinkSlipExpiryDate(s.pinkSlipIssueDate);$("studentName").textContent=nameOf(s)||"Allievo";$("studentDetails").innerHTML=`<div class="detail-row"><span class="detail-label">Nome:</span> ${esc(s.firstName||"-")}</div><div class="detail-row"><span class="detail-label">Cognome:</span> ${esc(s.lastName||"-")}</div><div class="detail-row"><span class="detail-label">Categoria:</span> ${LABELS[s.category]}</div><div class="detail-row"><span class="detail-label">Telefono:</span> ${esc(s.phone||"-")}</div><div class="detail-row"><span class="detail-label">Patente:</span> ${esc(s.license||"-")}</div><div class="detail-row"><span class="detail-label">Rilascio foglio rosa:</span> ${formatStoredDate(s.pinkSlipIssueDate)}</div><div class="detail-row"><span class="detail-label">Scadenza foglio rosa:</span> ${formatStoredDate(expiry)}</div><div class="detail-row"><span class="detail-label">Note:</span> ${esc(s.notes||"-")}</div>`;renderLessons();show("student")}
+function renderLessons(){const s=student();$("lessons").innerHTML="";$("emptyLessons").classList.toggle("hidden",s.lessons.length>0);[...s.lessons].sort((a,b)=>b.createdAt-a.createdAt).forEach(l=>{const b=document.createElement("button");b.className="lesson-card";const selected=l.checklist.filter(x=>x.status!=="none").map(x=>`${stateIcon(x.status)} ${esc(x.label)}`).join("<br>")||"Nessuna voce selezionata";b.innerHTML=`<strong>${new Date(l.createdAt).toLocaleString("it-IT")}</strong><span>${esc(l.notes||"Nessuna nota")}</span><span class="meta lesson-items">${selected}</span><span class="meta">${l.route.length>1?"GPS presente":"GPS non usato"} · Tocca per aprire</span>`;b.onclick=()=>openLesson(l.id);$("lessons").appendChild(b)})}
+function newStudent(){state.editingStudent=null;$("studentFormTitle").textContent="Nuovo allievo";$("category").value=state.filter||"auto";try{$("category").closest("label").style.display="none"}catch(e){}["firstName","lastName","phone","license","pinkSlipIssueDate","studentNotes"].forEach(id=>$(id).value="");updatePinkSlipExpiry();show("studentForm")}
+function editStudent(){const s=student();state.editingStudent=s.id;try{$("category").closest("label").style.display=""}catch(e){}$("studentFormTitle").textContent="Modifica allievo";$("category").value=s.category;$("firstName").value=s.firstName;$("lastName").value=s.lastName;$("phone").value=s.phone;$("license").value=s.license;$("pinkSlipIssueDate").value=s.pinkSlipIssueDate;$("studentNotes").value=s.notes;updatePinkSlipExpiry();show("studentForm")}
+function saveStudent(){const c=$("category").value,first=$("firstName").value.trim(),last=$("lastName").value.trim(),pinkSlipIssueDate=$("pinkSlipIssueDate").value;if(!first&&!last)return alert("Inserisci nome o cognome.");if(state.editingStudent){const s=state.students.find(x=>x.id===state.editingStudent),oldType=typeOf(s.category),newType=typeOf(c);Object.assign(s,{category:c,firstName:first,lastName:last,phone:$("phone").value.trim(),license:$("license").value.trim(),pinkSlipIssueDate,notes:$("studentNotes").value.trim()});if(oldType!==newType){s.checklist=normalizeItems([],newType);s.lessons=s.lessons.map(l=>({...l,checklist:normalizeItems([],newType)}))}save();openStudent(s.id)}else{const s=normalizeStudent({id:uid(),category:c,firstName:first,lastName:last,phone:$("phone").value.trim(),license:$("license").value.trim(),pinkSlipIssueDate,notes:$("studentNotes").value.trim(),checklist:[],lessons:[]});state.students.push(s);save();openStudent(s.id)}}
 function deleteStudent(){const s=student();if(confirm(`Eliminare definitivamente ${nameOf(s)}?`)){state.students=state.students.filter(x=>x.id!==s.id);save();renderStudents();show("home")}}
 function renderLessonChecklist(items){$("lessonChecklist").dataset.items=JSON.stringify(items);renderStateItems(items,$("lessonChecklist"),(i,v)=>{const a=JSON.parse($("lessonChecklist").dataset.items);a[i].status=v;$("lessonChecklist").dataset.items=JSON.stringify(a)})}
-function newLesson(){state.lessonId=null;const now=new Date(),items=student().checklist.map(x=>({...x}));$("lessonTitle").textContent="Nuova guida";$("lessonDate").value=now.toISOString().slice(0,10);$("lessonTime").value=now.toTimeString().slice(0,5);$("lessonNotes").value="";$("deleteLesson").classList.add("hidden");$("openSavedRoute").classList.add("hidden");state.tempRoute=[];renderLessonChecklist(items);resetGps();show("lesson")}
+function newLesson(){state.lessonId=null;const s=student(),now=new Date(),previous=[...s.lessons].sort((a,b)=>b.createdAt-a.createdAt)[0],base=previous?.checklist?.length?previous.checklist:normalizeItems([],typeOf(s.category)),items=base.map(x=>({...x}));$("lessonTitle").textContent="Nuova guida";$("lessonDate").value=now.toISOString().slice(0,10);$("lessonTime").value=now.toTimeString().slice(0,5);$("lessonNotes").value="";$("deleteLesson").classList.add("hidden");$("openSavedRoute").classList.add("hidden");state.tempRoute=[];renderLessonChecklist(items);resetGps();show("lesson")}
 function openLesson(id){state.lessonId=id;const l=lesson(),d=new Date(l.createdAt);$("lessonTitle").textContent="Modifica guida";$("lessonDate").value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;$("lessonTime").value=`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;$("lessonNotes").value=l.notes;$("deleteLesson").classList.remove("hidden");$("openSavedRoute").classList.toggle("hidden",l.route.length<2);state.tempRoute=[...l.route];renderLessonChecklist(l.checklist.map(x=>({...x})));resetGps();show("lesson")}
 function saveLesson(){stopGps();const stamp=new Date(`${$("lessonDate").value}T${$("lessonTime").value||"00:00"}:00`).getTime(),data={createdAt:stamp,notes:$("lessonNotes").value.trim(),route:[...state.tempRoute],checklist:JSON.parse($("lessonChecklist").dataset.items||"[]")};if(state.lessonId)Object.assign(lesson(),data);else student().lessons.push({id:uid(),...data});save();openStudent(state.studentId)}
 function deleteLesson(){if(confirm("Eliminare questa guida?")){student().lessons=student().lessons.filter(x=>x.id!==state.lessonId);save();openStudent(state.studentId)}}
@@ -70,6 +76,155 @@ function addChecklist(){const input=$("newChecklistLabel"),label=input.value.tri
 function renameChecklist(i){const old=LISTS[state.managerType][i],next=prompt("Nuovo nome",old);if(next===null||!next.trim())return;LISTS[state.managerType][i]=next.trim();state.students.forEach(s=>{if(typeOf(s.category)!==state.managerType)return;(s.checklist||[]).forEach(x=>{if(x.label===old)x.label=next.trim()});(s.lessons||[]).forEach(l=>(l.checklist||[]).forEach(x=>{if(x.label===old)x.label=next.trim()}))});saveLists();save();renderChecklistManager()}
 function removeChecklist(i){const label=LISTS[state.managerType][i];if(!confirm(`Eliminare "${label}" da tutte le schede?`))return;LISTS[state.managerType].splice(i,1);syncLists(state.managerType);renderChecklistManager()}function moveChecklist(i,d){const t=i+d;if(t<0||t>=LISTS[state.managerType].length)return;[LISTS[state.managerType][i],LISTS[state.managerType][t]]=[LISTS[state.managerType][t],LISTS[state.managerType][i]];syncLists(state.managerType);renderChecklistManager()}
 
+// Mostra una scelta riutilizzabile senza modificare le viste esistenti.
+function chooseAction(title,message,actions){
+  return new Promise(resolve=>{
+    const modal=$("choiceModal"),buttons=$("choiceButtons");
+    $("choiceTitle").textContent=title;
+    $("choiceMessage").textContent=message;
+    buttons.innerHTML="";
+    actions.forEach(action=>{
+      const button=document.createElement("button");
+      button.type="button";
+      button.textContent=action.label;
+      if(action.className)button.className=action.className;
+      button.onclick=()=>{modal.classList.add("hidden");resolve(action.value)};
+      buttons.appendChild(button);
+    });
+    modal.classList.remove("hidden");
+  });
+}
+
+// Crea un file JSON e usa la condivisione nativa quando il dispositivo la supporta.
+async function exportJsonFile(data,fileName,shareTitle,useShare){
+  let url=null;
+  try{
+    const json=JSON.stringify(data,null,2);
+    JSON.parse(json);
+    const blob=new Blob([json],{type:"application/json;charset=utf-8"});
+
+    if(useShare&&typeof navigator.share==="function"&&typeof navigator.canShare==="function"&&typeof File!=="undefined"){
+      try{
+        const file=new File([json],fileName,{type:"application/json",lastModified:Date.now()});
+        if(navigator.canShare({files:[file]})){
+          try{
+            await navigator.share({files:[file]});
+            return;
+          }catch(error){
+            if(error&&error.name==="AbortError")return;
+          }
+        }
+      }catch(error){
+        if(error&&error.name==="AbortError")return;
+      }
+    }
+
+    url=URL.createObjectURL(blob);
+    let downloadSupported=false,downloadFailed=false;
+    try{
+      const link=document.createElement("a");
+      downloadSupported="download" in link;
+      link.href=url;
+      link.download=fileName;
+      link.style.display="none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }catch(error){
+      downloadFailed=true;
+    }
+
+    const shareUnavailable=typeof navigator.share!=="function";
+    if(shareUnavailable&&(!downloadSupported||downloadFailed)){
+      try{
+        const opened=window.open(url,"_blank");
+        if(!opened)window.location.href=url;
+      }catch(error){
+        try{window.location.href=url}catch(ignore){}
+      }
+    }
+
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(error){
+    if(error&&error.name==="AbortError")return;
+    if(url)setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+}
+
+function safeFilePart(value,fallback){
+  const cleaned=String(value||"").trim().replace(/[\\/:*?"<>|]+/g,"_").replace(/\s+/g,"_");
+  return cleaned||fallback;
+}
+
+// Esporta l'oggetto allievo completo, comprese guide, checklist e punti GPS annidati.
+async function shareCurrentStudent(){
+  const current=student();
+  if(!current)return;
+  const data={app:APP_NAME,version:APP_VERSION,type:"student",exportDate:new Date().toISOString(),student:JSON.parse(JSON.stringify(current))};
+  const fileName=`${safeFilePart(current.lastName,"Senza_cognome")}_${safeFilePart(current.firstName,"Senza_nome")}.json`;
+  await exportJsonFile(data,fileName,`Allievo ${nameOf(current)}`,true);
+}
+
+async function readJsonFile(file){
+  try{return JSON.parse(await file.text())}
+  catch{return null}
+}
+
+// Conserva le eventuali voci checklist personalizzate presenti nel file importato.
+function prepareImportedStudent(raw,forcedId){
+  if(!raw||typeof raw!=="object"||Array.isArray(raw))return null;
+  const category=LABELS[raw.category]?raw.category:"auto",listType=typeOf(category);
+  const labels=[];
+  if(Array.isArray(raw.checklist))raw.checklist.forEach(item=>{if(item&&typeof item.label==="string")labels.push(item.label)});
+  if(Array.isArray(raw.lessons))raw.lessons.forEach(item=>{if(Array.isArray(item&&item.checklist))item.checklist.forEach(entry=>{if(entry&&typeof entry.label==="string")labels.push(entry.label)})});
+  labels.forEach(label=>{if(label&&!LISTS[listType].includes(label))LISTS[listType].push(label)});
+  saveLists();
+  return normalizeStudent({...raw,id:forcedId||raw.id||uid(),category});
+}
+
+// Importa un singolo allievo e gestisce esplicitamente gli omonimi.
+async function importStudentFile(file){
+  const data=await readJsonFile(file);
+  if(!data||data.app!==APP_NAME||typeof data.version!=="string"||data.type!=="student"||!data.student){alert("File non valido");return}
+  const raw=data.student,first=String(raw.firstName||"").trim().toLocaleLowerCase("it"),last=String(raw.lastName||"").trim().toLocaleLowerCase("it");
+  const duplicate=state.students.find(item=>item.firstName.trim().toLocaleLowerCase("it")===first&&item.lastName.trim().toLocaleLowerCase("it")===last);
+  let action="copy";
+  if(duplicate)action=await chooseAction("Allievo già presente",`${nameOf(duplicate)||"Questo allievo"} esiste già nell'archivio.`,[
+    {label:"Aggiorna",value:"update"},{label:"Crea copia",value:"copy",className:"secondary"},{label:"Annulla",value:"cancel",className:"secondary"}
+  ]);
+  if(action==="cancel")return;
+  const imported=prepareImportedStudent(raw,action==="update"?duplicate.id:uid());
+  if(!imported){alert("File non valido");return}
+  if(action==="update")state.students[state.students.indexOf(duplicate)]=imported;else state.students.push(imported);
+  save();renderStudents();alert(action==="update"?"Allievo aggiornato":"Allievo importato");
+}
+
+// Esporta l'archivio usando direttamente l'array allievi esistente.
+function backupArchive(){
+  const data={app:APP_NAME,version:APP_VERSION,type:"backup",exportDate:new Date().toISOString(),students:JSON.parse(JSON.stringify(state.students))};
+  const date=new Date().toISOString().slice(0,10);
+  exportJsonFile(data,`Agenda_Istruttore_Backup_${date}.json`,`Backup ${APP_NAME}`,false);
+}
+
+// Ripristina o unisce un backup senza cambiare chiavi o struttura del database.
+async function restoreArchiveFile(file){
+  const data=await readJsonFile(file);
+  if(!data||data.app!==APP_NAME||typeof data.version!=="string"||data.type!=="backup"||!Array.isArray(data.students)){alert("File non valido");return}
+  let action="replace";
+  if(state.students.length)action=await chooseAction("Ripristina archivio","Sono già presenti dati nell'archivio.",[
+    {label:"Sostituisci archivio",value:"replace",className:"danger"},{label:"Unisci archivi",value:"merge"},{label:"Annulla",value:"cancel",className:"secondary"}
+  ]);
+  if(action==="cancel")return;
+  const usedIds=new Set(action==="merge"?state.students.map(item=>item.id):[]);
+  const imported=data.students.map(raw=>{
+    const requestedId=String(raw&&raw.id||""),importId=!requestedId||usedIds.has(requestedId)?uid():requestedId;
+    usedIds.add(importId);
+    return prepareImportedStudent(raw,importId);
+  }).filter(Boolean);
+  state.students=action==="merge"?[...state.students,...imported]:imported;
+  save();renderStudents();alert("Archivio ripristinato");
+}
+
 function examinerName(x){return[x.firstName,x.lastName].filter(Boolean).join(" ")}
 function renderExaminers(){const box=$("examinerList");box.innerHTML="";$("emptyExaminers").classList.toggle("hidden",state.examiners.length>0);[...state.examiners].sort((a,b)=>examinerName(a).localeCompare(examinerName(b),"it")).forEach(x=>{const b=document.createElement("button");b.className="student-card";b.innerHTML=`<strong>${esc(examinerName(x)||"Senza nome")}</strong><span class="meta">${x.habits.length} abitudini</span>`;b.onclick=()=>openExaminer(x.id);box.appendChild(b)})}
 function renderHabits(){const box=$("habitList");box.innerHTML="";state.habitDraft.forEach((habit,index)=>{const row=document.createElement("div");row.className="manager-row";row.innerHTML=`<div class="manager-label">${esc(habit)}</div><div class="manager-actions"><button class="secondary rename-habit">Modifica</button><button class="danger remove-habit">Elimina</button></div>`;row.querySelector(".rename-habit").onclick=()=>{const next=prompt("Modifica abitudine",habit);if(next!==null&&next.trim()){state.habitDraft[index]=next.trim();renderHabits()}};row.querySelector(".remove-habit").onclick=()=>{state.habitDraft.splice(index,1);renderHabits()};box.appendChild(row)})}
@@ -78,9 +233,19 @@ function openExaminer(id){const x=state.examiners.find(e=>e.id===id);if(!x)retur
 function addHabit(){const input=$("newHabit"),value=input.value.trim();if(!value)return;state.habitDraft.push(value);input.value="";renderHabits()}
 function saveExaminer(){const firstName=$("examinerFirstName").value.trim(),lastName=$("examinerLastName").value.trim(),notes=$("examinerNotes").value;if(!firstName&&!lastName)return alert("Inserisci nome o cognome.");if(state.editingExaminer){const x=state.examiners.find(e=>e.id===state.editingExaminer);Object.assign(x,{firstName,lastName,notes,habits:[...state.habitDraft]})}else state.examiners.push({id:uid(),firstName,lastName,notes,habits:[...state.habitDraft]});saveExaminers();renderExaminers();show("examiners")}
 function deleteExaminer(){if(!state.editingExaminer||!confirm("Eliminare questo esaminatore?"))return;state.examiners=state.examiners.filter(e=>e.id!==state.editingExaminer);saveExaminers();renderExaminers();show("examiners")}
+function moveBackButtonsToBottom(){[["studentForm","backStudentForm"],["student","backHome"],["lesson","backLesson"],["checklistManager","backChecklistManager"],["examiners","backExaminers"],["examinerForm","backExaminerForm"],["savedMapView","backSavedMap"],["settings","backSettings"]].forEach(([viewId,buttonId])=>{const view=$(viewId),button=$(buttonId);if(view&&button){button.classList.add("full");view.appendChild(button)}})}
 $("loginForm").onsubmit=login;$("openSettings").onclick=()=>{["currentPassword","newPassword","confirmPassword"].forEach(id=>$(id).value="");$("passwordMessage").classList.add("hidden");show("settings")};$("backSettings").onclick=()=>{renderStudents();show("home")};$("changePassword").onclick=changePassword;$("logout").onclick=logout;
+moveBackButtonsToBottom();
+$("pinkSlipIssueDate").addEventListener("input",updatePinkSlipExpiry);
+$("shareStudent").onclick=shareCurrentStudent;
+$("importStudent").onclick=()=>$("studentFile").click();
+$("studentFile").onchange=async event=>{const file=event.target.files[0];event.target.value="";if(file)await importStudentFile(file)};
+$("backupArchive").onclick=backupArchive;
+$("restoreArchive").onclick=()=>$("backupFile").click();
+$("backupFile").onchange=async event=>{const file=event.target.files[0];event.target.value="";if(file)await restoreArchiveFile(file)};
 function toggleVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return alert("Usa il microfono della tastiera del telefono.");if(!state.recognition){state.recognition=new SR();state.recognition.lang="it-IT";state.recognition.continuous=true;state.recognition.onresult=e=>{let t="";for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)t+=e.results[i][0].transcript+" ";(document.activeElement&&document.activeElement.id==="examinerNotes"?$("examinerNotes"):$("lessonNotes")).value+=t};state.recognition.onend=()=>{state.recognizing=false;$("voice").textContent="🎤 Detta"}}if(state.recognizing)state.recognition.stop();else{state.recognition.start();state.recognizing=true;$("voice").textContent="⏹ Ferma dettatura"}}
 $("search").oninput=renderStudents;$("newStudent").onclick=newStudent;$("openExaminers").onclick=()=>{renderExaminers();show("examiners")};$("backExaminers").onclick=()=>{renderStudents();show("home")};$("newExaminer").onclick=newExaminer;$("backExaminerForm").onclick=()=>{renderExaminers();show("examiners")};$("saveExaminer").onclick=saveExaminer;$("deleteExaminer").onclick=deleteExaminer;$("addHabit").onclick=addHabit;$("newHabit").onkeydown=e=>{if(e.key==="Enter")addHabit()};document.querySelectorAll(".categories button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".categories button").forEach(x=>x.classList.remove("active"));b.classList.add("active");state.filter=b.dataset.f;renderStudents()});$("backStudentForm").onclick=()=>state.editingStudent?openStudent(state.editingStudent):show("home");$("saveStudent").onclick=saveStudent;$("backHome").onclick=()=>{renderStudents();show("home")};$("editStudent").onclick=editStudent;$("deleteStudent").onclick=deleteStudent;$("newLesson").onclick=newLesson;$("backLesson").onclick=()=>{stopGps();openStudent(state.studentId)};$("saveLesson").onclick=saveLesson;$("deleteLesson").onclick=deleteLesson;$("startGps").onclick=startGps;$("stopGps").onclick=stopGps;$("voice").onclick=toggleVoice;$("openSavedRoute").onclick=showSavedRoute;$("backSavedMap").onclick=()=>show("lesson");$("manageChecklists").onclick=()=>{renderChecklistManager();show("checklistManager")};$("backChecklistManager").onclick=()=>{renderStudents();show("home")};document.querySelectorAll(".check-tabs button").forEach(b=>b.onclick=()=>{state.managerType=b.dataset.list;renderChecklistManager()});$("addChecklistItem").onclick=addChecklist;$("newChecklistLabel").onkeydown=e=>{if(e.key==="Enter")addChecklist()};
 saveLists();save();if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));if(isAuthenticated())showApp();else showLogin();
 
 $("voiceExaminer")&&($("voiceExaminer").onclick=()=>{$("examinerNotes").focus();toggleVoice()});
+$("openExaminers").onclick=()=>{renderExaminers();show("examiners")};

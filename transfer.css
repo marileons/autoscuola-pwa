@@ -1,0 +1,26 @@
+.choice-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #0008;
+}
+
+.choice-card {
+  width: min(100%, 420px);
+  padding: 20px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 30px #0004;
+}
+
+.choice-card h2 {
+  margin-top: 0;
+}
+
+.choice-buttons {
+  display: grid;
+  gap: 10px;
+}

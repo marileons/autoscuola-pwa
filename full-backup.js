@@ -1,0 +1,555 @@
+// Backup completo e separato: dati applicativi in localStorage e documenti in IndexedDB.
+(()=>{
+  "use strict";
+
+  const FORMAT="AgendaIstruttoriFullBackup";
+  const FORMAT_VERSION=1;
+  const APP_VERSION="1.0.1";
+  const BACKUP_EXTENSION="agendabackup";
+  const DATA_KEYS={
+    students:"autoscuola_v3_completa",
+    checklists:"autoscuola_v3_checklists_v2",
+    examiners:"autoscuola_v3_examiners"
+  };
+  const DOCUMENT_DB="agenda_istruttori_documents";
+  const DOCUMENT_DB_VERSION=1;
+  const DOCUMENT_STORE="documents";
+  const SAFETY_DB="agenda_istruttori_full_backup_safety";
+  const SAFETY_STORE="snapshots";
+  const SAFETY_KEY="beforeRestore";
+  const PENDING_RESTORE_KEY="agenda_istruttori_full_restore_pending";
+  const RESTORE_RESULT_KEY="agenda_istruttori_full_restore_result";
+  const byId=id=>document.getElementById(id);
+
+  function showMessage(text,isError=false){
+    const message=byId("fullBackupMessage");
+    message.textContent=text;
+    message.classList.remove("hidden","full-backup-error","full-backup-success");
+    message.classList.add(isError?"full-backup-error":"full-backup-success");
+  }
+
+  function clearMessage(){
+    byId("fullBackupMessage").classList.add("hidden");
+  }
+
+  function formatBytes(bytes){
+    if(!bytes)return "0 B";
+    const units=["B","KB","MB","GB"];
+    const unit=Math.min(Math.floor(Math.log(bytes)/Math.log(1024)),units.length-1);
+    return `${(bytes/Math.pow(1024,unit)).toLocaleString("it-IT",{maximumFractionDigits:unit?1:0})} ${units[unit]}`;
+  }
+
+  function parsedStorageValue(key,fallback){
+    const raw=localStorage.getItem(key);
+    if(raw===null)return fallback;
+    return JSON.parse(raw);
+  }
+
+  function validateAppData(appData){
+    if(!appData||typeof appData!=="object")throw new Error("Dati applicativi mancanti.");
+    if(!Array.isArray(appData.students))throw new Error("Archivio allievi non valido.");
+    if(!appData.checklists||typeof appData.checklists!=="object"||Array.isArray(appData.checklists))throw new Error("Checklist non valide.");
+    if(!Array.isArray(appData.examiners))throw new Error("Archivio esaminatori non valido.");
+  }
+
+  function openDocumentDatabase(){
+    return new Promise((resolve,reject)=>{
+      const request=indexedDB.open(DOCUMENT_DB,DOCUMENT_DB_VERSION);
+      request.onupgradeneeded=()=>{
+        const db=request.result;
+        if(!db.objectStoreNames.contains(DOCUMENT_STORE)){
+          const store=db.createObjectStore(DOCUMENT_STORE,{keyPath:"id"});
+          store.createIndex("createdAt","createdAt");
+        }
+      };
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+      request.onblocked=()=>reject(new Error("Archivio documenti temporaneamente bloccato."));
+    });
+  }
+
+  async function readDocuments(){
+    const db=await openDocumentDatabase();
+    return new Promise((resolve,reject)=>{
+      const transaction=db.transaction(DOCUMENT_STORE,"readonly");
+      const request=transaction.objectStore(DOCUMENT_STORE).getAll();
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+      transaction.oncomplete=()=>db.close();
+      transaction.onabort=()=>{db.close();reject(transaction.error)};
+    });
+  }
+
+  async function replaceDocuments(records){
+    const db=await openDocumentDatabase();
+    return new Promise((resolve,reject)=>{
+      const transaction=db.transaction(DOCUMENT_STORE,"readwrite");
+      const store=transaction.objectStore(DOCUMENT_STORE);
+      store.clear();
+      records.forEach(record=>store.put(record));
+      transaction.oncomplete=()=>{db.close();resolve()};
+      transaction.onerror=()=>{db.close();reject(transaction.error)};
+      transaction.onabort=()=>{db.close();reject(transaction.error)};
+    });
+  }
+
+  function openSafetyDatabase(){
+    return new Promise((resolve,reject)=>{
+      const request=indexedDB.open(SAFETY_DB,1);
+      request.onupgradeneeded=()=>{
+        if(!request.result.objectStoreNames.contains(SAFETY_STORE))request.result.createObjectStore(SAFETY_STORE,{keyPath:"id"});
+      };
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+      request.onblocked=()=>reject(new Error("Archivio di sicurezza temporaneamente bloccato."));
+    });
+  }
+
+  async function writeSafetyCopy(payload){
+    const db=await openSafetyDatabase();
+    await new Promise((resolve,reject)=>{
+      const transaction=db.transaction(SAFETY_STORE,"readwrite");
+      transaction.objectStore(SAFETY_STORE).put({id:SAFETY_KEY,createdAt:Date.now(),payload});
+      transaction.oncomplete=resolve;
+      transaction.onerror=()=>reject(transaction.error);
+      transaction.onabort=()=>reject(transaction.error);
+    });
+    const saved=await new Promise((resolve,reject)=>{
+      const transaction=db.transaction(SAFETY_STORE,"readonly");
+      const request=transaction.objectStore(SAFETY_STORE).get(SAFETY_KEY);
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+    });
+    db.close();
+    if(!saved||!saved.payload||saved.payload.format!==FORMAT)throw new Error("Copia di sicurezza non verificabile.");
+    return saved.payload;
+  }
+
+  async function readSafetyCopy(){
+    const db=await openSafetyDatabase();
+    const saved=await new Promise((resolve,reject)=>{
+      const transaction=db.transaction(SAFETY_STORE,"readonly");
+      const request=transaction.objectStore(SAFETY_STORE).get(SAFETY_KEY);
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+      transaction.onabort=()=>reject(transaction.error||request.error);
+    });
+    db.close();
+    if(!saved||!saved.payload)throw new Error("Copia di sicurezza preventiva non disponibile.");
+    return saved.payload;
+  }
+
+  function arrayBufferToBase64(buffer){
+    const bytes=new Uint8Array(buffer);
+    let binary="";
+    const block=0x8000;
+    for(let index=0;index<bytes.length;index+=block)binary+=String.fromCharCode(...bytes.subarray(index,index+block));
+    return btoa(binary);
+  }
+
+  function base64ToBytes(value){
+    try{
+      const binary=atob(value);
+      const bytes=new Uint8Array(binary.length);
+      for(let index=0;index<binary.length;index++)bytes[index]=binary.charCodeAt(index);
+      return bytes;
+    }catch(error){
+      throw new Error("Contenuto di un documento corrotto.");
+    }
+  }
+
+  async function sha256(buffer){
+    if(!crypto.subtle)throw new Error("Controllo SHA-256 non disponibile su questo dispositivo.");
+    const digest=await crypto.subtle.digest("SHA-256",buffer);
+    return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
+  }
+
+  async function selfTestDocument(originalBuffer,dataBase64,originalHash,fileName){
+    const originalBytes=new Uint8Array(originalBuffer);
+    const reconstructedBytes=base64ToBytes(dataBase64);
+    if(reconstructedBytes.byteLength!==originalBytes.byteLength)throw new Error(`Self-test fallito per ${fileName}: dimensione diversa.`);
+    for(let index=0;index<originalBytes.length;index++){
+      if(originalBytes[index]!==reconstructedBytes[index])throw new Error(`Self-test fallito per ${fileName}: contenuto binario diverso.`);
+    }
+    const reconstructedHash=await sha256(reconstructedBytes.buffer);
+    if(reconstructedHash!==originalHash)throw new Error(`Self-test SHA-256 fallito per ${fileName}.`);
+  }
+
+  async function selfTestSerializedDocuments(documents){
+    for(const documentRecord of documents){
+      const bytes=base64ToBytes(documentRecord.dataBase64);
+      if(bytes.byteLength!==documentRecord.size)throw new Error(`Self-test fallito per ${documentRecord.originalName}: dimensione diversa.`);
+      const hash=await sha256(bytes.buffer);
+      if(hash!==documentRecord.sha256)throw new Error(`Self-test SHA-256 fallito per ${documentRecord.originalName}.`);
+    }
+  }
+
+  async function serializeDocument(record){
+    if(!(record.blob instanceof Blob))throw new Error(`Documento non leggibile: ${record.title||record.originalName||"senza titolo"}.`);
+    const buffer=await record.blob.arrayBuffer();
+    const fileName=String(record.originalName||"documento");
+    const hash=await sha256(buffer);
+    const dataBase64=arrayBufferToBase64(buffer);
+    await selfTestDocument(buffer,dataBase64,hash,fileName);
+    return {
+      id:String(record.id),
+      originalName:fileName,
+      title:String(record.title||record.originalName||"Documento"),
+      mimeType:String(record.mimeType||record.blob.type||"application/octet-stream"),
+      size:buffer.byteLength,
+      createdAt:Number(record.createdAt||Date.now()),
+      sha256:hash,
+      dataBase64
+    };
+  }
+
+  async function deserializeDocument(serialized){
+    if(!serialized||typeof serialized!=="object"||typeof serialized.dataBase64!=="string")throw new Error("Documento del backup non valido.");
+    if(typeof serialized.id!=="string"||!serialized.id||typeof serialized.originalName!=="string"||typeof serialized.title!=="string")throw new Error("Metadati documento non validi.");
+    if(typeof serialized.mimeType!=="string"||!Number.isFinite(serialized.size)||serialized.size<0||!Number.isFinite(serialized.createdAt))throw new Error("Metadati documento non validi.");
+    const bytes=base64ToBytes(serialized.dataBase64);
+    if(bytes.byteLength!==serialized.size)throw new Error(`Dimensione non valida per ${serialized.originalName}.`);
+    if(typeof serialized.sha256!=="string"||!/^[a-f0-9]{64}$/i.test(serialized.sha256))throw new Error(`Checksum mancante o non valido per ${serialized.originalName}.`);
+    if(await sha256(bytes.buffer)!==serialized.sha256)throw new Error(`Controllo integrità fallito per ${serialized.originalName}.`);
+    return {
+      id:serialized.id,
+      originalName:serialized.originalName,
+      title:serialized.title,
+      mimeType:serialized.mimeType,
+      size:serialized.size,
+      createdAt:serialized.createdAt,
+      blob:new Blob([bytes],{type:serialized.mimeType})
+    };
+  }
+
+  async function createBackupPayload(){
+    const appData={
+      students:parsedStorageValue(DATA_KEYS.students,[]),
+      checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
+      examiners:parsedStorageValue(DATA_KEYS.examiners,[])
+    };
+    validateAppData(appData);
+    const sourceDocuments=await readDocuments();
+    const documents=[];
+    for(const record of sourceDocuments)documents.push(await serializeDocument(record));
+    if(documents.length!==sourceDocuments.length)throw new Error("Conteggio documenti non coerente durante la creazione del backup.");
+    const payload={
+      format:FORMAT,
+      formatVersion:FORMAT_VERSION,
+      app:"Agenda Istruttori",
+      appVersion:APP_VERSION,
+      createdAt:new Date().toISOString(),
+      metadata:{students:appData.students.length,documents:documents.length},
+      appData,
+      documents
+    };
+    payload.metadata.approximateBytes=new Blob([JSON.stringify(payload)]).size;
+    return payload;
+  }
+
+  async function validateBackupPayload(payload){
+    if(!payload||payload.format!==FORMAT)throw new Error("Il file non è un backup completo di Agenda Istruttori.");
+    if(payload.formatVersion!==FORMAT_VERSION)throw new Error("Versione del backup non supportata.");
+    if(typeof payload.createdAt!=="string"||!Number.isFinite(Date.parse(payload.createdAt)))throw new Error("Data del backup non valida.");
+    validateAppData(payload.appData);
+    if(!Array.isArray(payload.documents))throw new Error("Sezione documenti non valida.");
+    if(!payload.metadata||payload.metadata.students!==payload.appData.students.length||payload.metadata.documents!==payload.documents.length)throw new Error("Conteggi del backup non coerenti con il contenuto.");
+    const restoredDocuments=[];
+    const ids=new Set();
+    for(const item of payload.documents){
+      const record=await deserializeDocument(item);
+      if(ids.has(record.id))throw new Error("Il backup contiene documenti duplicati.");
+      ids.add(record.id);
+      restoredDocuments.push(record);
+    }
+    return {payload,restoredDocuments,students:payload.appData.students.length,documents:restoredDocuments.length};
+  }
+
+  function modalChoice(title,body,buttons){
+    return new Promise(resolve=>{
+      const modal=byId("fullBackupModal");
+      byId("fullBackupModalTitle").textContent=title;
+      const content=byId("fullBackupModalBody");
+      content.replaceChildren();
+      if(typeof body==="string"){
+        const paragraph=document.createElement("p");
+        paragraph.textContent=body;
+        content.appendChild(paragraph);
+      }else content.appendChild(body);
+      const actions=byId("fullBackupModalButtons");
+      actions.replaceChildren();
+      buttons.forEach(option=>{
+        const button=document.createElement("button");
+        button.type="button";
+        button.textContent=option.label;
+        if(option.className)button.className=option.className;
+        button.onclick=()=>{modal.classList.add("hidden");resolve(option.value)};
+        actions.appendChild(button);
+      });
+      modal.classList.remove("hidden");
+    });
+  }
+
+  function restorePreview(validated){
+    const summary=document.createElement("div");
+    summary.className="full-backup-summary";
+    const rows=[
+      ["Creato",new Date(validated.payload.createdAt).toLocaleString("it-IT")],
+      ["Allievi",String(validated.students)],
+      ["Documenti",String(validated.documents)],
+      ["Dimensione",formatBytes(validated.payload.metadata&&validated.payload.metadata.approximateBytes||0)]
+    ];
+    rows.forEach(([label,value])=>{
+      const row=document.createElement("div");
+      const strong=document.createElement("strong");
+      strong.textContent=`${label}: `;
+      row.append(strong,document.createTextNode(value));
+      summary.appendChild(row);
+    });
+    const warning=document.createElement("p");
+    warning.className="full-backup-warning";
+    warning.textContent="Il ripristino sostituirà i dati dell'app presenti su questo dispositivo.";
+    summary.appendChild(warning);
+    return summary;
+  }
+
+  function downloadFile(file){
+    const url=URL.createObjectURL(file);
+    const link=document.createElement("a");
+    link.href=url;
+    link.download=file.name;
+    link.style.display="none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+
+  async function shareOrDownloadBackup(file){
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({title:"Backup completo Agenda Istruttori",files:[file]});
+        return;
+      }catch(error){
+        if(error&&error.name==="AbortError")return;
+      }
+    }
+    downloadFile(file);
+  }
+
+  async function exportFullBackup(){
+    clearMessage();
+    byId("exportFullBackup").disabled=true;
+    try{
+      const payload=await createBackupPayload();
+      await selfTestSerializedDocuments(payload.documents);
+      const json=JSON.stringify(payload);
+      const timestamp=new Date().toISOString().replace(/[:.]/g,"-");
+      const file=new File([json],`AgendaIstruttori_BackupCompleto_${timestamp}.${BACKUP_EXTENSION}`,{type:"application/json"});
+      showMessage(`Backup pronto: ${payload.metadata.students} allievi, ${payload.metadata.documents} documenti, circa ${formatBytes(file.size)}.`);
+      await shareOrDownloadBackup(file);
+    }catch(error){
+      showMessage(error&&error.message?error.message:"Non è stato possibile creare il backup completo.",true);
+    }finally{
+      byId("exportFullBackup").disabled=false;
+    }
+  }
+
+  async function readBackupFile(file){
+    let payload;
+    try{payload=JSON.parse(await file.text())}catch(error){throw new Error("File non leggibile o JSON corrotto.")}
+    return validateBackupPayload(payload);
+  }
+
+  function writeAppData(appData){
+    localStorage.setItem(DATA_KEYS.students,JSON.stringify(appData.students));
+    localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(appData.checklists));
+    localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(appData.examiners));
+  }
+
+  function canonicalAppData(appData){
+    const cleanItems=items=>(Array.isArray(items)?items:[]).map(item=>({label:String(item&&item.label||""),status:String(item&&item.status?item.status:item&&item.done?"good":"none")}));
+    const students=(Array.isArray(appData.students)?appData.students:[]).map(student=>({
+      id:String(student&&student.id||""),category:String(student&&student.category||""),firstName:String(student&&student.firstName||""),lastName:String(student&&student.lastName||""),phone:String(student&&student.phone||""),license:String(student&&student.license||""),notes:String(student&&student.notes||student&&student.studentNotes||""),
+      checklist:cleanItems(student&&student.checklist),
+      lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>({id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:Array.isArray(lesson&&lesson.route)?lesson.route:[],checklist:cleanItems(lesson&&lesson.checklist)}))
+    }));
+    const checklistSource=appData.checklists&&typeof appData.checklists==="object"&&!Array.isArray(appData.checklists)?appData.checklists:{};
+    const checklists={};
+    Object.keys(checklistSource).sort().forEach(key=>{checklists[key]=Array.isArray(checklistSource[key])?checklistSource[key].map(String):[]});
+    const examiners=(Array.isArray(appData.examiners)?appData.examiners:[]).map(examiner=>({id:String(examiner&&examiner.id||""),firstName:String(examiner&&examiner.firstName||""),lastName:String(examiner&&examiner.lastName||""),notes:String(examiner&&examiner.notes||""),habits:Array.isArray(examiner&&examiner.habits)?examiner.habits.map(String):[]}));
+    return {students,checklists,examiners};
+  }
+
+  async function textSha256(value){
+    const bytes=new TextEncoder().encode(value);
+    return sha256(bytes.buffer);
+  }
+
+  async function createRestoreManifest(validated){
+    const canonical=canonicalAppData(validated.payload.appData);
+    return {
+      version:1,
+      students:canonical.students.length,
+      lessons:canonical.students.reduce((total,student)=>total+student.lessons.length,0),
+      examiners:canonical.examiners.length,
+      appDataSha256:await textSha256(JSON.stringify(canonical)),
+      documents:validated.payload.documents.map(documentRecord=>({id:documentRecord.id,originalName:documentRecord.originalName,mimeType:documentRecord.mimeType,size:documentRecord.size,sha256:documentRecord.sha256}))
+    };
+  }
+
+  async function verifyRestoreManifest(manifest){
+    if(!manifest||manifest.version!==1||!Array.isArray(manifest.documents))throw new Error("Manifest di verifica non valido.");
+    const appData={
+      students:parsedStorageValue(DATA_KEYS.students,[]),
+      checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
+      examiners:parsedStorageValue(DATA_KEYS.examiners,[])
+    };
+    validateAppData(appData);
+    const canonical=canonicalAppData(appData);
+    if(canonical.students.length!==manifest.students)throw new Error(`Verifica post-riavvio allievi fallita: attesi ${manifest.students}, trovati ${canonical.students.length}.`);
+    const lessons=canonical.students.reduce((total,student)=>total+student.lessons.length,0);
+    if(lessons!==manifest.lessons)throw new Error(`Verifica post-riavvio guide fallita: attese ${manifest.lessons}, trovate ${lessons}.`);
+    if(canonical.examiners.length!==manifest.examiners)throw new Error(`Verifica post-riavvio esaminatori fallita: attesi ${manifest.examiners}, trovati ${canonical.examiners.length}.`);
+    if(await textSha256(JSON.stringify(canonical))!==manifest.appDataSha256)throw new Error("Verifica post-riavvio dei dati applicativi fallita.");
+    const documents=await readDocuments();
+    if(documents.length!==manifest.documents.length)throw new Error(`Verifica post-riavvio documenti fallita: attesi ${manifest.documents.length}, trovati ${documents.length}.`);
+    const documentsById=new Map(documents.map(documentRecord=>[documentRecord.id,documentRecord]));
+    for(const expected of manifest.documents){
+      const actual=documentsById.get(expected.id);
+      if(!actual)throw new Error(`Documento mancante dopo il riavvio: ${expected.originalName}.`);
+      if(actual.size!==expected.size||actual.mimeType!==expected.mimeType||actual.blob.size!==expected.size||actual.blob.type!==expected.mimeType)throw new Error(`Dimensione o MIME non valido dopo il riavvio: ${expected.originalName}.`);
+      const buffer=await actual.blob.arrayBuffer();
+      if(await sha256(buffer)!==expected.sha256)throw new Error(`SHA-256 non valido dopo il riavvio: ${expected.originalName}.`);
+    }
+  }
+
+  async function verifyRestoredData(validated){
+    const currentStudents=parsedStorageValue(DATA_KEYS.students,[]);
+    const currentChecklists=parsedStorageValue(DATA_KEYS.checklists,{});
+    const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]);
+    if(JSON.stringify(currentStudents)!==JSON.stringify(validated.payload.appData.students)||JSON.stringify(currentChecklists)!==JSON.stringify(validated.payload.appData.checklists)||JSON.stringify(currentExaminers)!==JSON.stringify(validated.payload.appData.examiners))throw new Error("Verifica dei dati applicativi non riuscita.");
+    const documents=await readDocuments();
+    if(documents.length!==validated.restoredDocuments.length)throw new Error("Verifica dei documenti non riuscita.");
+    const byDocumentId=new Map(documents.map(record=>[record.id,record]));
+    for(const expected of validated.restoredDocuments){
+      const actual=byDocumentId.get(expected.id);
+      if(!actual||actual.size!==expected.size||actual.mimeType!==expected.mimeType)throw new Error("Verifica dei documenti non riuscita.");
+      const actualBuffer=await actual.blob.arrayBuffer();
+      const expectedBuffer=await expected.blob.arrayBuffer();
+      if(arrayBufferToBase64(actualBuffer)!==arrayBufferToBase64(expectedBuffer))throw new Error(`Verifica del documento ${expected.originalName} non riuscita.`);
+    }
+  }
+
+  async function applyValidatedBackup(validated){
+    const safetyPayload=await createBackupPayload();
+    await validateBackupPayload(safetyPayload);
+    const storedSafetyPayload=await writeSafetyCopy(safetyPayload);
+    const safetyValidated=await validateBackupPayload(storedSafetyPayload);
+    try{
+      await replaceDocuments(validated.restoredDocuments);
+      writeAppData(validated.payload.appData);
+      await verifyRestoredData(validated);
+      const manifest=await createRestoreManifest(validated);
+      localStorage.setItem(PENDING_RESTORE_KEY,JSON.stringify(manifest));
+    }catch(error){
+      try{
+        await replaceDocuments(safetyValidated.restoredDocuments);
+        writeAppData(safetyValidated.payload.appData);
+        await verifyRestoredData(safetyValidated);
+      }catch(rollbackError){
+        throw new Error("Ripristino fallito e rollback non completato. La copia preventiva resta nell'archivio di sicurezza locale.");
+      }
+      throw new Error(`Ripristino annullato: ${error&&error.message?error.message:"errore imprevisto"}. I dati precedenti sono stati ripristinati.`);
+    }
+  }
+
+  async function restoreSelectedBackup(file){
+    clearMessage();
+    byId("restoreFullBackup").disabled=true;
+    try{
+      const validated=await readBackupFile(file);
+      const preview=await modalChoice("Backup completo Agenda Istruttori",restorePreview(validated),[
+        {label:"Annulla",value:"cancel",className:"secondary"},
+        {label:"Continua",value:"continue"}
+      ]);
+      if(preview!=="continue")return;
+      const confirmation=await modalChoice("ATTENZIONE","Il ripristino completo sostituirà i dati di Agenda Istruttori presenti su questo dispositivo. Prima dell'operazione verrà creata una copia di sicurezza. Continuare?",[
+        {label:"ANNULLA",value:"cancel",className:"secondary"},
+        {label:"RIPRISTINA",value:"restore",className:"danger"}
+      ]);
+      if(confirmation!=="restore")return;
+      showMessage("Creazione copia di sicurezza e ripristino in corso…");
+      await applyValidatedBackup(validated);
+      location.replace(location.href);
+    }catch(error){
+      showMessage(error&&error.message?error.message:"Non è stato possibile ripristinare il backup completo.",true);
+    }finally{
+      byId("restoreFullBackup").disabled=false;
+    }
+  }
+
+  async function refreshFullBackupSummary(){
+    const summary=byId("fullBackupSummary");
+    try{
+      const students=parsedStorageValue(DATA_KEYS.students,[]);
+      const documents=await readDocuments();
+      summary.textContent=`Dati attuali: ${Array.isArray(students)?students.length:0} allievi, ${documents.length} documenti.`;
+    }catch(error){
+      summary.textContent="Conteggio dati non disponibile.";
+    }
+  }
+
+  function displayRestoreResult(text,isError){
+    const appShell=byId("appShell");
+    if(appShell&&!appShell.classList.contains("hidden"))byId("openSettings").click();
+    showMessage(text,isError);
+  }
+
+  async function completePendingRestore(){
+    const storedResult=localStorage.getItem(RESTORE_RESULT_KEY);
+    if(storedResult){
+      localStorage.removeItem(RESTORE_RESULT_KEY);
+      try{
+        const result=JSON.parse(storedResult);
+        displayRestoreResult(result.message,!!result.isError);
+      }catch(error){
+        displayRestoreResult("Il risultato del ripristino non è leggibile.",true);
+      }
+      return;
+    }
+    const storedManifest=localStorage.getItem(PENDING_RESTORE_KEY);
+    if(!storedManifest)return;
+    try{
+      const manifest=JSON.parse(storedManifest);
+      await verifyRestoreManifest(manifest);
+      localStorage.removeItem(PENDING_RESTORE_KEY);
+      displayRestoreResult(`Ripristino completo verificato dopo il riavvio: ${manifest.students} allievi, ${manifest.documents.length} documenti.`,false);
+    }catch(error){
+      try{
+        const safetyPayload=await readSafetyCopy();
+        const safetyValidated=await validateBackupPayload(safetyPayload);
+        await replaceDocuments(safetyValidated.restoredDocuments);
+        writeAppData(safetyValidated.payload.appData);
+        await verifyRestoredData(safetyValidated);
+        localStorage.removeItem(PENDING_RESTORE_KEY);
+        localStorage.setItem(RESTORE_RESULT_KEY,JSON.stringify({isError:true,message:`Verifica post-riavvio fallita: ${error&&error.message?error.message:"errore imprevisto"}. È stato ripristinato lo stato precedente.`}));
+        location.replace(location.href);
+      }catch(rollbackError){
+        localStorage.removeItem(PENDING_RESTORE_KEY);
+        displayRestoreResult("Verifica post-riavvio fallita e rollback non completato. La copia preventiva resta nell'archivio di sicurezza locale.",true);
+      }
+    }
+  }
+
+  byId("exportFullBackup").addEventListener("click",exportFullBackup);
+  byId("restoreFullBackup").addEventListener("click",()=>byId("fullBackupFile").click());
+  byId("fullBackupFile").addEventListener("change",async event=>{
+    const file=event.target.files[0];
+    event.target.value="";
+    if(file)await restoreSelectedBackup(file);
+  });
+  byId("openSettings").addEventListener("click",refreshFullBackupSummary);
+  refreshFullBackupSummary();
+  completePendingRestore();
+})();

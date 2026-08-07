@@ -5,19 +5,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a84ff">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Agenda Istruttore</title>
+<title>Agenda Istruttori</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="auth.css">
+<link rel="stylesheet" href="transfer.css">
+<link rel="stylesheet" href="documents.css">
+<link rel="stylesheet" href="full-backup.css">
 </head>
 <body>
 <section id="loginScreen" class="auth-screen">
   <div class="auth-card">
-    <img src="logo.jpg" alt="Logo" class="auth-logo">
-    <h1>AGENDA ISTRUTTORE</h1>
-    <p class="muted auth-version">Versione 1.0.0</p>
+    <img src="logo.png" alt="Logo" class="auth-logo">
+    <h1>AGENDA ISTRUTTORI</h1>
+    <p class="muted auth-version">Versione 1.0.1</p>
     <p class="muted">Inserisci la password per accedere.</p>
     <form id="loginForm" class="form">
       <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required autofocus></label>
@@ -29,13 +32,13 @@
   </div>
 </section>
 <div id="appShell" class="hidden">
-<header style="text-align:center;padding:12px"><img src="logo.jpg" alt="Logo" style="max-width:220px;width:90%;border-radius:12px"><h1>AGENDA ISTRUTTORE</h1><div style="color:#555">Gestione Allievi e Guide</div></header>
+<header style="text-align:center;padding:12px"><img src="logo.png" alt="Logo" style="max-width:220px;width:90%;border-radius:12px"><h1>AGENDA ISTRUTTORI</h1><div style="color:#555">Gestione Allievi e Guide</div></header>
 <main>
 <section id="home" class="view active">
   <div class="toolbar"><input id="search" type="search" placeholder="Cerca allievo"><button id="newStudent">➕ Nuovo allievo</button></div>
   <div class="categories">
-    <button data-f="all" class="active">Tutti</button>
-    <button data-f="auto">🚗 Auto</button>
+    <button data-f="auto" class="active">🚗 Auto</button>
+    <button data-f="guida-accompagnata">🚗 Guida Accompagnata</button>
     <button data-f="moto">🏍 Moto</button>
     <button data-f="quad-leggero">🛵 Quadriciclo leggero AM</button>
     <button data-f="quad-pesante">🚙 Quadriciclo pesante B1</button>
@@ -43,39 +46,47 @@
     <button data-f="perfezionamento">⭐ Perfezionamento</button>
     <button data-f="esame-revisione">📝 Esame Revisione</button>
     <button data-f="esame-esperimento">🎯 Esame Esperimento</button>
+    <button id="openExaminers">👨‍💼 Esaminatori</button>
   </div>
+  <a class="link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer">📖 Codice della Strada ACI</a>
+  <button id="openDocuments" class="secondary full">📁 Documenti vari</button>
   <button id="manageChecklists" class="secondary full">Gestisci checklist</button>
-  <button id="openExaminers" class="secondary full">👨‍💼 Esaminatori</button>
   <button id="openSettings" class="secondary full">Impostazioni</button>
+  <button id="importStudent" class="secondary full">📥 Importa allievo</button>
+  <button id="logout" class="secondary full">Esci</button>
+  <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
   <div id="students"></div><p id="emptyStudents" class="empty hidden">Nessun allievo.</p>
 </section>
 
 <section id="studentForm" class="view">
-  <div class="top"><button id="backStudentForm" class="secondary">Indietro</button><button id="saveStudent">Salva allievo</button></div>
+  <div class="top"><button id="saveStudent">Salva allievo</button></div>
   <div class="card form"><h2 id="studentFormTitle">Nuovo allievo</h2>
     <label>Categoria<select id="category">
-      <option value="auto">Auto</option><option value="moto">Moto</option>
+      <option value="auto">Auto</option><option value="guida-accompagnata">Guida Accompagnata</option><option value="moto">Moto</option>
       <option value="quad-leggero">Quadriciclo leggero AM</option><option value="quad-pesante">Quadriciclo pesante B1</option>
       <option value="corso-moto">Corso Moto ad accesso graduale A2 e A</option><option value="perfezionamento">Perfezionamento</option>
       <option value="esame-revisione">Esame Revisione</option><option value="esame-esperimento">Esame Esperimento</option>
     </select></label>
     <label>Nome<input id="firstName"></label><label>Cognome<input id="lastName"></label>
     <label>Telefono<input id="phone" type="tel"></label><label>Patente<input id="license" placeholder="Es. B, A1, A2, AM"></label>
+    <label>Data rilascio foglio rosa<input id="pinkSlipIssueDate" type="date"></label>
+    <p id="pinkSlipExpiry" class="muted">Scadenza foglio rosa: —</p>
     <label>Note<textarea id="studentNotes" rows="5"></textarea></label>
   </div>
+  <button id="backStudentForm" class="secondary full">Indietro</button>
 </section>
 
 <section id="student" class="view">
-  <div class="top"><button id="backHome" class="secondary">Indietro</button><button id="editStudent">Modifica dati</button></div>
+  <div class="top"><button id="editStudent">Modifica dati</button></div>
   <div class="card"><h2 id="studentName"></h2><div id="studentDetails"></div></div>
-  <div class="card"><h2>Checklist</h2><p id="checklistType" class="muted"></p><div id="studentChecklist"></div></div>
   <button id="newLesson" class="full">Nuova guida</button>
+  <button id="shareStudent" class="secondary full">📤 Condividi allievo</button>
   <div class="card"><h2>Guide salvate</h2><div id="lessons"></div><p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p></div>
   <button id="deleteStudent" class="danger full">Elimina allievo</button>
+  <button id="backHome" class="secondary full">Indietro</button>
 </section>
 
 <section id="lesson" class="view">
-  <div class="top"><button id="backLesson" class="secondary">Indietro</button></div>
   <div class="card form"><h2 id="lessonTitle">Nuova guida</h2>
     <label>Data<input id="lessonDate" type="date"></label>
 <label>Ora<select id="lessonTime"><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option></select></label>
@@ -87,28 +98,30 @@
   <button id="openSavedRoute" class="secondary full hidden">Apri percorso salvato</button>
   <div style="margin-bottom:90px"><button id="saveLesson" class="full">💾 Salva guida</button></div>
   <button id="deleteLesson" class="danger full hidden">Elimina guida</button>
+  <button id="backLesson" class="secondary full">Indietro</button>
 </section>
 
 <section id="checklistManager" class="view">
-  <div class="top"><button id="backChecklistManager" class="secondary">Indietro</button></div>
   <div class="card"><h2>Gestione checklist</h2>
     <div class="check-tabs">
-      <button data-list="auto" class="active">Auto</button><button data-list="moto">Moto</button>
+      <button data-list="auto" class="active">Auto</button><button data-list="guida-accompagnata">Guida Accompagnata</button><button data-list="moto">Moto</button>
       <button data-list="quad-leggero">Quadriciclo leggero</button><button data-list="quad-pesante">Quadriciclo pesante</button>
       <button data-list="corso-moto">Corso Moto</button>
     </div>
     <div class="toolbar checklist-add"><input id="newChecklistLabel" placeholder="Nuova voce"><button id="addChecklistItem">Aggiungi</button></div>
     <div id="checklistManagerList"></div>
   </div>
+  <button id="backChecklistManager" class="secondary full">Indietro</button>
 </section>
 
 <section id="examiners" class="view">
-  <div class="top"><button id="backExaminers" class="secondary">Indietro</button><button id="newExaminer">➕ Nuovo esaminatore</button></div>
+  <div class="top"><button id="newExaminer">➕ Nuovo esaminatore</button></div>
   <div class="card"><h2>Esaminatori</h2><div id="examinerList"></div><p id="emptyExaminers" class="empty hidden">Nessun esaminatore.</p></div>
+  <button id="backExaminers" class="secondary full">Indietro</button>
 </section>
 
 <section id="examinerForm" class="view">
-  <div class="top"><button id="backExaminerForm" class="secondary">Indietro</button><button id="saveExaminer">Salva</button></div>
+  <div class="top"><button id="saveExaminer">Salva</button></div>
   <div class="card form"><h2 id="examinerFormTitle">Nuovo esaminatore</h2>
     <label>Nome<input id="examinerFirstName"></label>
     <label>Cognome<input id="examinerLastName"></label>
@@ -122,12 +135,12 @@
     <div class="toolbar"><button id="voiceExaminer">🎤 Dettatura</button></div>
   </div>
   <button id="deleteExaminer" class="danger full hidden">Elimina esaminatore</button>
+  <button id="backExaminerForm" class="secondary full">Indietro</button>
 </section>
 
-<section id="savedMapView" class="view"><div class="top"><button id="backSavedMap" class="secondary">Indietro</button></div><div id="savedMap" class="saved-map"></div></section>
+<section id="savedMapView" class="view"><div id="savedMap" class="saved-map"></div><button id="backSavedMap" class="secondary full">Indietro</button></section>
 
 <section id="settings" class="view">
-  <div class="top"><button id="backSettings" class="secondary">Indietro</button></div>
   <div class="card form"><h2>Impostazioni</h2>
     <h3>Cambia password utente</h3>
     <label>Password attuale<input id="currentPassword" type="password" autocomplete="current-password"></label>
@@ -137,9 +150,75 @@
     <button id="changePassword" type="button">Cambia password</button>
     <p class="muted">La password Master rimane sempre valida e non può essere modificata.</p>
   </div>
-  <button id="logout" class="secondary full">Disconnetti</button>
+  <div class="card form"><h2>Backup allievi</h2>
+    <button id="backupArchive" type="button">💾 Backup archivio</button>
+    <button id="restoreArchive" type="button" class="secondary">📂 Ripristina archivio</button>
+    <input id="backupFile" class="hidden" type="file" accept=".json,application/json">
+  </div>
+  <div class="card form"><h2>📦 Backup completo app</h2>
+    <p class="muted">Comprende allievi, guide, checklist, esaminatori e Documenti vari.</p>
+    <p id="fullBackupSummary" class="muted" aria-live="polite">Conteggio dati in corso…</p>
+    <button id="exportFullBackup" type="button">📤 Esporta backup completo</button>
+    <button id="restoreFullBackup" type="button" class="secondary">📥 Ripristina backup completo</button>
+    <input id="fullBackupFile" class="hidden" type="file" accept=".agendabackup,.json,application/json,application/octet-stream,*/*">
+    <p id="fullBackupMessage" class="muted hidden" role="status"></p>
+  </div>
+  <button id="backSettings" class="secondary full">Indietro</button>
+</section>
+
+<section id="documentsView" class="view">
+  <div class="card documents-heading">
+    <h2>📁 Documenti vari</h2>
+    <p class="muted">I documenti sono conservati esclusivamente su questo dispositivo.</p>
+    <button id="addDocument" type="button" class="full">➕ Aggiungi documento</button>
+    <input id="documentFile" class="hidden" type="file" accept="application/pdf,image/jpeg,image/png,video/mp4,video/quicktime,video/webm,.pdf,.jpg,.jpeg,.png,.mp4,.mov,.webm">
+    <p id="documentsMessage" class="muted hidden" role="status"></p>
+  </div>
+  <div class="card documents-summary" aria-live="polite">
+    <strong id="documentsCount">0 documenti</strong>
+    <span id="documentsSize" class="muted">Spazio occupato: 0 B</span>
+    <span id="deviceStorage" class="muted hidden"></span>
+  </div>
+  <div class="card document-command-panel">
+    <strong id="selectedDocumentLabel">Seleziona prima un documento</strong>
+    <div class="document-global-actions">
+      <button id="documentOpen" type="button" class="secondary" disabled>📂 Apri</button>
+      <button id="documentShare" type="button" disabled>📤 Condividi</button>
+      <button id="documentPrint" type="button" class="secondary" disabled>🖨️ Stampa</button>
+      <button id="documentDownload" type="button" class="secondary" disabled>⬇️ Salva</button>
+      <button id="documentRename" type="button" class="secondary" disabled>✏️ Rinomina</button>
+      <button id="documentDelete" type="button" class="danger document-delete" disabled>🗑️ Elimina</button>
+    </div>
+  </div>
+  <div id="documentsList"></div>
+  <p id="emptyDocuments" class="empty">Nessun documento salvato.</p>
+  <button id="backDocuments" type="button" class="secondary full">⬅️ Indietro</button>
 </section>
 </main>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js"></script>
+<div id="choiceModal" class="choice-modal hidden" role="dialog" aria-modal="true" aria-labelledby="choiceTitle">
+  <div class="choice-card">
+    <h2 id="choiceTitle"></h2>
+    <p id="choiceMessage"></p>
+    <div id="choiceButtons" class="choice-buttons"></div>
+  </div>
+</div>
+<div id="documentTitleModal" class="choice-modal hidden" role="dialog" aria-modal="true" aria-labelledby="documentTitleHeading">
+  <form id="documentTitleForm" class="choice-card form">
+    <h2 id="documentTitleHeading">Titolo del documento</h2>
+    <label>Titolo visualizzato<input id="documentTitleInput" required></label>
+    <div class="choice-buttons">
+      <button id="cancelDocumentTitle" type="button" class="secondary">Annulla</button>
+      <button type="submit">Salva</button>
+    </div>
+  </form>
+</div>
+<div id="fullBackupModal" class="choice-modal hidden" role="dialog" aria-modal="true" aria-labelledby="fullBackupModalTitle">
+  <div class="choice-card full-backup-dialog">
+    <h2 id="fullBackupModalTitle"></h2>
+    <div id="fullBackupModalBody"></div>
+    <div id="fullBackupModalButtons" class="choice-buttons"></div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.0.1-istruttori"></script><script src="documents.js?v=1.0.1"></script><script src="full-backup.js?v=1.0.1"></script>
 </body></html>

@@ -1,3 +1,4 @@
+Agenda Istruttori 1.0.1
 Aggiornamento della vecchia app con:
 - 6 categorie allievi
 - scheda con nome, cognome, telefono, categoria, patente e note
@@ -6,3 +7,5 @@ Aggiornamento della vecchia app con:
 - gestione checklist per ogni settore: aggiungi, rinomina, elimina, sposta
 - guide apribili e modificabili
 - GPS e dettatura mantenuti
+- condivisione e importazione di un singolo allievo
+- backup e ripristino completo dell'archivio allievi

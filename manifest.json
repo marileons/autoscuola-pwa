@@ -1,12 +1,11 @@
 {
-  "name": "Agenda Istruttore",
-  "short_name": "Agenda",
+  "name": "Agenda Istruttori",
+  "short_name": "Agenda Istruttori",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0a84ff",
-  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",

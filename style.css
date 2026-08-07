@@ -2,3 +2,6 @@
 #saveLesson{margin-top:18px;margin-bottom:10px}
 #examinerList .student-card{display:block}
 #habitList{margin-top:12px}
+.pdf-resources h2{margin-top:0}.pdf-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.link-button{display:block;border-radius:12px;background:#e9e9ee;color:#111;padding:12px 15px;font-weight:700;text-align:center;text-decoration:none}
+.lesson-items{display:block;margin:8px 0;line-height:1.45}
+@media (min-width:700px) and (orientation:landscape),(min-width:1024px){header{display:flex;align-items:center;justify-content:center;gap:12px;padding:4px 12px!important}header img{width:64px!important;max-width:64px!important}header h1{font-size:20px;line-height:1;margin:0}header div{font-size:12px}}
