@@ -35,19 +35,25 @@
 <header style="text-align:center;padding:12px"><img src="logo.png" alt="Logo" style="max-width:220px;width:90%;border-radius:12px"><h1>AGENDA ISTRUTTORI</h1><div style="color:#555">Gestione Allievi e Guide</div></header>
 <main>
 <section id="home" class="view active">
-  <div class="toolbar"><input id="search" type="search" placeholder="Cerca allievo"><button id="newStudent">➕ Nuovo allievo</button></div>
   <div class="categories">
     <button data-f="auto" class="active">🚗 Auto</button>
-    <button data-f="guida-accompagnata">🚗 Guida Accompagnata</button>
     <button data-f="moto">🏍 Moto</button>
+    <button data-f="guida-accompagnata">🚗 Guida Accompagnata</button>
     <button data-f="quad-leggero">🛵 Quadriciclo leggero AM</button>
     <button data-f="quad-pesante">🚙 Quadriciclo pesante B1</button>
     <button data-f="corso-moto">🏁 Corso Moto ad accesso graduale A2 e A</button>
     <button data-f="perfezionamento">⭐ Perfezionamento</button>
-    <button data-f="esame-revisione">📝 Esame Revisione</button>
-    <button data-f="esame-esperimento">🎯 Esame Esperimento</button>
+    <button data-f="esame-revisione">📝 Esami di revisione</button>
+    <button data-f="esame-esperimento">🎯 Esame di perfezionamento</button>
     <button id="openExaminers">👨‍💼 Esaminatori</button>
   </div>
+  <div class="card student-section">
+    <h2 id="currentSectionTitle">Auto</h2>
+    <button id="newStudent" class="full">➕ Nuovo allievo</button>
+    <input id="search" type="search" placeholder="Cerca allievo">
+    <div id="students"></div><p id="emptyStudents" class="empty hidden">Nessun allievo in questa sezione.</p>
+  </div>
+  <button id="unclassifiedStudents" class="secondary full hidden">⚠️ Allievi da classificare</button>
   <a class="link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer">📖 Codice della Strada ACI</a>
   <button id="openDocuments" class="secondary full">📁 Documenti vari</button>
   <button id="manageChecklists" class="secondary full">Gestisci checklist</button>
@@ -55,23 +61,22 @@
   <button id="importStudent" class="secondary full">📥 Importa allievo</button>
   <button id="logout" class="secondary full">Esci</button>
   <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
-  <div id="students"></div><p id="emptyStudents" class="empty hidden">Nessun allievo.</p>
 </section>
 
 <section id="studentForm" class="view">
-  <div class="top"><button id="saveStudent">Salva allievo</button></div>
   <div class="card form"><h2 id="studentFormTitle">Nuovo allievo</h2>
     <label>Categoria<select id="category">
       <option value="auto">Auto</option><option value="guida-accompagnata">Guida Accompagnata</option><option value="moto">Moto</option>
       <option value="quad-leggero">Quadriciclo leggero AM</option><option value="quad-pesante">Quadriciclo pesante B1</option>
-      <option value="corso-moto">Corso Moto ad accesso graduale A2 e A</option><option value="perfezionamento">Perfezionamento</option>
-      <option value="esame-revisione">Esame Revisione</option><option value="esame-esperimento">Esame Esperimento</option>
+      <option value="corso-moto">Corso moto ad accesso graduale A2 e A</option><option value="perfezionamento">Perfezionamento</option>
+      <option value="esame-revisione">Esami di revisione</option><option value="esame-esperimento">Esame di perfezionamento</option>
     </select></label>
     <label>Nome<input id="firstName"></label><label>Cognome<input id="lastName"></label>
     <label>Telefono<input id="phone" type="tel"></label><label>Patente<input id="license" placeholder="Es. B, A1, A2, AM"></label>
     <label>Data rilascio foglio rosa<input id="pinkSlipIssueDate" type="date"></label>
     <p id="pinkSlipExpiry" class="muted">Scadenza foglio rosa: —</p>
     <label>Note<textarea id="studentNotes" rows="5"></textarea></label>
+    <button id="saveStudent" class="full">Salva</button>
   </div>
   <button id="backStudentForm" class="secondary full">Indietro</button>
 </section>
@@ -89,7 +94,7 @@
 <section id="lesson" class="view">
   <div class="card form"><h2 id="lessonTitle">Nuova guida</h2>
     <label>Data<input id="lessonDate" type="date"></label>
-<label>Ora<select id="lessonTime"><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option></select></label>
+<label>Ora<select id="lessonTime"><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option></select></label>
 <label>Durata<select id="lessonDuration"><option>1 ora</option><option>2 ore</option><option>3 ore</option></select></label>
     <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><button id="voice" class="secondary">🎤 Detta</button>
   </div>
@@ -167,9 +172,16 @@
 </section>
 
 <section id="documentsView" class="view">
+  <button id="backDocuments" type="button" class="secondary full">🏠 Home</button>
   <div class="card documents-heading">
     <h2>📁 Documenti vari</h2>
     <p class="muted">I documenti sono conservati esclusivamente su questo dispositivo.</p>
+    <div id="documentSections" class="document-sections"></div>
+  </div>
+  <div id="documentSectionContent" class="hidden">
+  <button id="backDocumentSection" type="button" class="secondary full">← Documenti</button>
+  <div class="card documents-heading">
+    <h2 id="documentSectionTitle">Documenti</h2>
     <button id="addDocument" type="button" class="full">➕ Aggiungi documento</button>
     <input id="documentFile" class="hidden" type="file" accept="application/pdf,image/jpeg,image/png,video/mp4,video/quicktime,video/webm,.pdf,.jpg,.jpeg,.png,.mp4,.mov,.webm">
     <p id="documentsMessage" class="muted hidden" role="status"></p>
@@ -187,12 +199,13 @@
       <button id="documentPrint" type="button" class="secondary" disabled>🖨️ Stampa</button>
       <button id="documentDownload" type="button" class="secondary" disabled>⬇️ Salva</button>
       <button id="documentRename" type="button" class="secondary" disabled>✏️ Rinomina</button>
+      <button id="documentMove" type="button" class="secondary" disabled>📂 Sposta documento</button>
       <button id="documentDelete" type="button" class="danger document-delete" disabled>🗑️ Elimina</button>
     </div>
   </div>
   <div id="documentsList"></div>
   <p id="emptyDocuments" class="empty">Nessun documento salvato.</p>
-  <button id="backDocuments" type="button" class="secondary full">⬅️ Indietro</button>
+  </div>
 </section>
 </main>
 </div>
@@ -210,6 +223,16 @@
     <div class="choice-buttons">
       <button id="cancelDocumentTitle" type="button" class="secondary">Annulla</button>
       <button type="submit">Salva</button>
+    </div>
+  </form>
+</div>
+<div id="documentMoveModal" class="choice-modal hidden" role="dialog" aria-modal="true" aria-labelledby="documentMoveHeading">
+  <form id="documentMoveForm" class="choice-card form">
+    <h2 id="documentMoveHeading">Sposta documento</h2>
+    <label>Sezione di destinazione<select id="documentMoveSection"></select></label>
+    <div class="choice-buttons">
+      <button id="cancelDocumentMove" type="button" class="secondary">Annulla</button>
+      <button type="submit">Sposta</button>
     </div>
   </form>
 </div>

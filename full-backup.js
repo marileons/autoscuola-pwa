@@ -198,6 +198,7 @@
       mimeType:String(record.mimeType||record.blob.type||"application/octet-stream"),
       size:buffer.byteLength,
       createdAt:Number(record.createdAt||Date.now()),
+      section:String(record.section||"common"),
       sha256:hash,
       dataBase64
     };
@@ -218,6 +219,7 @@
       mimeType:serialized.mimeType,
       size:serialized.size,
       createdAt:serialized.createdAt,
+      section:typeof serialized.section==="string"&&serialized.section?serialized.section:"common",
       blob:new Blob([bytes],{type:serialized.mimeType})
     };
   }

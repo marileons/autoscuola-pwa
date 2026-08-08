@@ -8,9 +8,20 @@
   const VIDEO_TYPES=new Set(["video/mp4","video/quicktime","video/webm"]);
   const ACCEPTED_TYPES=new Set(["application/pdf","image/jpeg","image/png",...VIDEO_TYPES]);
   const MAX_VIDEO_SIZE=100*1024*1024;
+  const COMMON_SECTION="common";
+  const DOCUMENT_SECTIONS=[
+    ["auto","Auto"],["moto","Moto"],["guida-accompagnata","Guida Accompagnata"],
+    ["quad-leggero","Quadriciclo leggero AM"],["quad-pesante","Quadriciclo pesante B1"],
+    ["corso-moto","Corso moto ad accesso graduale A2 e A"],["perfezionamento","Perfezionamento"],
+    ["esame-revisione","Esami di revisione"],["esame-esperimento","Esame di perfezionamento"],
+    [COMMON_SECTION,"Varie / Comuni"]
+  ];
+  const SECTION_LABELS=new Map(DOCUMENT_SECTIONS);
   const byId=id=>document.getElementById(id);
   let databasePromise=null;
   let documents=[];
+  let allDocuments=[];
+  let currentSection=null;
   const selectedDocumentIds=new Set();
 
   function openDatabase(){
@@ -72,6 +83,40 @@
 
   function clearMessage(){
     byId("documentsMessage").classList.add("hidden");
+  }
+
+  function normalizedSection(record){
+    return SECTION_LABELS.has(record&&record.section)?record.section:COMMON_SECTION;
+  }
+
+  function renderDocumentSections(){
+    const counts=new Map(DOCUMENT_SECTIONS.map(([id])=>[id,0]));
+    allDocuments.forEach(record=>counts.set(normalizedSection(record),(counts.get(normalizedSection(record))||0)+1));
+    const buttons=DOCUMENT_SECTIONS.map(([id,label])=>{
+      const button=makeButton(`${label} (${counts.get(id)||0})`,"secondary document-section-button",()=>openDocumentSection(id));
+      button.dataset.section=id;
+      return button;
+    });
+    byId("documentSections").replaceChildren(...buttons);
+  }
+
+  function showDocumentCategories(){
+    currentSection=null;
+    selectedDocumentIds.clear();
+    byId("documentSectionContent").classList.add("hidden");
+    byId("documentSections").closest(".documents-heading").classList.remove("hidden");
+    clearMessage();
+    refreshDocuments();
+  }
+
+  function openDocumentSection(section){
+    currentSection=SECTION_LABELS.has(section)?section:COMMON_SECTION;
+    selectedDocumentIds.clear();
+    byId("documentSectionTitle").textContent=SECTION_LABELS.get(currentSection);
+    byId("documentSections").closest(".documents-heading").classList.add("hidden");
+    byId("documentSectionContent").classList.remove("hidden");
+    renderCurrentSection();
+    window.scrollTo(0,0);
   }
 
   function formatBytes(bytes){
@@ -287,6 +332,7 @@
     const selected=selectedDocuments(),count=selected.length,single=count===1;
     byId("selectedDocumentLabel").textContent=!count?"Seleziona prima un documento":single?`Documento selezionato: ${selected[0].title}`:`${count} documenti selezionati`;
     ["documentOpen","documentShare","documentDownload","documentRename"].forEach(id=>{byId(id).disabled=!single});
+    byId("documentMove").disabled=!count;
     byId("documentPrint").disabled=!single||isVideo(selected[0]&&selected[0].mimeType);
     const deleteButton=byId("documentDelete");
     deleteButton.disabled=!count;
@@ -296,6 +342,15 @@
   function renderDocumentList(){
     byId("documentsList").replaceChildren(...documents.map(createDocumentCard));
     updateCommandPanel();
+  }
+
+  function renderCurrentSection(){
+    documents=currentSection===null?[]:allDocuments.filter(record=>normalizedSection(record)===currentSection);
+    [...selectedDocumentIds].forEach(id=>{if(!documents.some(record=>record.id===id))selectedDocumentIds.delete(id)});
+    renderDocumentList();
+    byId("emptyDocuments").classList.toggle("hidden",documents.length>0);
+    byId("documentsCount").textContent=`${documents.length} ${documents.length===1?"documento":"documenti"}`;
+    byId("documentsSize").textContent=`Spazio occupato: ${formatBytes(documents.reduce((sum,item)=>sum+(item.size||0),0))}`;
   }
 
   function toggleDocumentSelection(id,selected){
@@ -334,13 +389,10 @@
     if(clearStatus)clearMessage();
     const list=byId("documentsList");
     try{
-      documents=await getDocuments();
-      documents.sort((a,b)=>b.createdAt-a.createdAt);
-      [...selectedDocumentIds].forEach(id=>{if(!documents.some(record=>record.id===id))selectedDocumentIds.delete(id)});
-      renderDocumentList();
-      byId("emptyDocuments").classList.toggle("hidden",documents.length>0);
-      byId("documentsCount").textContent=`${documents.length} ${documents.length===1?"documento":"documenti"}`;
-      byId("documentsSize").textContent=`Spazio occupato: ${formatBytes(documents.reduce((sum,item)=>sum+(item.size||0),0))}`;
+      allDocuments=await getDocuments();
+      allDocuments.sort((a,b)=>b.createdAt-a.createdAt);
+      renderDocumentSections();
+      if(currentSection!==null)renderCurrentSection();
       updateStorageEstimate();
     }catch(error){
       list.replaceChildren();
@@ -388,6 +440,7 @@
       mimeType,
       size:file.size,
       createdAt:Date.now(),
+      section:currentSection||COMMON_SECTION,
       blob:file.slice(0,file.size,mimeType)
     };
     try{
@@ -400,11 +453,54 @@
     }
   }
 
+  function requestMoveDestination(){
+    return new Promise(resolve=>{
+      const modal=byId("documentMoveModal"),form=byId("documentMoveForm"),select=byId("documentMoveSection");
+      select.replaceChildren(...DOCUMENT_SECTIONS.map(([id,label])=>{
+        const option=document.createElement("option");
+        option.value=id;
+        option.textContent=label;
+        return option;
+      }));
+      select.value=currentSection===COMMON_SECTION?"auto":COMMON_SECTION;
+      const finish=value=>{
+        modal.classList.add("hidden");
+        form.onsubmit=null;
+        byId("cancelDocumentMove").onclick=null;
+        resolve(value);
+      };
+      form.onsubmit=event=>{event.preventDefault();finish(select.value)};
+      byId("cancelDocumentMove").onclick=()=>finish(null);
+      modal.classList.remove("hidden");
+    });
+  }
+
+  async function moveSelectedDocuments(){
+    const selected=selectedDocuments();
+    if(!selected.length){showMessage("Seleziona prima almeno un documento.",true);return}
+    const destination=await requestMoveDestination();
+    if(destination===null)return;
+    try{
+      for(const record of selected){
+        // Mantiene lo stesso ID e lo stesso Blob: cambia soltanto la classificazione.
+        record.section=destination;
+        await putDocument(record);
+      }
+      const count=selected.length;
+      selectedDocumentIds.clear();
+      showMessage(count===1?"Documento spostato.":`${count} documenti spostati.`);
+      await refreshDocuments(false);
+    }catch(error){
+      showMessage("Non è stato possibile spostare il documento.",true);
+    }
+  }
+
   byId("openDocuments").addEventListener("click",()=>{
     showView("documentsView");
-    refreshDocuments();
+    showDocumentCategories();
   });
   byId("backDocuments").addEventListener("click",()=>showView("home"));
+  byId("backDocumentSection").addEventListener("click",showDocumentCategories);
   byId("addDocument").addEventListener("click",()=>byId("documentFile").click());
   byId("documentFile").addEventListener("change",async event=>{
     const file=event.target.files[0];
@@ -416,5 +512,6 @@
   byId("documentPrint").addEventListener("click",()=>runSingleDocumentAction(printDocument));
   byId("documentDownload").addEventListener("click",()=>runSingleDocumentAction(saveDocument));
   byId("documentRename").addEventListener("click",()=>runSingleDocumentAction(renameDocument));
+  byId("documentMove").addEventListener("click",moveSelectedDocuments);
   byId("documentDelete").addEventListener("click",deleteSelectedDocuments);
 })();
