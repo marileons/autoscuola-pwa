@@ -1,4 +1,4 @@
-const CACHE="agenda-istruttori-v1-19";
+const CACHE="agenda-istruttori-v1-19-backup-fix-2";
 const FILES=[
   "./",
   "./index.html",
