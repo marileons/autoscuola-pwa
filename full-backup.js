@@ -119,6 +119,30 @@
     });
   }
 
+  async function readDocumentKeys(){
+    const db=await openDocumentDatabase();
+    return new Promise((resolve,reject)=>{
+      const transaction=db.transaction(DOCUMENT_STORE,"readonly");
+      const request=transaction.objectStore(DOCUMENT_STORE).getAllKeys();
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+      transaction.oncomplete=()=>db.close();
+      transaction.onabort=()=>{db.close();reject(transaction.error||request.error)};
+    });
+  }
+
+  async function readDocumentByKey(key){
+    const db=await openDocumentDatabase();
+    return new Promise((resolve,reject)=>{
+      const transaction=db.transaction(DOCUMENT_STORE,"readonly");
+      const request=transaction.objectStore(DOCUMENT_STORE).get(key);
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+      transaction.oncomplete=()=>db.close();
+      transaction.onabort=()=>{db.close();reject(transaction.error||request.error)};
+    });
+  }
+
   async function replaceDocuments(records){
     const db=await openDocumentDatabase();
     return new Promise((resolve,reject)=>{
@@ -184,6 +208,16 @@
     const block=0x8000;
     for(let index=0;index<bytes.length;index+=block)binary+=String.fromCharCode(...bytes.subarray(index,index+block));
     return btoa(binary);
+  }
+
+  async function arrayBufferToBase64Incremental(buffer){
+    const bytes=new Uint8Array(buffer),block=3*8192;
+    let result="";
+    for(let index=0;index<bytes.length;index+=block){
+      result+=btoa(String.fromCharCode(...bytes.subarray(index,Math.min(index+block,bytes.length))));
+      if(index&&index%(block*32)===0)await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    return result;
   }
 
   function base64ToBytes(value){
@@ -264,24 +298,57 @@
     }
   }
 
-  async function serializeDocument(record){
-    if(!(record.blob instanceof Blob))throw new Error(`Documento non leggibile: ${record.title||record.originalName||"senza titolo"}.`);
-    const buffer=await record.blob.arrayBuffer();
+  async function serializeDocument(record,index,total){
+    if(!(record&&record.blob instanceof Blob))throw new Error("Documento non leggibile durante il backup.");
+    diagnostic(`3c. documento ${index}/${total}: lettura Blob iniziata`);
+    let buffer=await record.blob.arrayBuffer();
+    diagnostic(`3d. documento ${index}/${total}: lettura Blob completata`,`${buffer.byteLength} byte`);
     const fileName=String(record.originalName||"documento");
+    diagnostic(`3e. documento ${index}/${total}: SHA-256 iniziato`);
     const hash=await sha256(buffer);
-    const dataBase64=arrayBufferToBase64(buffer);
-    await selfTestDocument(buffer,dataBase64,hash,fileName);
-    return {
+    diagnostic(`3f. documento ${index}/${total}: SHA-256 completato`);
+    diagnostic(`3g. documento ${index}/${total}: conversione Base64 iniziata`);
+    const dataBase64=await arrayBufferToBase64Incremental(buffer);
+    const size=buffer.byteLength;
+    buffer=null;
+    diagnostic(`3h. documento ${index}/${total}: conversione Base64 completata`,`${dataBase64.length} caratteri`);
+    const serialized={
       id:String(record.id),
       originalName:fileName,
       title:String(record.title||record.originalName||"Documento"),
       mimeType:String(record.mimeType||record.blob.type||"application/octet-stream"),
-      size:buffer.byteLength,
+      size,
       createdAt:Number(record.createdAt||Date.now()),
       section:String(record.section||"common"),
       sha256:hash,
       dataBase64
     };
+    diagnostic(`3i. documento ${index}/${total}: elaborazione completata`);
+    return serialized;
+  }
+
+  function backupJsonParts(payload){
+    const header={...payload};delete header.documents;
+    const headerJson=JSON.stringify(header);
+    const parts=[headerJson.slice(0,-1),',"documents":['];
+    payload.documents.forEach((documentRecord,index)=>{
+      if(index)parts.push(",");
+      const metadata={...documentRecord};delete metadata.dataBase64;
+      const metadataJson=JSON.stringify(metadata);
+      parts.push(metadataJson.slice(0,-1),',"dataBase64":"',documentRecord.dataBase64,'"}');
+    });
+    parts.push("]}");
+    return parts;
+  }
+
+  function createBackupFile(payload,fileName){
+    let file;
+    for(let attempt=0;attempt<3;attempt++){
+      file=new File(backupJsonParts(payload),fileName,{type:"application/json"});
+      if(payload.metadata.approximateBytes===file.size)break;
+      payload.metadata.approximateBytes=file.size;
+    }
+    return file;
   }
 
   async function deserializeDocument(serialized){
@@ -313,22 +380,29 @@
     };
     validateAppData(appData);
     diagnostic("3a. dati locali letti",`${appData.students.length} allievi, ${appData.examiners.length} esaminatori`);
-    const sourceDocuments=await readDocuments();
-    diagnostic("3b. lettura documenti completata",`${sourceDocuments.length} documenti`);
+    const documentKeys=await readDocumentKeys();
+    diagnostic("3b. lettura documenti completata",`${documentKeys.length} documenti individuati`);
     const documents=[];
-    for(const record of sourceDocuments)documents.push(await serializeDocument(record));
-    if(documents.length!==sourceDocuments.length)throw new Error("Conteggio documenti non coerente durante la creazione del backup.");
+    diagnostic("3c. conversione documenti iniziata",`${documentKeys.length} documenti`);
+    for(let index=0;index<documentKeys.length;index++){
+      const record=await readDocumentByKey(documentKeys[index]);
+      if(!record)throw new Error(`Documento ${index+1} non disponibile durante il backup.`);
+      documents.push(await serializeDocument(record,index+1,documentKeys.length));
+      record.blob=null;
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    if(documents.length!==documentKeys.length)throw new Error("Conteggio documenti non coerente durante la creazione del backup.");
+    diagnostic("3j. conversione documenti completata",`${documents.length} documenti`);
     const payload={
       format:FORMAT,
       formatVersion:FORMAT_VERSION,
       app:"Agenda Istruttori",
       appVersion:APP_VERSION,
       createdAt:new Date().toISOString(),
-      metadata:{students:appData.students.length,documents:documents.length},
+      metadata:{students:appData.students.length,documents:documents.length,approximateBytes:0},
       appData,
       documents
     };
-    payload.metadata.approximateBytes=new Blob([JSON.stringify(payload)]).size;
     diagnostic("3. lettura dati completata",`${documents.length} documenti serializzati`);
     return payload;
   }
@@ -448,12 +522,12 @@
     byId("exportFullBackup").disabled=true;
     try{
       const payload=await createBackupPayload();
-      await selfTestSerializedDocuments(payload.documents);
-      const json=JSON.stringify(payload);
-      diagnostic("4. serializzazione completata",`${json.length} caratteri`);
+      diagnostic("4a. serializzazione JSON iniziata");
       const timestamp=new Date().toISOString().replace(/[:.]/g,"-");
-      const file=new File([json],`AgendaIstruttori_BackupCompleto_${timestamp}.${BACKUP_EXTENSION}`,{type:"application/json"});
+      const file=createBackupFile(payload,`AgendaIstruttori_BackupCompleto_${timestamp}.${BACKUP_EXTENSION}`);
+      diagnostic("4b. serializzazione JSON completata",`${file.size} byte`);
       diagnostic("5. Blob/File creato",`${file.name}, ${file.size} byte`);
+      diagnostic("5b. arrivo alla fase di condivisione");
       showMessage(`Backup pronto: ${payload.metadata.students} allievi, ${payload.metadata.documents} documenti, circa ${formatBytes(file.size)}.`);
       presentPreparedBackup(file);
     }catch(error){
