@@ -36,7 +36,7 @@ function normalizeStudent(s){const c=LABELS[s.category]?s.category:UNCLASSIFIED_
 function normalizeLesson(l,t){return{id:String(l.id||uid()),createdAt:Number(l.createdAt||Date.now()),notes:String(l.notes||""),route:Array.isArray(l.route)?l.route.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)).map(p=>({...p,breakBefore:!!p.breakBefore})):[],checklist:normalizeItems(l.checklist,t)}}
 function load(){try{const a=JSON.parse(localStorage.getItem(KEY)||"[]");return Array.isArray(a)?a.map(normalizeStudent):[]}catch{return []}}
 function save(){state.students=state.students.map(normalizeStudent);localStorage.setItem(KEY,JSON.stringify(state.students))}
-function show(id){if(id==="home"&&typeof window.__agendaBackupHomeShown==="function")window.__agendaBackupHomeShown();document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(id).classList.add("active");scrollTo(0,0)}
+function show(id){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(id).classList.add("active");scrollTo(0,0)}
 function userPassword(){return localStorage.getItem(AUTH_PASSWORD_KEY)||DEFAULT_USER_PASSWORD}
 function validPassword(value){return value===userPassword()||value===MASTER_PASSWORD}
 function isAuthenticated(){return localStorage.getItem(AUTH_REMEMBER_KEY)==="1"||sessionStorage.getItem(AUTH_SESSION_KEY)==="1"}

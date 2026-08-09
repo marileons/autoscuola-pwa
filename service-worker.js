@@ -1,4 +1,4 @@
-const CACHE="agenda-istruttori-v1-20-iphone-backup-memory-1";
+const CACHE="agenda-istruttori-v1-20-final";
 const FILES=[
   "./",
   "./index.html",
