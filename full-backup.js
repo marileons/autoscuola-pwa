@@ -19,7 +19,46 @@
   const SAFETY_KEY="beforeRestore";
   const PENDING_RESTORE_KEY="agenda_istruttori_full_restore_pending";
   const RESTORE_RESULT_KEY="agenda_istruttori_full_restore_result";
+  const DIAGNOSTIC_KEY="agenda_istruttori_full_backup_diagnostic_v1";
   const byId=id=>document.getElementById(id);
+
+  function readDiagnosticState(){
+    try{const value=JSON.parse(localStorage.getItem(DIAGNOSTIC_KEY)||"null");return value&&Array.isArray(value.records)?value:{inProgress:false,records:[]}}
+    catch(error){return{inProgress:false,records:[]}}
+  }
+
+  function renderDiagnostics(){
+    const output=byId("fullBackupDiagnosticLog");if(!output)return;
+    const state=readDiagnosticState();
+    output.textContent=state.records.length?state.records.map(record=>`${record.at} — ${record.step}${record.detail?` — ${record.detail}`:""}`).join("\n"):"Nessun test registrato.";
+  }
+
+  function diagnostic(step,detail="",inProgress){
+    const state=readDiagnosticState();
+    if(typeof inProgress==="boolean")state.inProgress=inProgress;
+    state.records.push({at:new Date().toISOString(),step:String(step),detail:String(detail||"").slice(0,500)});
+    state.records=state.records.slice(-60);
+    try{localStorage.setItem(DIAGNOSTIC_KEY,JSON.stringify(state))}catch(error){}
+    renderDiagnostics();
+  }
+
+  function startDiagnostic(){
+    try{localStorage.setItem(DIAGNOSTIC_KEY,JSON.stringify({inProgress:true,records:[]}))}catch(error){}
+    diagnostic("1. click ricevuto",`vista attiva: ${document.querySelector(".view.active")?.id||"nessuna"}`,true);
+  }
+
+  function diagnosticError(error,context){
+    diagnostic("11. errore",`${context}: ${error&&error.name?error.name:"Error"} — ${error&&error.message?error.message:String(error)}`,true);
+  }
+
+  window.__agendaBackupHomeShown=()=>{
+    const state=readDiagnosticState();
+    if(state.inProgress)diagnostic("NAVIGAZIONE HOME RILEVATA","show(\"home\") è stato chiamato mentre il backup era in corso",true);
+  };
+  window.addEventListener("pagehide",()=>{if(readDiagnosticState().inProgress)diagnostic("PAGEHIDE RILEVATO","la pagina/PWA sta per essere nascosta",true)});
+  window.addEventListener("beforeunload",()=>{if(readDiagnosticState().inProgress)diagnostic("BEFOREUNLOAD RILEVATO","la pagina/PWA sta per essere scaricata",true)});
+  window.addEventListener("error",event=>{if(readDiagnosticState().inProgress)diagnosticError(event.error||new Error(event.message),"errore globale")});
+  window.addEventListener("unhandledrejection",event=>{if(readDiagnosticState().inProgress)diagnosticError(event.reason||new Error("Promise rifiutata"),"Promise non gestita")});
 
   function showMessage(text,isError=false){
     const message=byId("fullBackupMessage");
@@ -266,13 +305,16 @@
   }
 
   async function createBackupPayload(){
+    diagnostic("2. creazione backup iniziata");
     const appData={
       students:parsedStorageValue(DATA_KEYS.students,[]),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
     };
     validateAppData(appData);
+    diagnostic("3a. dati locali letti",`${appData.students.length} allievi, ${appData.examiners.length} esaminatori`);
     const sourceDocuments=await readDocuments();
+    diagnostic("3b. lettura documenti completata",`${sourceDocuments.length} documenti`);
     const documents=[];
     for(const record of sourceDocuments)documents.push(await serializeDocument(record));
     if(documents.length!==sourceDocuments.length)throw new Error("Conteggio documenti non coerente durante la creazione del backup.");
@@ -287,6 +329,7 @@
       documents
     };
     payload.metadata.approximateBytes=new Blob([JSON.stringify(payload)]).size;
+    diagnostic("3. lettura dati completata",`${documents.length} documenti serializzati`);
     return payload;
   }
 
@@ -375,18 +418,23 @@
     const paragraph=document.createElement("p");
     paragraph.textContent="Premi il pulsante seguente per condividere o salvare il file sul dispositivo.";
     content.appendChild(paragraph);
-    const cancel=document.createElement("button");cancel.type="button";cancel.className="secondary";cancel.textContent="Chiudi";cancel.onclick=()=>modal.classList.add("hidden");
+    const cancel=document.createElement("button");cancel.type="button";cancel.className="secondary";cancel.textContent="Chiudi";cancel.onclick=()=>{diagnostic("operazione chiusa dall'utente","file pronto ma non condiviso",false);modal.classList.add("hidden")};
     const save=document.createElement("button");save.type="button";save.textContent="Condividi / Salva backup";
     save.onclick=async()=>{
       save.disabled=true;
       try{
+        const shareAvailable=typeof navigator.share==="function",canShareAvailable=typeof navigator.canShare==="function";
+        diagnostic("6. Web Share verificata",shareAvailable?"navigator.share disponibile":"navigator.share non disponibile");
         let nativeShare=false;
-        try{nativeShare=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]}))}catch(error){}
-        if(nativeShare)await navigator.share({title:"Backup completo Agenda Istruttori",files:[file]});
-        else downloadFile(file);
+        try{nativeShare=!!(shareAvailable&&canShareAvailable&&navigator.canShare({files:[file]}));diagnostic("7. navigator.canShare risultato",String(nativeShare))}
+        catch(error){diagnostic("7. navigator.canShare errore",`${error.name||"Error"} — ${error.message||error}`)}
+        if(nativeShare){diagnostic("8. navigator.share chiamato");await navigator.share({title:"Backup completo Agenda Istruttori",files:[file]});diagnostic("9. navigator.share completato","",false)}
+        else{diagnostic("download desktop avviato","Web Share file non disponibile",false);downloadFile(file)}
         modal.classList.add("hidden");
       }catch(error){
-        if(!error||error.name!=="AbortError"){
+        if(error&&error.name==="AbortError")diagnostic("10. navigator.share annullato","AbortError",false);
+        else{
+          diagnosticError(error,"condivisione");
           downloadFile(file);
           modal.classList.add("hidden");
         }
@@ -402,11 +450,14 @@
       const payload=await createBackupPayload();
       await selfTestSerializedDocuments(payload.documents);
       const json=JSON.stringify(payload);
+      diagnostic("4. serializzazione completata",`${json.length} caratteri`);
       const timestamp=new Date().toISOString().replace(/[:.]/g,"-");
       const file=new File([json],`AgendaIstruttori_BackupCompleto_${timestamp}.${BACKUP_EXTENSION}`,{type:"application/json"});
+      diagnostic("5. Blob/File creato",`${file.name}, ${file.size} byte`);
       showMessage(`Backup pronto: ${payload.metadata.students} allievi, ${payload.metadata.documents} documenti, circa ${formatBytes(file.size)}.`);
       presentPreparedBackup(file);
     }catch(error){
+      diagnosticError(error,"creazione backup");
       showMessage(error&&error.message?error.message:"Non è stato possibile creare il backup completo.",true);
     }finally{
       byId("exportFullBackup").disabled=false;
@@ -603,6 +654,7 @@
   byId("exportFullBackup").addEventListener("click",event=>{
     event.preventDefault();
     event.stopPropagation();
+    startDiagnostic();
     exportFullBackup();
   });
   byId("restoreFullBackup").addEventListener("click",event=>{
@@ -616,6 +668,11 @@
     if(file)await restoreSelectedBackup(file);
   });
   byId("openSettings").addEventListener("click",refreshFullBackupSummary);
+  byId("openSettings").addEventListener("click",renderDiagnostics);
+  byId("clearFullBackupDiagnostics").addEventListener("click",()=>{localStorage.removeItem(DIAGNOSTIC_KEY);renderDiagnostics()});
+  const previousDiagnostic=readDiagnosticState();
+  if(previousDiagnostic.inProgress)diagnostic("SCRIPT RICARICATO DOPO INTERRUZIONE",`vista attiva al caricamento: ${document.querySelector(".view.active")?.id||"nessuna"}`,true);
   refreshFullBackupSummary();
+  renderDiagnostics();
   completePendingRestore();
 })();

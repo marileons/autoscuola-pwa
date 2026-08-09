@@ -1,4 +1,4 @@
-const CACHE="agenda-istruttori-v1-20-backup-multi-1";
+const CACHE="agenda-istruttori-v1-20-iphone-backup-debug-1";
 const FILES=[
   "./",
   "./index.html",
