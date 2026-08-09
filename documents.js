@@ -13,7 +13,7 @@
     ["auto","Auto"],["moto","Moto"],["guida-accompagnata","Guida Accompagnata"],
     ["quad-leggero","Quadriciclo leggero AM"],["quad-pesante","Quadriciclo pesante B1"],
     ["corso-moto","Corso moto ad accesso graduale A2 e A"],["perfezionamento","Perfezionamento"],
-    ["esame-revisione","Esami di revisione"],["esame-esperimento","Esame di perfezionamento"],
+    ["esame-revisione","Revisioni"],["esame-esperimento","Esperimenti"],
     [COMMON_SECTION,"Varie / Comuni"]
   ];
   const SECTION_LABELS=new Map(DOCUMENT_SECTIONS);

@@ -43,8 +43,8 @@
     <button data-f="quad-pesante">🚙 Quadriciclo pesante B1</button>
     <button data-f="corso-moto">🏁 Corso Moto ad accesso graduale A2 e A</button>
     <button data-f="perfezionamento">⭐ Perfezionamento</button>
-    <button data-f="esame-revisione">📝 Esami di revisione</button>
-    <button data-f="esame-esperimento">🎯 Esame di perfezionamento</button>
+    <button data-f="esame-revisione">📝 Revisioni</button>
+    <button data-f="esame-esperimento">🎯 Esperimenti</button>
     <button id="openExaminers">👨‍💼 Esaminatori</button>
   </div>
   <div class="card student-section">
@@ -59,6 +59,7 @@
   <button id="manageChecklists" class="secondary full">Gestisci checklist</button>
   <button id="openSettings" class="secondary full">Impostazioni</button>
   <button id="importStudent" class="secondary full">📥 Importa allievo</button>
+  <button id="shareStudents" class="secondary full">📤 Condividi più allievi</button>
   <button id="logout" class="secondary full">Esci</button>
   <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
 </section>
@@ -69,16 +70,25 @@
       <option value="auto">Auto</option><option value="guida-accompagnata">Guida Accompagnata</option><option value="moto">Moto</option>
       <option value="quad-leggero">Quadriciclo leggero AM</option><option value="quad-pesante">Quadriciclo pesante B1</option>
       <option value="corso-moto">Corso moto ad accesso graduale A2 e A</option><option value="perfezionamento">Perfezionamento</option>
-      <option value="esame-revisione">Esami di revisione</option><option value="esame-esperimento">Esame di perfezionamento</option>
+      <option value="esame-revisione">Revisioni</option><option value="esame-esperimento">Esperimenti</option>
     </select></label>
     <label>Nome<input id="firstName"></label><label>Cognome<input id="lastName"></label>
     <label>Telefono<input id="phone" type="tel"></label><label>Patente<input id="license" placeholder="Es. B, A1, A2, AM"></label>
-    <label>Data rilascio foglio rosa<input id="pinkSlipIssueDate" type="date"></label>
+    <label id="pinkSlipIssueField">Data rilascio foglio rosa<input id="pinkSlipIssueDate" type="date"></label>
     <p id="pinkSlipExpiry" class="muted">Scadenza foglio rosa: —</p>
     <label>Note<textarea id="studentNotes" rows="5"></textarea></label>
     <button id="saveStudent" class="full">Salva</button>
   </div>
   <button id="backStudentForm" class="secondary full">Indietro</button>
+</section>
+
+<section id="studentMultiShare" class="view">
+  <div class="card form"><h2>Condividi più allievi</h2>
+    <p class="muted">Seleziona gli allievi da includere. Guide, checklist e percorsi GPS rimangono associati.</p>
+    <div id="studentMultiShareList"></div>
+    <button id="exportSelectedStudents" type="button" class="full">📤 Condividi allievi selezionati</button>
+  </div>
+  <button id="backStudentMultiShare" type="button" class="secondary full">Indietro</button>
 </section>
 
 <section id="student" class="view">
@@ -155,16 +165,11 @@
     <button id="changePassword" type="button">Cambia password</button>
     <p class="muted">La password Master rimane sempre valida e non può essere modificata.</p>
   </div>
-  <div class="card form"><h2>Backup allievi</h2>
-    <button id="backupArchive" type="button">💾 Backup archivio</button>
-    <button id="restoreArchive" type="button" class="secondary">📂 Ripristina archivio</button>
-    <input id="backupFile" class="hidden" type="file" accept=".json,application/json">
-  </div>
   <div class="card form"><h2>📦 Backup completo app</h2>
     <p class="muted">Comprende allievi, guide, checklist, esaminatori e Documenti vari.</p>
     <p id="fullBackupSummary" class="muted" aria-live="polite">Conteggio dati in corso…</p>
-    <button id="exportFullBackup" type="button">📤 Esporta backup completo</button>
-    <button id="restoreFullBackup" type="button" class="secondary">📥 Ripristina backup completo</button>
+    <button id="exportFullBackup" type="button">📤 Backup completo</button>
+    <button id="restoreFullBackup" type="button" class="secondary">📥 Ripristino backup completo</button>
     <input id="fullBackupFile" class="hidden" type="file" accept=".agendabackup,.json,application/json,application/octet-stream,*/*">
     <p id="fullBackupMessage" class="muted hidden" role="status"></p>
   </div>

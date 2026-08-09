@@ -9,7 +9,7 @@ const DEFAULT_USER_PASSWORD="Autoscuola1923";
 const MASTER_PASSWORD="ZenaMaster1964";
 const APP_NAME="Agenda Istruttore";
 const APP_VERSION="1.0.1";
-const LABELS={auto:"Auto","guida-accompagnata":"Guida Accompagnata",moto:"Moto","quad-leggero":"Quadriciclo leggero AM","quad-pesante":"Quadriciclo pesante B1","corso-moto":"Corso moto ad accesso graduale A2 e A",perfezionamento:"Perfezionamento","esame-revisione":"Esami di revisione","esame-esperimento":"Esame di perfezionamento","da-classificare":"Da classificare"};
+const LABELS={auto:"Auto","guida-accompagnata":"Guida Accompagnata",moto:"Moto","quad-leggero":"Quadriciclo leggero AM","quad-pesante":"Quadriciclo pesante B1","corso-moto":"Corso moto ad accesso graduale A2 e A",perfezionamento:"Perfezionamento","esame-revisione":"Revisioni","esame-esperimento":"Esperimenti","da-classificare":"Da classificare"};
 const UNCLASSIFIED_CATEGORY="da-classificare";
 const DEFAULT_LISTS={
  auto:["Spiegazione auto","Posizione mani sul volante","Uso cambio","Uso frizione","Uso volante","Partenza in salita","Extraurbana","Nervi Quinto Quarto","Autostrada Nervi","Autostrada Recco","Autostrada Rapallo","Autostrada Chiavari","Autostrada Est","Autostrada Bolzaneto","Autostrada Aeroporto","Autostrada Ovest","Park a L","Park a S","Park di punta","Retromarcia lunga","Inversioni di marcia"],
@@ -55,10 +55,11 @@ function selectStudentSection(category){state.filter=category;document.querySele
 function pinkSlipExpiryDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(value||""))return"";const [year,month,day]=value.split("-").map(Number),lastDay=new Date(year+1,month,0).getDate();return`${year+1}-${String(month).padStart(2,"0")}-${String(Math.min(day,lastDay)).padStart(2,"0")}`}
 function formatStoredDate(value){if(!value)return"-";const [year,month,day]=value.split("-").map(Number);return new Date(year,month-1,day).toLocaleDateString("it-IT")}
 function updatePinkSlipExpiry(){const value=$("pinkSlipIssueDate").value,expiry=pinkSlipExpiryDate(value);$("pinkSlipExpiry").textContent=`Scadenza foglio rosa: ${expiry?formatStoredDate(expiry):"—"}`}
-function openStudent(id){state.studentId=id;const s=student(),expiry=pinkSlipExpiryDate(s.pinkSlipIssueDate);$("studentName").textContent=nameOf(s)||"Allievo";$("studentDetails").innerHTML=`<div class="detail-row"><span class="detail-label">Nome:</span> ${esc(s.firstName||"-")}</div><div class="detail-row"><span class="detail-label">Cognome:</span> ${esc(s.lastName||"-")}</div><div class="detail-row"><span class="detail-label">Categoria:</span> ${LABELS[s.category]}</div><div class="detail-row"><span class="detail-label">Telefono:</span> ${esc(s.phone||"-")}</div><div class="detail-row"><span class="detail-label">Patente:</span> ${esc(s.license||"-")}</div><div class="detail-row"><span class="detail-label">Rilascio foglio rosa:</span> ${formatStoredDate(s.pinkSlipIssueDate)}</div><div class="detail-row"><span class="detail-label">Scadenza foglio rosa:</span> ${formatStoredDate(expiry)}</div><div class="detail-row"><span class="detail-label">Note:</span> ${esc(s.notes||"-")}</div>`;renderLessons();show("student")}
+function openStudent(id){state.studentId=id;const s=student(),expiry=pinkSlipExpiryDate(s.pinkSlipIssueDate),pinkSlip=s.category==="perfezionamento"?"":`<div class="detail-row"><span class="detail-label">Rilascio foglio rosa:</span> ${formatStoredDate(s.pinkSlipIssueDate)}</div><div class="detail-row"><span class="detail-label">Scadenza foglio rosa:</span> ${formatStoredDate(expiry)}</div>`;$("studentName").textContent=nameOf(s)||"Allievo";$("studentDetails").innerHTML=`<div class="detail-row"><span class="detail-label">Nome:</span> ${esc(s.firstName||"-")}</div><div class="detail-row"><span class="detail-label">Cognome:</span> ${esc(s.lastName||"-")}</div><div class="detail-row"><span class="detail-label">Categoria:</span> ${LABELS[s.category]}</div><div class="detail-row"><span class="detail-label">Telefono:</span> ${esc(s.phone||"-")}</div><div class="detail-row"><span class="detail-label">Patente:</span> ${esc(s.license||"-")}</div>${pinkSlip}<div class="detail-row"><span class="detail-label">Note:</span> ${esc(s.notes||"-")}</div>`;renderLessons();show("student")}
 function renderLessons(){const s=student();$("lessons").innerHTML="";$("emptyLessons").classList.toggle("hidden",s.lessons.length>0);[...s.lessons].sort((a,b)=>b.createdAt-a.createdAt).forEach(l=>{const b=document.createElement("button");b.className="lesson-card";const selected=l.checklist.filter(x=>x.status!=="none").map(x=>`${stateIcon(x.status)} ${esc(x.label)}`).join("<br>")||"Nessuna voce selezionata";b.innerHTML=`<strong>${new Date(l.createdAt).toLocaleString("it-IT")}</strong><span>${esc(l.notes||"Nessuna nota")}</span><span class="meta lesson-items">${selected}</span><span class="meta">${l.route.length>1?"GPS presente":"GPS non usato"} · Tocca per aprire</span>`;b.onclick=()=>openLesson(l.id);$("lessons").appendChild(b)})}
-function newStudent(){state.editingStudent=null;$("studentFormTitle").textContent="Nuovo allievo";$("category").value=state.filter||"auto";try{$("category").closest("label").style.display="none"}catch(e){}["firstName","lastName","phone","license","pinkSlipIssueDate","studentNotes"].forEach(id=>$(id).value="");updatePinkSlipExpiry();show("studentForm")}
-function editStudent(){const s=student();state.editingStudent=s.id;try{$("category").closest("label").style.display=""}catch(e){}$("studentFormTitle").textContent="Modifica allievo";$("category").value=s.category;$("firstName").value=s.firstName;$("lastName").value=s.lastName;$("phone").value=s.phone;$("license").value=s.license;$("pinkSlipIssueDate").value=s.pinkSlipIssueDate;$("studentNotes").value=s.notes;updatePinkSlipExpiry();show("studentForm")}
+function updatePinkSlipVisibility(){const hidden=$("category").value==="perfezionamento";$("pinkSlipIssueField").classList.toggle("hidden",hidden);$("pinkSlipExpiry").classList.toggle("hidden",hidden)}
+function newStudent(){state.editingStudent=null;$("studentFormTitle").textContent="Nuovo allievo";$("category").value=state.filter||"auto";try{$("category").closest("label").style.display="none"}catch(e){}["firstName","lastName","phone","license","pinkSlipIssueDate","studentNotes"].forEach(id=>$(id).value="");updatePinkSlipExpiry();updatePinkSlipVisibility();show("studentForm")}
+function editStudent(){const s=student();state.editingStudent=s.id;try{$("category").closest("label").style.display=""}catch(e){}$("studentFormTitle").textContent="Modifica allievo";$("category").value=s.category;$("firstName").value=s.firstName;$("lastName").value=s.lastName;$("phone").value=s.phone;$("license").value=s.license;$("pinkSlipIssueDate").value=s.pinkSlipIssueDate;$("studentNotes").value=s.notes;updatePinkSlipExpiry();updatePinkSlipVisibility();show("studentForm")}
 function saveStudent(){const c=$("category").value,first=$("firstName").value.trim(),last=$("lastName").value.trim(),pinkSlipIssueDate=$("pinkSlipIssueDate").value;if(!first&&!last)return alert("Inserisci nome o cognome.");if(state.editingStudent){const s=state.students.find(x=>x.id===state.editingStudent),oldType=typeOf(s.category),newType=typeOf(c);Object.assign(s,{category:c,firstName:first,lastName:last,phone:$("phone").value.trim(),license:$("license").value.trim(),pinkSlipIssueDate,notes:$("studentNotes").value.trim()});if(oldType!==newType){s.checklist=normalizeItems([],newType);s.lessons=s.lessons.map(l=>({...l,checklist:normalizeItems([],newType)}))}}else state.students.push(normalizeStudent({id:uid(),category:c,firstName:first,lastName:last,phone:$("phone").value.trim(),license:$("license").value.trim(),pinkSlipIssueDate,notes:$("studentNotes").value.trim(),checklist:[],lessons:[]}));save();state.editingStudent=null;selectStudentSection(c);show("home")}
 function deleteStudent(){const s=student();if(confirm(`Eliminare definitivamente ${nameOf(s)}?`)){state.students=state.students.filter(x=>x.id!==s.id);save();renderStudents();show("home")}}
 function renderLessonChecklist(items){$("lessonChecklist").dataset.items=JSON.stringify(items);renderStateItems(items,$("lessonChecklist"),(i,v)=>{const a=JSON.parse($("lessonChecklist").dataset.items);a[i].status=v;$("lessonChecklist").dataset.items=JSON.stringify(a)})}
@@ -168,6 +169,19 @@ async function shareCurrentStudent(){
   await exportJsonFile(data,fileName,`Allievo ${nameOf(current)}`,true);
 }
 
+function openStudentMultiShare(){
+  const box=$("studentMultiShareList");box.replaceChildren();
+  [...state.students].sort((a,b)=>nameOf(a).localeCompare(nameOf(b),"it")).forEach(item=>{const label=document.createElement("label"),input=document.createElement("input"),text=document.createElement("span");label.className="detail-row";input.type="checkbox";input.value=item.id;text.textContent=`${nameOf(item)||"Senza nome"} · ${sectionLabel(item.category)}`;label.append(input,text);box.appendChild(label)});
+  $("exportSelectedStudents").disabled=!state.students.length;show("studentMultiShare");
+}
+
+async function shareSelectedStudents(){
+  const ids=[...$("studentMultiShareList").querySelectorAll('input[type="checkbox"]:checked')].map(input=>input.value),students=state.students.filter(item=>ids.includes(item.id));
+  if(!students.length){alert("Seleziona almeno un allievo.");return}
+  const data={app:APP_NAME,version:APP_VERSION,type:"students",exportDate:new Date().toISOString(),students:JSON.parse(JSON.stringify(students))};
+  await exportJsonFile(data,`Agenda_Istruttore_${students.length}_allievi.json`,`${students.length} allievi`,true);
+}
+
 async function readJsonFile(file){
   try{return JSON.parse(await file.text())}
   catch{return null}
@@ -188,18 +202,23 @@ function prepareImportedStudent(raw,forcedId){
 // Importa un singolo allievo e gestisce esplicitamente gli omonimi.
 async function importStudentFile(file){
   const data=await readJsonFile(file);
-  if(!data||data.app!==APP_NAME||typeof data.version!=="string"||data.type!=="student"||!data.student){alert("File non valido");return}
-  const raw=data.student,first=String(raw.firstName||"").trim().toLocaleLowerCase("it"),last=String(raw.lastName||"").trim().toLocaleLowerCase("it");
+  if(!data||data.app!==APP_NAME||typeof data.version!=="string"){alert("File non valido");return}
+  const raws=data.type==="student"&&data.student?[data.student]:data.type==="students"&&Array.isArray(data.students)?data.students:null;
+  if(!raws||!raws.length){alert("File non valido");return}
+  let importedCount=0,updatedCount=0;
+  for(const raw of raws){
+  const first=String(raw.firstName||"").trim().toLocaleLowerCase("it"),last=String(raw.lastName||"").trim().toLocaleLowerCase("it");
   const duplicate=state.students.find(item=>item.firstName.trim().toLocaleLowerCase("it")===first&&item.lastName.trim().toLocaleLowerCase("it")===last);
   let action="copy";
   if(duplicate)action=await chooseAction("Allievo già presente",`${nameOf(duplicate)||"Questo allievo"} esiste già nell'archivio.`,[
     {label:"Aggiorna",value:"update"},{label:"Crea copia",value:"copy",className:"secondary"},{label:"Annulla",value:"cancel",className:"secondary"}
   ]);
-  if(action==="cancel")return;
+  if(action==="cancel")continue;
   const imported=prepareImportedStudent(raw,action==="update"?duplicate.id:uid());
-  if(!imported){alert("File non valido");return}
-  if(action==="update")state.students[state.students.indexOf(duplicate)]=imported;else state.students.push(imported);
-  save();renderStudents();alert(action==="update"?"Allievo aggiornato":"Allievo importato");
+  if(!imported)continue;
+  if(action==="update"){state.students[state.students.indexOf(duplicate)]=imported;updatedCount++}else{state.students.push(imported);importedCount++}
+  }
+  save();renderStudents();alert(raws.length===1?(updatedCount?"Allievo aggiornato":importedCount?"Allievo importato":"Importazione annullata"):`Importazione completata: ${importedCount} nuovi, ${updatedCount} aggiornati.`);
 }
 
 // Esporta l'archivio usando direttamente l'array allievi esistente.
@@ -236,16 +255,15 @@ function openExaminer(id){const x=state.examiners.find(e=>e.id===id);if(!x)retur
 function addHabit(){const input=$("newHabit"),value=input.value.trim();if(!value)return;state.habitDraft.push(value);input.value="";renderHabits()}
 function saveExaminer(){const firstName=$("examinerFirstName").value.trim(),lastName=$("examinerLastName").value.trim(),notes=$("examinerNotes").value;if(!firstName&&!lastName)return alert("Inserisci nome o cognome.");if(state.editingExaminer){const x=state.examiners.find(e=>e.id===state.editingExaminer);Object.assign(x,{firstName,lastName,notes,habits:[...state.habitDraft]})}else state.examiners.push({id:uid(),firstName,lastName,notes,habits:[...state.habitDraft]});saveExaminers();renderExaminers();show("examiners")}
 function deleteExaminer(){if(!state.editingExaminer||!confirm("Eliminare questo esaminatore?"))return;state.examiners=state.examiners.filter(e=>e.id!==state.editingExaminer);saveExaminers();renderExaminers();show("examiners")}
-function moveBackButtonsToBottom(){[["studentForm","backStudentForm"],["student","backHome"],["lesson","backLesson"],["checklistManager","backChecklistManager"],["examiners","backExaminers"],["examinerForm","backExaminerForm"],["savedMapView","backSavedMap"],["settings","backSettings"]].forEach(([viewId,buttonId])=>{const view=$(viewId),button=$(buttonId);if(view&&button){button.classList.add("full");view.appendChild(button)}})}
+function moveBackButtonsToBottom(){[["studentForm","backStudentForm"],["studentMultiShare","backStudentMultiShare"],["student","backHome"],["lesson","backLesson"],["checklistManager","backChecklistManager"],["examiners","backExaminers"],["examinerForm","backExaminerForm"],["savedMapView","backSavedMap"],["settings","backSettings"]].forEach(([viewId,buttonId])=>{const view=$(viewId),button=$(buttonId);if(view&&button){button.classList.add("full");view.appendChild(button)}})}
 $("loginForm").onsubmit=login;$("openSettings").onclick=()=>{["currentPassword","newPassword","confirmPassword"].forEach(id=>$(id).value="");$("passwordMessage").classList.add("hidden");show("settings")};$("backSettings").onclick=()=>{renderStudents();show("home")};$("changePassword").onclick=changePassword;$("logout").onclick=logout;
 moveBackButtonsToBottom();
 $("pinkSlipIssueDate").addEventListener("input",updatePinkSlipExpiry);
+$("category").addEventListener("change",updatePinkSlipVisibility);
 $("shareStudent").onclick=shareCurrentStudent;
 $("importStudent").onclick=()=>$("studentFile").click();
 $("studentFile").onchange=async event=>{const file=event.target.files[0];event.target.value="";if(file)await importStudentFile(file)};
-$("backupArchive").onclick=event=>{event.preventDefault();event.stopPropagation();backupArchive()};
-$("restoreArchive").onclick=event=>{event.preventDefault();event.stopPropagation();$("backupFile").click()};
-$("backupFile").onchange=async event=>{const file=event.target.files[0];event.target.value="";if(file)await restoreArchiveFile(file)};
+$("shareStudents").onclick=openStudentMultiShare;$("exportSelectedStudents").onclick=shareSelectedStudents;$("backStudentMultiShare").onclick=()=>show("home");
 function toggleVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return alert("Usa il microfono della tastiera del telefono.");if(!state.recognition){state.recognition=new SR();state.recognition.lang="it-IT";state.recognition.continuous=true;state.recognition.onresult=e=>{let t="";for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)t+=e.results[i][0].transcript+" ";(document.activeElement&&document.activeElement.id==="examinerNotes"?$("examinerNotes"):$("lessonNotes")).value+=t};state.recognition.onend=()=>{state.recognizing=false;$("voice").textContent="🎤 Detta"}}if(state.recognizing)state.recognition.stop();else{state.recognition.start();state.recognizing=true;$("voice").textContent="⏹ Ferma dettatura"}}
 $("search").oninput=renderStudents;$("newStudent").onclick=newStudent;$("openExaminers").onclick=()=>{renderExaminers();show("examiners")};$("backExaminers").onclick=()=>{renderStudents();show("home")};$("newExaminer").onclick=newExaminer;$("backExaminerForm").onclick=()=>{renderExaminers();show("examiners")};$("saveExaminer").onclick=saveExaminer;$("deleteExaminer").onclick=deleteExaminer;$("addHabit").onclick=addHabit;$("newHabit").onkeydown=e=>{if(e.key==="Enter")addHabit()};document.querySelectorAll(".categories button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".categories button").forEach(x=>x.classList.remove("active"));b.classList.add("active");state.filter=b.dataset.f;renderStudents()});$("backStudentForm").onclick=()=>state.editingStudent?openStudent(state.editingStudent):show("home");$("saveStudent").onclick=saveStudent;$("backHome").onclick=()=>{renderStudents();show("home")};$("editStudent").onclick=editStudent;$("deleteStudent").onclick=deleteStudent;$("newLesson").onclick=newLesson;$("backLesson").onclick=()=>{stopGps();openStudent(state.studentId)};$("saveLesson").onclick=saveLesson;$("deleteLesson").onclick=deleteLesson;$("startGps").onclick=startGps;$("stopGps").onclick=stopGps;$("voice").onclick=toggleVoice;$("openSavedRoute").onclick=showSavedRoute;$("backSavedMap").onclick=()=>show("lesson");$("manageChecklists").onclick=()=>{renderChecklistManager();show("checklistManager")};$("backChecklistManager").onclick=()=>{renderStudents();show("home")};document.querySelectorAll(".check-tabs button").forEach(b=>b.onclick=()=>{state.managerType=b.dataset.list;renderChecklistManager()});$("addChecklistItem").onclick=addChecklist;$("newChecklistLabel").onkeydown=e=>{if(e.key==="Enter")addChecklist()};
 document.querySelectorAll(".categories button[data-f]").forEach(button=>button.onclick=()=>selectStudentSection(button.dataset.f));

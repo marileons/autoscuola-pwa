@@ -368,16 +368,31 @@
     window.setTimeout(()=>URL.revokeObjectURL(url),60000);
   }
 
-  async function shareOrDownloadBackup(file){
-    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+  function presentPreparedBackup(file){
+    const modal=byId("fullBackupModal"),content=byId("fullBackupModalBody"),actions=byId("fullBackupModalButtons");
+    byId("fullBackupModalTitle").textContent="Backup completo pronto";
+    content.replaceChildren();actions.replaceChildren();
+    const paragraph=document.createElement("p");
+    paragraph.textContent="Premi il pulsante seguente per condividere o salvare il file sul dispositivo.";
+    content.appendChild(paragraph);
+    const cancel=document.createElement("button");cancel.type="button";cancel.className="secondary";cancel.textContent="Chiudi";cancel.onclick=()=>modal.classList.add("hidden");
+    const save=document.createElement("button");save.type="button";save.textContent="Condividi / Salva backup";
+    save.onclick=async()=>{
+      save.disabled=true;
       try{
-        await navigator.share({title:"Backup completo Agenda Istruttori",files:[file]});
-        return;
+        let nativeShare=false;
+        try{nativeShare=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]}))}catch(error){}
+        if(nativeShare)await navigator.share({title:"Backup completo Agenda Istruttori",files:[file]});
+        else downloadFile(file);
+        modal.classList.add("hidden");
       }catch(error){
-        if(error&&error.name==="AbortError")return;
-      }
-    }
-    downloadFile(file);
+        if(!error||error.name!=="AbortError"){
+          downloadFile(file);
+          modal.classList.add("hidden");
+        }
+      }finally{save.disabled=false}
+    };
+    actions.append(cancel,save);modal.classList.remove("hidden");
   }
 
   async function exportFullBackup(){
@@ -390,7 +405,7 @@
       const timestamp=new Date().toISOString().replace(/[:.]/g,"-");
       const file=new File([json],`AgendaIstruttori_BackupCompleto_${timestamp}.${BACKUP_EXTENSION}`,{type:"application/json"});
       showMessage(`Backup pronto: ${payload.metadata.students} allievi, ${payload.metadata.documents} documenti, circa ${formatBytes(file.size)}.`);
-      await shareOrDownloadBackup(file);
+      presentPreparedBackup(file);
     }catch(error){
       showMessage(error&&error.message?error.message:"Non è stato possibile creare il backup completo.",true);
     }finally{
