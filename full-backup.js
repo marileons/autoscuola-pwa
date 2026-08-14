@@ -490,16 +490,20 @@
     localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(appData.examiners));
   }
 
-  function canonicalAppData(appData){
-    const cleanItems=items=>(Array.isArray(items)?items:[]).map(item=>({label:String(item&&item.label||""),status:String(item&&item.status?item.status:item&&item.done?"good":"none")}));
+  function canonicalAppData(appData,checklistKeys=null){
+    const cleanItems=items=>(Array.isArray(items)?items:[]).map(item=>({label:String(item&&item.label||""),status:String(item&&item.status?item.status:item&&item.done?"good":"none")})).filter(item=>item.status!=="none");
+    const cleanRoute=route=>(Array.isArray(route)?route:[]).map(point=>({
+      lat:Number(point&&point.lat),lng:Number(point&&point.lng),accuracy:Number(point&&point.accuracy),time:Number(point&&point.time),breakBefore:point&&point.breakBefore===true
+    }));
     const students=(Array.isArray(appData.students)?appData.students:[]).map(student=>({
       id:String(student&&student.id||""),category:String(student&&student.category||""),firstName:String(student&&student.firstName||""),lastName:String(student&&student.lastName||""),phone:String(student&&student.phone||""),license:String(student&&student.license||""),pinkSlipIssueDate:String(student&&student.pinkSlipIssueDate||""),notes:String(student&&student.notes||student&&student.studentNotes||""),archived:student&&student.archived===true,
       checklist:cleanItems(student&&student.checklist),
-      lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>({id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:Array.isArray(lesson&&lesson.route)?lesson.route:[],checklist:cleanItems(lesson&&lesson.checklist)}))
+      lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>({id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist)}))
     }));
     const checklistSource=appData.checklists&&typeof appData.checklists==="object"&&!Array.isArray(appData.checklists)?appData.checklists:{};
     const checklists={};
-    Object.keys(checklistSource).sort().forEach(key=>{checklists[key]=Array.isArray(checklistSource[key])?checklistSource[key].map(String):[]});
+    const includedChecklistKeys=Array.isArray(checklistKeys)?checklistKeys:Object.keys(checklistSource);
+    includedChecklistKeys.sort().forEach(key=>{checklists[key]=Array.isArray(checklistSource[key])?checklistSource[key].map(String):[]});
     const examiners=(Array.isArray(appData.examiners)?appData.examiners:[]).map(examiner=>({id:String(examiner&&examiner.id||""),firstName:String(examiner&&examiner.firstName||""),lastName:String(examiner&&examiner.lastName||""),notes:String(examiner&&examiner.notes||""),habits:Array.isArray(examiner&&examiner.habits)?examiner.habits.map(String):[]}));
     return {students,checklists,examiners};
   }
@@ -510,26 +514,28 @@
   }
 
   async function createRestoreManifest(validated){
-    const canonical=canonicalAppData(validated.payload.appData);
+    const checklistKeys=Object.keys(validated.payload.appData.checklists).sort();
+    const canonical=canonicalAppData(validated.payload.appData,checklistKeys);
     return {
       version:1,
       students:canonical.students.length,
       lessons:canonical.students.reduce((total,student)=>total+student.lessons.length,0),
       examiners:canonical.examiners.length,
+      checklistKeys,
       appDataSha256:await textSha256(JSON.stringify(canonical)),
       documents:validated.payload.documents.map(documentRecord=>({id:documentRecord.id,originalName:documentRecord.originalName,mimeType:documentRecord.mimeType,size:documentRecord.size,sha256:documentRecord.sha256}))
     };
   }
 
   async function verifyRestoreManifest(manifest){
-    if(!manifest||manifest.version!==1||!Array.isArray(manifest.documents))throw new Error("Manifest di verifica non valido.");
+    if(!manifest||manifest.version!==1||!Array.isArray(manifest.documents)||!Array.isArray(manifest.checklistKeys))throw new Error("Manifest di verifica non valido.");
     const appData={
       students:parsedStorageValue(DATA_KEYS.students,[]),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
     };
     validateAppData(appData);
-    const canonical=canonicalAppData(appData);
+    const canonical=canonicalAppData(appData,manifest.checklistKeys);
     if(canonical.students.length!==manifest.students)throw new Error(`Verifica post-riavvio allievi fallita: attesi ${manifest.students}, trovati ${canonical.students.length}.`);
     const lessons=canonical.students.reduce((total,student)=>total+student.lessons.length,0);
     if(lessons!==manifest.lessons)throw new Error(`Verifica post-riavvio guide fallita: attese ${manifest.lessons}, trovate ${lessons}.`);

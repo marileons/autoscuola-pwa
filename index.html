@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#12616c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Agenda Istruttori</title>
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json?v=1.21-identita-definitiva">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v1-21.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=1.21-logo-background-r5">
 <link rel="stylesheet" href="auth.css">
 <link rel="stylesheet" href="transfer.css">
 <link rel="stylesheet" href="documents.css">
@@ -18,7 +18,7 @@
 <body>
 <section id="loginScreen" class="auth-screen">
   <div class="auth-card">
-    <img src="logo.png" alt="Logo" class="auth-logo">
+    <img src="home-logo-mr-login-v1-21.png" alt="Logo MR Agenda Istruttori" class="auth-logo">
     <h1>AGENDA ISTRUTTORI</h1>
     <p class="muted auth-version">Versione 1.21</p>
     <p class="muted">Inserisci la password per accedere.</p>
@@ -32,11 +32,12 @@
   </div>
 </section>
 <div id="appShell" class="hidden">
-<header class="app-header"><img src="logo.png" alt="Applicazione per gli istruttori di guida di ZENA" class="main-logo"><h1>AGENDA ISTRUTTORI</h1><div>Gestione Allievi e Guide · v1.21</div></header>
+<header class="app-header"><img src="home-logo-mr-header-v1-21.png" alt="Logo MR con automobile, moto, volante e strada" class="main-logo"><h1>AGENDA ISTRUTTORI</h1><div>Gestione Allievi e Guide · v1.21</div></header>
 <main>
 <section id="home" class="view active">
+  <div class="card dashboard-intro"><h2>Dashboard</h2><p class="muted">Scegli una sezione. Nessuna categoria o allievo è selezionato automaticamente.</p></div>
   <div class="categories">
-    <button data-f="auto" class="active">🚗 Auto</button>
+    <button data-f="auto">🚗 Auto</button>
     <button data-f="moto">🏍 Moto</button>
     <button data-f="guida-accompagnata">🚗 Guida Accompagnata</button>
     <button data-f="quad-leggero">🛵 Quadriciclo leggero AM</button>
@@ -47,21 +48,29 @@
     <button data-f="esame-esperimento">🎯 Esperimenti</button>
     <button id="openExaminers">👨‍💼 Esaminatori</button>
   </div>
-  <div class="card student-section">
+  <div id="studentSection" class="card student-section hidden">
+    <button id="studentSectionHome" type="button" class="home-command">← HOME</button>
     <h2 id="currentSectionTitle">Auto</h2>
     <button id="newStudent" class="full">➕ Nuovo allievo</button>
     <input id="search" type="search" placeholder="Cerca allievo">
     <div id="students"></div><p id="emptyStudents" class="empty hidden">Nessun allievo in questa sezione.</p>
   </div>
   <button id="unclassifiedStudents" class="secondary full hidden">⚠️ Allievi da classificare</button>
+  <div class="dashboard-actions">
   <button id="openArchive" class="archive-action full">🗃️ Archivio allievi</button>
   <a class="link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer">📖 Codice della Strada ACI</a>
   <button id="openDocuments" class="secondary full">📁 Documenti vari</button>
+  </div>
+  <div class="secondary-functions" aria-label="Altre funzioni">
+  <h2>Altre funzioni</h2>
+  <div class="secondary-actions">
   <button id="manageChecklists" class="secondary full">Gestisci checklist</button>
   <button id="openSettings" class="secondary full">Impostazioni</button>
   <button id="importStudent" class="secondary full">📥 Importa allievo</button>
   <button id="shareStudents" class="secondary full">📤 Condividi più allievi</button>
-  <button id="logout" class="secondary full">Esci</button>
+  <button id="logout" class="logout-action full">Esci</button>
+  </div>
+  </div>
   <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
 </section>
 
@@ -72,7 +81,7 @@
     <input id="archiveSearch" type="search" placeholder="Cerca nell'archivio">
     <div id="archivedStudents"></div><p id="emptyArchive" class="empty hidden">Nessun allievo archiviato.</p>
   </div>
-  <button id="backArchive" class="secondary full">Indietro</button>
+  <button id="backArchive" class="home-command full">← HOME</button>
 </section>
 
 <section id="studentForm" class="view">
@@ -99,7 +108,7 @@
     <div id="studentMultiShareList"></div>
     <button id="exportSelectedStudents" type="button" class="full">📤 Condividi allievi selezionati</button>
   </div>
-  <button id="backStudentMultiShare" type="button" class="secondary full">Indietro</button>
+  <button id="backStudentMultiShare" type="button" class="home-command full">← HOME</button>
 </section>
 
 <section id="student" class="view">
@@ -111,7 +120,7 @@
   <button id="restoreStudent" class="restore-action full hidden">↩️ Ripristina allievo</button>
   <div class="card"><h2>Guide salvate</h2><div id="lessons"></div><p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p></div>
   <button id="deleteStudent" class="danger full">Elimina allievo</button>
-  <button id="backHome" class="secondary full">Indietro</button>
+  <button id="backHome" class="home-command full">← HOME</button>
 </section>
 
 <section id="lesson" class="view">
@@ -122,7 +131,7 @@
     <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><button id="voice" class="secondary">🎤 Detta</button>
   </div>
   <div class="card"><h2>Checklist della guida</h2><div id="lessonChecklist"></div></div>
-  <div class="card"><h2>GPS</h2><div class="top"><button id="startGps">Avvia GPS</button><button id="stopGps" class="secondary" disabled>Ferma GPS</button></div><p id="gpsStatus" class="muted">GPS non attivo.</p><div id="liveMap" class="map"></div></div>
+  <div class="card gps-card"><h2>GPS</h2><button id="startGps" type="button" class="gps-toggle full" aria-pressed="false">AVVIA GPS</button><button id="stopGps" type="button" class="hidden" tabindex="-1" aria-hidden="true">Ferma GPS</button><p id="gpsIndicator" class="gps-indicator" role="status">GPS non attivo</p><p id="gpsStatus" class="muted" aria-live="polite">GPS non attivo.</p><div id="liveMap" class="map"></div></div>
   <button id="openSavedRoute" class="secondary full hidden">Apri percorso salvato</button>
   <div style="margin-bottom:90px"><button id="saveLesson" class="full">💾 Salva guida</button></div>
   <button id="deleteLesson" class="danger full hidden">Elimina guida</button>
@@ -139,13 +148,13 @@
     <div class="toolbar checklist-add"><input id="newChecklistLabel" placeholder="Nuova voce"><button id="addChecklistItem">Aggiungi</button></div>
     <div id="checklistManagerList"></div>
   </div>
-  <button id="backChecklistManager" class="secondary full">Indietro</button>
+  <button id="backChecklistManager" class="home-command full">← HOME</button>
 </section>
 
 <section id="examiners" class="view">
   <div class="top"><button id="newExaminer">➕ Nuovo esaminatore</button></div>
   <div class="card"><h2>Esaminatori</h2><div id="examinerList"></div><p id="emptyExaminers" class="empty hidden">Nessun esaminatore.</p></div>
-  <button id="backExaminers" class="secondary full">Indietro</button>
+  <button id="backExaminers" class="home-command full">← HOME</button>
 </section>
 
 <section id="examinerForm" class="view">
@@ -186,7 +195,7 @@
     <input id="fullBackupFile" class="hidden" type="file" accept=".agendabackup,.json,application/json,application/octet-stream,*/*">
     <p id="fullBackupMessage" class="muted hidden" role="status"></p>
   </div>
-  <button id="backSettings" class="secondary full">Indietro</button>
+  <button id="backSettings" class="home-command full">← HOME</button>
 </section>
 
 <section id="documentsView" class="view">
@@ -226,6 +235,7 @@
   </div>
 </section>
 </main>
+<footer class="ownership">© 2026 Mario Leoni — Tutti i diritti riservati<br><span>L'applicazione e il relativo codice sono software proprietario. I materiali di terzi restano di proprietà dei rispettivi titolari.</span></footer>
 </div>
 <div id="choiceModal" class="choice-modal hidden" role="dialog" aria-modal="true" aria-labelledby="choiceTitle">
   <div class="choice-card">

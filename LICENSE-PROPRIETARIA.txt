@@ -1,0 +1,11 @@
+© 2026 Mario Leoni — Tutti i diritti riservati.
+
+Agenda Istruttori e il relativo codice sorgente sono software proprietario.
+Salvo preventiva autorizzazione scritta del titolare, non sono consentiti la copia,
+la modifica, la distribuzione, la ridistribuzione, la pubblicazione, la cessione,
+il riutilizzo del codice o la creazione di versioni derivate, in tutto o in parte.
+
+I documenti, i modelli, i contenuti e i materiali appartenenti a soggetti terzi
+restano di proprietà dei rispettivi titolari e sono esclusi dalla presente
+dichiarazione di titolarità del software. Restano inoltre valide tutte le licenze,
+le attribuzioni e le condizioni applicabili ai componenti e materiali di terzi.

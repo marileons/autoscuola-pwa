@@ -1,4 +1,4 @@
-const CACHE="agenda-istruttori-v1-21-final";
+const CACHE="agenda-istruttori-v1-21-backup-compat-r7";
 const FILES=[
   "./",
   "./index.html",
@@ -11,11 +11,21 @@ const FILES=[
   "./documents.js",
   "./full-backup.js",
   "./manifest.json",
-  "./logo.jpg",
-  "./logo.png",
+  "./home-logo-mr-v1-21.png",
+  "./home-logo-mr-login-v1-21.png",
+  "./home-logo-mr-header-v1-21.png",
+  "./pwa-icon-mr-master-v1-21.png",
   "./apple-touch-icon.png",
+  "./apple-touch-icon-v1-21.png",
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-192-v1-21.png",
+  "./icon-512.png",
+  "./icon-512-v1-21.png",
+  "./launchericon-48x48.png",
+  "./launchericon-72x72.png",
+  "./launchericon-96x96.png",
+  "./launchericon-144x144.png",
+  "./LICENSE-PROPRIETARIA.txt"
 ];
 self.addEventListener("install",event=>{
   event.waitUntil(

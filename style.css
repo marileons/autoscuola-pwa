@@ -5,17 +5,25 @@
 /* Tavolozza v1.21 coordinata con Genova, mare e Lanterna. */
 :root{--zena-cream:#f6eedc;--zena-paper:#fffaf0;--zena-blue:#12616c;--zena-blue-dark:#0b4650;--zena-green:#477b58;--zena-orange:#d87832;--zena-ink:#173437}
 body{background:linear-gradient(180deg,#eadfca 0,var(--zena-cream) 35%,#edf2e8 100%);color:var(--zena-ink);min-height:100vh}
-header,.app-header{position:sticky;top:0;z-index:20;text-align:center;padding:max(12px,env(safe-area-inset-top)) 12px 12px;background:linear-gradient(135deg,var(--zena-blue-dark),var(--zena-blue));color:#fff;border-bottom:4px solid var(--zena-orange);box-shadow:0 3px 12px #092f3655}
-.app-header h1{margin:5px 0 1px;font-size:clamp(1.35rem,5vw,2rem)}.app-header>div{color:#f7ead0}
-.main-logo{display:block;width:min(92%,520px);max-height:190px;object-fit:contain;margin:0 auto;border-radius:14px;background:var(--zena-paper);box-shadow:0 2px 10px #0018}
+header,.app-header{position:static;z-index:auto;text-align:center;padding:max(8px,env(safe-area-inset-top)) 10px 8px;background:linear-gradient(135deg,var(--zena-blue-dark),var(--zena-blue));color:#fff;border-bottom:4px solid var(--zena-orange);box-shadow:0 3px 12px #092f3655}
+.app-header h1{margin:4px 0 0;font-size:clamp(1.2rem,4.6vw,1.75rem);line-height:1.05}.app-header>div{color:#f7ead0;font-size:clamp(.78rem,2.8vw,.95rem)}
+.main-logo{display:block;width:min(72%,440px);max-height:128px;object-fit:contain;margin:0 auto;border-radius:12px;background:#12616c;box-shadow:0 0 0 6px #12616c,0 2px 10px #0018}
 .card,.student-card,.lesson-card{background:var(--zena-paper);border:1px solid #dfcfb3;box-shadow:0 2px 8px #17343718}
 button{background:var(--zena-blue)}button:hover{background:var(--zena-blue-dark)}button.secondary{background:#e7e2d6;color:var(--zena-ink)}
 .categories button{background:var(--zena-paper);color:var(--zena-ink);border-left:4px solid var(--zena-green)}.categories button.active{background:var(--zena-blue);color:#fff;border-left-color:var(--zena-orange)}
 .archive-action{background:var(--zena-orange)}.archive-action:hover{background:#b85d21}.restore-action{background:var(--zena-green)}.restore-action:hover{background:#356345}
 .archive-section{border-top:5px solid var(--zena-orange)}.archived-student{border-left:5px solid var(--zena-orange)}
 input:focus,textarea:focus,select:focus{outline:3px solid #d8783255;border-color:var(--zena-orange)}
-@media(max-width:520px){.main-logo{width:100%;max-height:150px}.app-header{padding-left:8px;padding-right:8px}main{padding:12px}}
+@media(max-width:520px){.main-logo{width:min(68%,270px);max-height:116px}.app-header{padding:max(6px,env(safe-area-inset-top)) 7px 7px}main{padding:12px}}
 #habitList{margin-top:12px}
 .pdf-resources h2{margin-top:0}.pdf-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.link-button{display:block;border-radius:12px;background:#e9e9ee;color:#111;padding:12px 15px;font-weight:700;text-align:center;text-decoration:none}
 .lesson-items{display:block;margin:8px 0;line-height:1.45}
+.dashboard-intro{text-align:center}.dashboard-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.dashboard-actions .full{margin:0;min-height:54px}.student-section{scroll-margin-top:12px}.home-command{background:#12616c;color:#fff;min-height:46px}.student-section>.home-command{width:auto;margin:0 0 10px;padding:10px 16px}.secondary-functions{margin:14px 0}.secondary-functions>h2{font-size:1rem;margin:0 0 7px;color:#536568}.secondary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.secondary-actions .full{margin:0;min-height:44px;padding:9px 10px;font-size:.92rem}.logout-action{background:#596268;color:#fff}.logout-action:hover{background:#444b50}
+.gps-toggle{background:#0a84ff;font-size:1.05rem;min-height:52px}.gps-toggle:hover{background:#006dd6}.gps-toggle.gps-active{background:#d70015}.gps-toggle.gps-active:hover{background:#b00016}.gps-indicator{font-weight:800;color:#667;margin:10px 0}.gps-indicator.active{color:#d70015}.ownership{text-align:center;padding:18px 12px calc(18px + env(safe-area-inset-bottom));background:#0b4650;color:#fff;font-size:13px}.ownership span{color:#f7ead0}
+@media(max-width:520px){.dashboard-actions{grid-template-columns:1fr}.dashboard-actions .full{min-height:52px}.secondary-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.secondary-actions .full{min-height:44px;font-size:.86rem;padding:8px 6px}}
 @media (min-width:700px) and (orientation:landscape),(min-width:1024px){header{display:flex;align-items:center;justify-content:center;gap:12px;padding:4px 12px!important}header img{width:64px!important;max-width:64px!important}header h1{font-size:20px;line-height:1;margin:0}header div{font-size:12px}}
+
+/* Il logo completo v1.21 resta leggibile e non viene compresso dalla vecchia testata compatta. */
+.app-header{display:block!important}
+header.app-header img.main-logo{width:auto!important;max-width:min(72%,440px)!important;height:128px!important;max-height:128px!important;object-fit:contain!important}
+@media(max-width:520px){header.app-header img.main-logo{width:auto!important;max-width:min(68%,270px)!important;height:116px!important;max-height:116px!important}}
