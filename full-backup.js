@@ -4,7 +4,7 @@
 
   const FORMAT="AgendaIstruttoriFullBackup";
   const FORMAT_VERSION=1;
-  const APP_VERSION="1.0.1";
+  const APP_VERSION="1.21.0";
   const BACKUP_EXTENSION="agendabackup";
   const DATA_KEYS={
     students:"autoscuola_v3_completa",
@@ -493,7 +493,7 @@
   function canonicalAppData(appData){
     const cleanItems=items=>(Array.isArray(items)?items:[]).map(item=>({label:String(item&&item.label||""),status:String(item&&item.status?item.status:item&&item.done?"good":"none")}));
     const students=(Array.isArray(appData.students)?appData.students:[]).map(student=>({
-      id:String(student&&student.id||""),category:String(student&&student.category||""),firstName:String(student&&student.firstName||""),lastName:String(student&&student.lastName||""),phone:String(student&&student.phone||""),license:String(student&&student.license||""),notes:String(student&&student.notes||student&&student.studentNotes||""),
+      id:String(student&&student.id||""),category:String(student&&student.category||""),firstName:String(student&&student.firstName||""),lastName:String(student&&student.lastName||""),phone:String(student&&student.phone||""),license:String(student&&student.license||""),pinkSlipIssueDate:String(student&&student.pinkSlipIssueDate||""),notes:String(student&&student.notes||student&&student.studentNotes||""),archived:student&&student.archived===true,
       checklist:cleanItems(student&&student.checklist),
       lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>({id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:Array.isArray(lesson&&lesson.route)?lesson.route:[],checklist:cleanItems(lesson&&lesson.checklist)}))
     }));

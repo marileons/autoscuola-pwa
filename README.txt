@@ -9,3 +9,4 @@ Aggiornamento della vecchia app con:
 - GPS e dettatura mantenuti
 - condivisione e importazione di un singolo allievo
 - backup e ripristino completo dell'archivio allievi
+Agenda Istruttori v1.21

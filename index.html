@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a84ff">
+<meta name="theme-color" content="#12616c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Agenda Istruttori</title>
 <link rel="manifest" href="manifest.json">
@@ -20,7 +20,7 @@
   <div class="auth-card">
     <img src="logo.png" alt="Logo" class="auth-logo">
     <h1>AGENDA ISTRUTTORI</h1>
-    <p class="muted auth-version">Versione 1.0.1</p>
+    <p class="muted auth-version">Versione 1.21</p>
     <p class="muted">Inserisci la password per accedere.</p>
     <form id="loginForm" class="form">
       <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required autofocus></label>
@@ -32,7 +32,7 @@
   </div>
 </section>
 <div id="appShell" class="hidden">
-<header style="text-align:center;padding:12px"><img src="logo.png" alt="Logo" style="max-width:220px;width:90%;border-radius:12px"><h1>AGENDA ISTRUTTORI</h1><div style="color:#555">Gestione Allievi e Guide</div></header>
+<header class="app-header"><img src="logo.png" alt="Applicazione per gli istruttori di guida di ZENA" class="main-logo"><h1>AGENDA ISTRUTTORI</h1><div>Gestione Allievi e Guide · v1.21</div></header>
 <main>
 <section id="home" class="view active">
   <div class="categories">
@@ -54,6 +54,7 @@
     <div id="students"></div><p id="emptyStudents" class="empty hidden">Nessun allievo in questa sezione.</p>
   </div>
   <button id="unclassifiedStudents" class="secondary full hidden">⚠️ Allievi da classificare</button>
+  <button id="openArchive" class="archive-action full">🗃️ Archivio allievi</button>
   <a class="link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer">📖 Codice della Strada ACI</a>
   <button id="openDocuments" class="secondary full">📁 Documenti vari</button>
   <button id="manageChecklists" class="secondary full">Gestisci checklist</button>
@@ -62,6 +63,16 @@
   <button id="shareStudents" class="secondary full">📤 Condividi più allievi</button>
   <button id="logout" class="secondary full">Esci</button>
   <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
+</section>
+
+<section id="studentArchive" class="view">
+  <div class="card student-section archive-section">
+    <h2>Archivio allievi</h2>
+    <p class="muted">Allievi che hanno conseguito la patente. Tutti i dati e le guide restano conservati.</p>
+    <input id="archiveSearch" type="search" placeholder="Cerca nell'archivio">
+    <div id="archivedStudents"></div><p id="emptyArchive" class="empty hidden">Nessun allievo archiviato.</p>
+  </div>
+  <button id="backArchive" class="secondary full">Indietro</button>
 </section>
 
 <section id="studentForm" class="view">
@@ -96,6 +107,8 @@
   <div class="card"><h2 id="studentName"></h2><div id="studentDetails"></div></div>
   <button id="newLesson" class="full">Nuova guida</button>
   <button id="shareStudent" class="secondary full">📤 Condividi allievo</button>
+  <button id="archiveStudent" class="archive-action full">🗃️ Archivia allievo</button>
+  <button id="restoreStudent" class="restore-action full hidden">↩️ Ripristina allievo</button>
   <div class="card"><h2>Guide salvate</h2><div id="lessons"></div><p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p></div>
   <button id="deleteStudent" class="danger full">Elimina allievo</button>
   <button id="backHome" class="secondary full">Indietro</button>
@@ -248,5 +261,5 @@
     <div id="fullBackupModalButtons" class="choice-buttons"></div>
   </div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.0.1-istruttori"></script><script src="documents.js?v=1.0.1"></script><script src="full-backup.js?v=1.0.1"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.21"></script><script src="documents.js?v=1.21"></script><script src="full-backup.js?v=1.21"></script>
 </body></html>
