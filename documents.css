@@ -1,3 +1,11 @@
 .documents-heading h2{margin-top:0}.document-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.document-section-button{min-height:54px}.documents-summary{display:grid;gap:5px}.document-command-panel{position:sticky;top:82px;z-index:10}.document-global-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:12px}.document-global-actions button{min-height:40px;padding:7px 8px;border-radius:10px;font-size:13px;line-height:1.15}.document-global-actions button:disabled{opacity:.42;filter:saturate(.35);cursor:not-allowed}.document-delete{box-shadow:0 1px 4px #d7001533}.document-card{padding:16px;margin-bottom:10px;cursor:pointer;border:2px solid transparent;transition:border-color .15s,background-color .15s}.document-card.selected{border-color:#0a84ff;background:#eef7ff}.document-card-header{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start}.document-card h3{margin:0 0 6px;overflow-wrap:anywhere}.document-select{width:24px;height:24px;margin:2px 0 0;accent-color:#0a84ff}.documents-error{color:#d70015}.documents-success{color:#248a3d}
 @media(max-width:1100px){.document-global-actions{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.document-sections{grid-template-columns:1fr}.document-command-panel{position:static}.document-global-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.document-global-actions button{min-height:42px;font-size:14px}}
+
+/* Documenti premium r9. */
+#documentsView .document-section-button{background:linear-gradient(145deg,#20313c,#17242d);border:1px solid #405762;color:#eef4f6;box-shadow:0 7px 16px #0004}
+#documentsView .documents-summary,#documentsView .document-command-panel{background:linear-gradient(145deg,#1b2a34,#14212a);border-color:#354a56}
+#documentsView .document-card{background:linear-gradient(145deg,#1d2c36,#15222b);border:1px solid #354b57;color:#eef4f6;box-shadow:0 7px 17px #0004}
+#documentsView .document-card.selected{border-color:#299fe9;background:linear-gradient(145deg,#18364a,#142838);box-shadow:0 0 0 2px #1687e833}
+#documentsView .document-select{accent-color:#1687e8}
+#documentsView .documents-error{color:#ff6572}#documentsView .documents-success{color:#66d493}

@@ -11,8 +11,8 @@
 .choice-card {
   width: min(100%, 420px);
   padding: 20px;
-  border-radius: 16px;
-  background: #fff;
+  border-radius: 20px;
+  background: linear-gradient(145deg,#fff,#eef6f6);
   box-shadow: 0 8px 30px #0004;
 }
 
@@ -24,3 +24,12 @@
   display: grid;
   gap: 10px;
 }
+
+/* Finestre di scelta premium r9. */
+.choice-modal{background:#02070bc7;backdrop-filter:blur(5px)}
+.choice-card{border:1px solid #3a505c;background:linear-gradient(145deg,#1c2b35,#121e26);box-shadow:0 20px 55px #000b;color:#f2f5f6}
+.choice-card h2{color:#f4f7f8}.choice-card .muted{color:#aebdc5}
+.choice-card input,.choice-card select{border:1px solid #415762;background:#0f1a22;color:#f2f5f6}
+.choice-card button:not(.secondary):not(.danger){background:linear-gradient(135deg,#126fc7,#29a6ef);border:1px solid #4cb5f3}
+.choice-card button.secondary{background:#263640;border:1px solid #435965;color:#eef3f5}
+.choice-card button.danger{background:linear-gradient(135deg,#8e202d,#d63c49);border:1px solid #e05a66}

@@ -9,21 +9,21 @@
 <link rel="manifest" href="manifest.json?v=1.21-identita-definitiva">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v1-21.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=1.21-logo-background-r5">
-<link rel="stylesheet" href="auth.css">
-<link rel="stylesheet" href="transfer.css">
-<link rel="stylesheet" href="documents.css">
-<link rel="stylesheet" href="full-backup.css">
+<link rel="stylesheet" href="style.css?v=1.21-premium-internal-r9">
+<link rel="stylesheet" href="auth.css?v=1.21-premium-internal-r9">
+<link rel="stylesheet" href="transfer.css?v=1.21-premium-internal-r9">
+<link rel="stylesheet" href="documents.css?v=1.21-premium-internal-r9">
+<link rel="stylesheet" href="full-backup.css?v=1.21-premium-internal-r9">
 </head>
 <body>
 <section id="loginScreen" class="auth-screen">
   <div class="auth-card">
-    <img src="home-logo-mr-login-v1-21.png" alt="Logo MR Agenda Istruttori" class="auth-logo">
+    <img src="home-logo-mr-header-v1-21.png" alt="Logo MR Agenda Istruttori" class="auth-logo">
     <h1>AGENDA ISTRUTTORI</h1>
     <p class="muted auth-version">Versione 1.21</p>
     <p class="muted">Inserisci la password per accedere.</p>
     <form id="loginForm" class="form">
-      <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required autofocus></label>
+      <label>Password<span class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" required autofocus><button id="toggleLoginPassword" class="password-toggle" type="button" aria-label="Mostra password" aria-pressed="false"><span aria-hidden="true">◉</span></button></span></label>
       <label class="remember-row"><input id="rememberDevice" type="checkbox"> <span>Ricorda questo dispositivo</span></label>
       <p id="loginError" class="auth-error hidden" role="alert">Password non corretta.</p>
       <button type="submit" class="full">Accedi</button>
@@ -35,18 +35,18 @@
 <header class="app-header"><img src="home-logo-mr-header-v1-21.png" alt="Logo MR con automobile, moto, volante e strada" class="main-logo"><h1>AGENDA ISTRUTTORI</h1><div>Gestione Allievi e Guide · v1.21</div></header>
 <main>
 <section id="home" class="view active">
-  <div class="card dashboard-intro"><h2>Dashboard</h2><p class="muted">Scegli una sezione. Nessuna categoria o allievo è selezionato automaticamente.</p></div>
+  <div class="dashboard-intro"><p>Scegli una sezione</p></div>
   <div class="categories">
-    <button data-f="auto">🚗 Auto</button>
-    <button data-f="moto">🏍 Moto</button>
-    <button data-f="guida-accompagnata">🚗 Guida Accompagnata</button>
-    <button data-f="quad-leggero">🛵 Quadriciclo leggero AM</button>
-    <button data-f="quad-pesante">🚙 Quadriciclo pesante B1</button>
-    <button data-f="corso-moto">🏁 Corso Moto ad accesso graduale A2 e A</button>
-    <button data-f="perfezionamento">⭐ Perfezionamento</button>
-    <button data-f="esame-revisione">📝 Revisioni</button>
-    <button data-f="esame-esperimento">🎯 Esperimenti</button>
-    <button id="openExaminers">👨‍💼 Esaminatori</button>
+    <button data-f="auto" class="automotive-hero auto-hero"><span class="hero-copy"><strong>AUTO</strong></span><img src="home-auto-realistic-r8e.png" alt="Automobile moderna vista frontalmente"></button>
+    <button data-f="moto" class="automotive-hero moto-hero"><span class="hero-copy"><strong>MOTO</strong></span><img src="home-moto-realistic-r8e.png" alt="Motocicletta moderna con pilota vista frontalmente"></button>
+    <button data-f="quad-leggero" class="automotive-hero microcar-hero"><span class="hero-copy"><strong>QUADRICICLO AM</strong></span><img src="home-b1-microcar-realistic-r8g.png" alt="Microcar moderna per patente AM"></button>
+    <button data-f="quad-pesante" class="automotive-hero b1-hero"><span class="hero-copy"><strong>QUADRICICLO B1</strong></span><img src="home-microcar-realistic-r8f.png" alt="Microcar moderna di categoria B1"></button>
+    <button data-f="corso-moto" class="automotive-hero two-moto-hero"><span class="hero-copy"><strong>CORSO MOTO A2/A</strong></span><img src="home-two-moto-realistic-r8f.png" alt="Due motociclette moderne affiancate"></button>
+    <button data-f="guida-accompagnata" class="pro-card ga-pro"><span class="category-icon icon-ga" aria-hidden="true">GA</span><span>Guida Accompagnata</span></button>
+    <button data-f="perfezionamento" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#training-pro"/></svg></span><span>Perfezionamento</span></button>
+    <button data-f="esame-revisione" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#license-pro"/></svg></span><span>Revisione</span></button>
+    <button data-f="esame-esperimento" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#license-test-pro"/></svg></span><span>Esperimento di guida</span></button>
+    <button id="openExaminers" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#examiner-pro"/></svg></span><span>Esaminatori</span></button>
   </div>
   <div id="studentSection" class="card student-section hidden">
     <button id="studentSectionHome" type="button" class="home-command">← HOME</button>
@@ -57,18 +57,19 @@
   </div>
   <button id="unclassifiedStudents" class="secondary full hidden">⚠️ Allievi da classificare</button>
   <div class="dashboard-actions">
-  <button id="openArchive" class="archive-action full">🗃️ Archivio allievi</button>
-  <a class="link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer">📖 Codice della Strada ACI</a>
-  <button id="openDocuments" class="secondary full">📁 Documenti vari</button>
+  <button id="openArchive" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#archive-pro"/></svg></span> Archivio allievi</button>
+  <a class="home-pro-action link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#road-link-pro"/></svg></span> LINK AL CODICE DELLA STRADA</a>
+  <a class="home-pro-action link-button full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#schedule-pro"/></svg></span> TURNI OPERATIVI ESAMINATORI</a>
+  <button id="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#documents-pro"/></svg></span> Documenti vari</button>
   </div>
   <div class="secondary-functions" aria-label="Altre funzioni">
   <h2>Altre funzioni</h2>
   <div class="secondary-actions">
-  <button id="manageChecklists" class="secondary full">Gestisci checklist</button>
-  <button id="openSettings" class="secondary full">Impostazioni</button>
-  <button id="importStudent" class="secondary full">📥 Importa allievo</button>
-  <button id="shareStudents" class="secondary full">📤 Condividi più allievi</button>
-  <button id="logout" class="logout-action full">Esci</button>
+  <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#checklist-pro"/></svg></span> PERCORSO DIDATTICO</button>
+  <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#settings-pro"/></svg></span> Impostazioni</button>
+  <button id="importStudent" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#import-pro"/></svg></span> Importa allievo</button>
+  <button id="shareStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#share-pro"/></svg></span> Condividi più allievi</button>
+  <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#logout-pro"/></svg></span> Esci</button>
   </div>
   </div>
   <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
@@ -118,7 +119,7 @@
   <button id="shareStudent" class="secondary full">📤 Condividi allievo</button>
   <button id="archiveStudent" class="archive-action full">🗃️ Archivia allievo</button>
   <button id="restoreStudent" class="restore-action full hidden">↩️ Ripristina allievo</button>
-  <div class="card"><h2>Guide salvate</h2><div id="lessons"></div><p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p></div>
+  <div class="card lessons-panel"><h2>Guide</h2><div id="lessons"></div><p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p><button id="toggleLessons" type="button" class="secondary full hidden" aria-expanded="false">VEDI TUTTE LE GUIDE</button></div>
   <button id="deleteStudent" class="danger full">Elimina allievo</button>
   <button id="backHome" class="home-command full">← HOME</button>
 </section>
@@ -139,7 +140,7 @@
 </section>
 
 <section id="checklistManager" class="view">
-  <div class="card"><h2>Gestione checklist</h2>
+  <div class="card"><h2>PERCORSO DIDATTICO</h2>
     <div class="check-tabs">
       <button data-list="auto" class="active">Auto</button><button data-list="guida-accompagnata">Guida Accompagnata</button><button data-list="moto">Moto</button>
       <button data-list="quad-leggero">Quadriciclo leggero</button><button data-list="quad-pesante">Quadriciclo pesante</button>
