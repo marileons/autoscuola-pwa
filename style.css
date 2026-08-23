@@ -178,3 +178,29 @@ input,textarea,select{min-height:48px;border:1px solid #b9cdd0;border-radius:14p
 #appShell main>.view:not(#home) .map,#appShell main>.view:not(#home) .saved-map{border:1px solid #405663;box-shadow:0 8px 22px #0006}
 #savedMapView{padding-top:11px!important}#savedMapView .saved-map{height:calc(100vh - 240px)}
 @media(max-width:520px){#appShell main>.view:not(#home){min-height:calc(100vh - 160px);padding:14px 11px 24px}#appShell main>.view:not(#home) .card{padding:15px;border-radius:17px}#appShell main>.view:not(#home) .top{gap:8px}#appShell main>.view:not(#home) button{min-height:48px}#appShell main>.view:not(#home) .toolbar{grid-template-columns:1fr}#appShell main>.view:not(#home) .check-tabs{grid-template-columns:1fr 1fr}#savedMapView .saved-map{height:calc(100vh - 245px)}}
+
+/* Evoluzione r10: la r9 viene schiarita con discrezione, senza cambiarne il linguaggio. */
+.app-header{background:radial-gradient(circle at 78% 0,#244858 0,transparent 40%),linear-gradient(180deg,#11232e 0,#142731 72%,#162a35 100%);border-bottom-color:#3b535f}
+#home{background:radial-gradient(circle at 90% 1%,#25465a 0,transparent 30%),linear-gradient(180deg,#182b36,#1a2933 72%,#14242e)}
+#home .categories button{background:linear-gradient(145deg,#25343e,#1d2932);border-left:3px solid #d94249!important}
+#home .categories button.automotive-hero{border-left:3px solid #d94249!important}
+#home .home-pro-action{background:linear-gradient(145deg,#2a3943,#202c35);border-left:3px solid #d94249!important}
+#home .secondary-functions>h2{color:#c0cbd1}
+#home .ga-pro{position:relative;overflow:hidden;grid-template-columns:62px minmax(0,1fr);padding-right:38%;isolation:isolate}
+#home .ga-pro>*:not(.ga-auto-image){position:relative;z-index:2}
+#home .ga-auto-image{position:absolute;z-index:0;right:0;top:0;width:57%;height:100%;object-fit:cover;object-position:right center;filter:saturate(.9) contrast(1.04);-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 38%);mask-image:linear-gradient(90deg,transparent 0,#000 38%)}
+#home .ga-pro::after{content:"";position:absolute;z-index:1;inset:0;background:linear-gradient(90deg,#202a31 0,#202a31e8 48%,transparent 78%);pointer-events:none}
+#home .categories button[data-f="perfezionamento"]>span:last-child,#home .categories button[data-f="esame-revisione"]>span:last-child,#home .categories button[data-f="esame-esperimento"]>span:last-child{font-size:.93rem;line-height:1.15}
+#appShell main>.view:not(#home){background:radial-gradient(circle at 90% 0,#25465a 0,transparent 30%),linear-gradient(180deg,#192c37,#14242e 72%)}
+#appShell main>.view:not(#home) .card,#home #studentSection{background:linear-gradient(145deg,#22343f,#1b2b35);border-color:#405663}
+#appShell main>.view:not(#home)>.card:first-child,#home #studentSection{border-left:4px solid #d94249}
+#appShell main>.view:not(#home) .student-card,#appShell main>.view:not(#home) .lesson-card,#home #studentSection .student-card{background:linear-gradient(145deg,#263a46,#1c2d37)}
+.student-report-action{background:linear-gradient(135deg,#7d2631,#d4424f)!important;border:1px solid #e25d68!important;color:#fff!important}
+.wake-lock-status{margin:8px 0 12px;padding:8px 10px;border:1px solid #3d5360;border-radius:11px;background:#13242e}
+.saved-route-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0}
+.road-report-status{min-height:1.4em;margin:8px 2px}.road-report-panel{border-left:4px solid #d94249!important}
+.road-report-heading{display:flex;align-items:start;justify-content:space-between;gap:12px;border-bottom:1px solid #405663;padding-bottom:10px}.road-report-heading h2{margin:2px 0 0!important}.report-kicker{font-size:.72rem;font-weight:900;letter-spacing:.13em;color:#ff6975}
+.road-report-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px 0}.road-report-meta span{padding:9px;border:1px solid #405663;border-radius:11px;background:#13232c}.road-report-meta strong{display:block;color:#9fb1ba;font-size:.68rem;text-transform:uppercase}
+.road-endpoint{padding:11px 12px;border-radius:12px;background:linear-gradient(135deg,#174e70,#19638b)}.road-endpoint.arrival{background:linear-gradient(135deg,#71303a,#9d3945)}.road-endpoint small{display:block;font-weight:900;letter-spacing:.12em;color:#d9e8ef}.road-endpoint strong{display:block;margin-top:2px}
+.road-list{display:grid;gap:7px;margin:12px 0;padding:0;list-style:none}.road-list li{display:grid;grid-template-columns:30px 1fr;align-items:center;gap:8px;padding:9px;border:1px solid #405663;border-radius:11px;background:#162731}.road-list li>span{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#d94249;color:#fff;font-weight:900}.road-attribution{margin:12px 0 0;color:#9fb1ba;font-size:.75rem}.road-attribution a{color:#6dc3f4}
+@media(max-width:520px){#home .ga-pro{padding-right:34%}#home .ga-auto-image{width:54%}#home .categories button[data-f="perfezionamento"]>span:last-child,#home .categories button[data-f="esame-revisione"]>span:last-child{font-size:.86rem}.saved-route-actions{grid-template-columns:1fr}.road-report-meta{grid-template-columns:1fr 1fr}.road-report-meta span:last-child{grid-column:1/-1}}

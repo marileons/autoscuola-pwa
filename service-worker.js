@@ -1,4 +1,4 @@
-const CACHE="agenda-istruttori-v1-21-premium-r9";
+const CACHE="agenda-istruttori-v1-21-premium-r10";
 const FILES=[
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const FILES=[
   "./documents.css",
   "./full-backup.css",
   "./app.js",
+  "./r10-features.js",
   "./documents.js",
   "./full-backup.js",
   "./ui-icons.svg",
@@ -16,7 +17,7 @@ const FILES=[
   "./home-moto-realistic-r8e.png",
   "./home-microcar-realistic-r8f.png",
   "./home-b1-microcar-realistic-r8g.png",
-  "./home-two-moto-realistic-r8f.png",
+  "./home-moto-scooter-realistic-r10.png",
   "./home-logo-mr-v1-21.png",
   "./home-logo-mr-login-v1-21.png",
   "./home-logo-mr-header-v1-21.png",

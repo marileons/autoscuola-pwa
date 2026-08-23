@@ -61,3 +61,8 @@
 .auth-card input:focus{outline:3px solid #1687e844;border-color:#2a9df0}
 .auth-card button[type="submit"]{background:linear-gradient(135deg,#126fc7,#29a6ef);border:1px solid #4cb5f3}
 .auth-logo{filter:drop-shadow(0 9px 16px #0008)}
+
+/* r10: elimina visivamente il margine chiaro incorporato senza alterare il PNG MR. */
+.auth-logo-frame{width:190px;height:190px;margin:0 auto 4px;overflow:hidden;border-radius:34px;background:#172832;box-shadow:0 10px 18px #0008}
+.auth-logo{display:block;width:224px;height:auto;max-height:none;margin:-21px 0 0 -17px;clip-path:none;transform:none;background:transparent;box-shadow:none;filter:none}
+.auth-credit{color:#aebdc5!important;font-size:12px;letter-spacing:.015em}

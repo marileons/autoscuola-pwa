@@ -9,16 +9,16 @@
 <link rel="manifest" href="manifest.json?v=1.21-identita-definitiva">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v1-21.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=1.21-premium-internal-r9">
-<link rel="stylesheet" href="auth.css?v=1.21-premium-internal-r9">
-<link rel="stylesheet" href="transfer.css?v=1.21-premium-internal-r9">
-<link rel="stylesheet" href="documents.css?v=1.21-premium-internal-r9">
-<link rel="stylesheet" href="full-backup.css?v=1.21-premium-internal-r9">
+<link rel="stylesheet" href="style.css?v=1.21-premium-r10">
+<link rel="stylesheet" href="auth.css?v=1.21-premium-r10">
+<link rel="stylesheet" href="transfer.css?v=1.21-premium-r10">
+<link rel="stylesheet" href="documents.css?v=1.21-premium-r10">
+<link rel="stylesheet" href="full-backup.css?v=1.21-premium-r10">
 </head>
 <body>
 <section id="loginScreen" class="auth-screen">
   <div class="auth-card">
-    <img src="home-logo-mr-header-v1-21.png" alt="Logo MR Agenda Istruttori" class="auth-logo">
+    <div class="auth-logo-frame"><img src="home-logo-mr-header-v1-21.png" alt="Logo MR Agenda Istruttori" class="auth-logo"></div>
     <h1>AGENDA ISTRUTTORI</h1>
     <p class="muted auth-version">Versione 1.21</p>
     <p class="muted">Inserisci la password per accedere.</p>
@@ -28,7 +28,7 @@
       <p id="loginError" class="auth-error hidden" role="alert">Password non corretta.</p>
       <button type="submit" class="full">Accedi</button>
     </form>
-    <p class="muted auth-credit">Realizzata da Mario Leoni</p>
+    <p class="muted auth-credit">© 2026 Mario Leoni — Tutti i diritti riservati.</p>
   </div>
 </section>
 <div id="appShell" class="hidden">
@@ -39,14 +39,14 @@
   <div class="categories">
     <button data-f="auto" class="automotive-hero auto-hero"><span class="hero-copy"><strong>AUTO</strong></span><img src="home-auto-realistic-r8e.png" alt="Automobile moderna vista frontalmente"></button>
     <button data-f="moto" class="automotive-hero moto-hero"><span class="hero-copy"><strong>MOTO</strong></span><img src="home-moto-realistic-r8e.png" alt="Motocicletta moderna con pilota vista frontalmente"></button>
-    <button data-f="quad-leggero" class="automotive-hero microcar-hero"><span class="hero-copy"><strong>QUADRICICLO AM</strong></span><img src="home-b1-microcar-realistic-r8g.png" alt="Microcar moderna per patente AM"></button>
-    <button data-f="quad-pesante" class="automotive-hero b1-hero"><span class="hero-copy"><strong>QUADRICICLO B1</strong></span><img src="home-microcar-realistic-r8f.png" alt="Microcar moderna di categoria B1"></button>
-    <button data-f="corso-moto" class="automotive-hero two-moto-hero"><span class="hero-copy"><strong>CORSO MOTO A2/A</strong></span><img src="home-two-moto-realistic-r8f.png" alt="Due motociclette moderne affiancate"></button>
-    <button data-f="guida-accompagnata" class="pro-card ga-pro"><span class="category-icon icon-ga" aria-hidden="true">GA</span><span>Guida Accompagnata</span></button>
-    <button data-f="perfezionamento" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#training-pro"/></svg></span><span>Perfezionamento</span></button>
-    <button data-f="esame-revisione" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#license-pro"/></svg></span><span>Revisione</span></button>
-    <button data-f="esame-esperimento" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#license-test-pro"/></svg></span><span>Esperimento di guida</span></button>
-    <button id="openExaminers" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#examiner-pro"/></svg></span><span>Esaminatori</span></button>
+    <button data-f="quad-leggero" class="automotive-hero microcar-hero"><span class="hero-copy"><strong>QUADRICICLO LEGGERO AM</strong></span><img src="home-b1-microcar-realistic-r8g.png" alt="Microcar moderna per patente AM"></button>
+    <button data-f="quad-pesante" class="automotive-hero b1-hero"><span class="hero-copy"><strong>QUADRICICLO PESANTE B1</strong></span><img src="home-microcar-realistic-r8f.png" alt="Microcar moderna di categoria B1"></button>
+    <button data-f="corso-moto" class="automotive-hero two-moto-hero"><span class="hero-copy"><strong>CORSO MOTO A2/A</strong></span><img src="home-moto-scooter-realistic-r10.png" alt="Una motocicletta e uno scooter moderni affiancati"></button>
+    <button data-f="guida-accompagnata" class="pro-card ga-pro"><span class="category-icon icon-ga" aria-hidden="true">GA</span><span>GUIDA ACCOMPAGNATA</span><img class="ga-auto-image" src="home-auto-realistic-r8e.png" alt=""></button>
+    <button data-f="perfezionamento" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#training-pro"/></svg></span><span>GUIDE DI PERFEZIONAMENTO</span></button>
+    <button data-f="esame-revisione" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#license-pro"/></svg></span><span>ESAMI DI REVISIONE</span></button>
+    <button data-f="esame-esperimento" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#license-test-pro"/></svg></span><span>ESPERIMENTO DI GUIDA</span></button>
+    <button id="openExaminers" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#examiner-pro"/></svg></span><span>ESAMINATORI</span></button>
   </div>
   <div id="studentSection" class="card student-section hidden">
     <button id="studentSectionHome" type="button" class="home-command">← HOME</button>
@@ -57,15 +57,15 @@
   </div>
   <button id="unclassifiedStudents" class="secondary full hidden">⚠️ Allievi da classificare</button>
   <div class="dashboard-actions">
-  <button id="openArchive" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#archive-pro"/></svg></span> Archivio allievi</button>
+  <button id="openArchive" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#archive-pro"/></svg></span> ARCHIVIO ALLIEVI</button>
   <a class="home-pro-action link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#road-link-pro"/></svg></span> LINK AL CODICE DELLA STRADA</a>
   <a class="home-pro-action link-button full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#schedule-pro"/></svg></span> TURNI OPERATIVI ESAMINATORI</a>
-  <button id="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#documents-pro"/></svg></span> Documenti vari</button>
+  <button id="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#documents-pro"/></svg></span> DOCUMENTI VARI</button>
   </div>
   <div class="secondary-functions" aria-label="Altre funzioni">
   <h2>Altre funzioni</h2>
   <div class="secondary-actions">
-  <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#checklist-pro"/></svg></span> PERCORSO DIDATTICO</button>
+    <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#checklist-pro"/></svg></span> Percorso didattico</button>
   <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#settings-pro"/></svg></span> Impostazioni</button>
   <button id="importStudent" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#import-pro"/></svg></span> Importa allievo</button>
   <button id="shareStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#share-pro"/></svg></span> Condividi più allievi</button>
@@ -118,6 +118,7 @@
   <button id="newLesson" class="full">Nuova guida</button>
   <button id="shareStudent" class="secondary full">📤 Condividi allievo</button>
   <button id="archiveStudent" class="archive-action full">🗃️ Archivia allievo</button>
+  <button id="exportStudentPdf" class="student-report-action full">ESPORTA REPORT PDF</button>
   <button id="restoreStudent" class="restore-action full hidden">↩️ Ripristina allievo</button>
   <div class="card lessons-panel"><h2>Guide</h2><div id="lessons"></div><p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p><button id="toggleLessons" type="button" class="secondary full hidden" aria-expanded="false">VEDI TUTTE LE GUIDE</button></div>
   <button id="deleteStudent" class="danger full">Elimina allievo</button>
@@ -132,7 +133,7 @@
     <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><button id="voice" class="secondary">🎤 Detta</button>
   </div>
   <div class="card"><h2>Checklist della guida</h2><div id="lessonChecklist"></div></div>
-  <div class="card gps-card"><h2>GPS</h2><button id="startGps" type="button" class="gps-toggle full" aria-pressed="false">AVVIA GPS</button><button id="stopGps" type="button" class="hidden" tabindex="-1" aria-hidden="true">Ferma GPS</button><p id="gpsIndicator" class="gps-indicator" role="status">GPS non attivo</p><p id="gpsStatus" class="muted" aria-live="polite">GPS non attivo.</p><div id="liveMap" class="map"></div></div>
+  <div class="card gps-card"><h2>GPS</h2><button id="startGps" type="button" class="gps-toggle full" aria-pressed="false">AVVIA GPS</button><button id="stopGps" type="button" class="hidden" tabindex="-1" aria-hidden="true">Ferma GPS</button><p id="gpsIndicator" class="gps-indicator" role="status">GPS non attivo</p><p id="gpsStatus" class="muted" aria-live="polite">GPS non attivo.</p><p id="wakeLockStatus" class="muted wake-lock-status" aria-live="polite">Schermo attivo: in attesa del GPS.</p><div id="liveMap" class="map"></div></div>
   <button id="openSavedRoute" class="secondary full hidden">Apri percorso salvato</button>
   <div style="margin-bottom:90px"><button id="saveLesson" class="full">💾 Salva guida</button></div>
   <button id="deleteLesson" class="danger full hidden">Elimina guida</button>
@@ -176,7 +177,7 @@
   <button id="backExaminerForm" class="secondary full">Indietro</button>
 </section>
 
-<section id="savedMapView" class="view"><div id="savedMap" class="saved-map"></div><button id="backSavedMap" class="secondary full">Indietro</button></section>
+<section id="savedMapView" class="view"><div id="savedMap" class="saved-map"></div><div class="saved-route-actions"><button id="generateRoadReport" type="button" class="full">GENERA REPORT STRADE</button><button id="toggleRoadReport" type="button" class="secondary full hidden" aria-expanded="true">NASCONDI REPORT</button></div><p id="roadReportStatus" class="muted road-report-status" aria-live="polite"></p><div id="roadReportPanel" class="card road-report-panel hidden"></div><button id="backSavedMap" class="secondary full">Indietro</button></section>
 
 <section id="settings" class="view">
   <div class="card form"><h2>Impostazioni</h2>
@@ -272,5 +273,5 @@
     <div id="fullBackupModalButtons" class="choice-buttons"></div>
   </div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.21"></script><script src="documents.js?v=1.21"></script><script src="full-backup.js?v=1.21"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.21-r10"></script><script src="documents.js?v=1.21"></script><script src="full-backup.js?v=1.21"></script><script src="r10-features.js?v=1.21-r10"></script>
 </body></html>
