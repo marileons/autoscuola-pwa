@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json?v=1.21-identita-definitiva">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v1-21.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=1.21-premium-r10">
+<link rel="stylesheet" href="style.css?v=1.21-premium-r10-title-typography">
 <link rel="stylesheet" href="auth.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="transfer.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="documents.css?v=1.21-premium-r10">
@@ -141,14 +141,15 @@
 </section>
 
 <section id="checklistManager" class="view">
-  <div class="card"><h2>PERCORSO DIDATTICO</h2>
+  <div class="card"><h2>Percorso didattico</h2>
     <div class="check-tabs">
-      <button data-list="auto" class="active">Auto</button><button data-list="guida-accompagnata">Guida Accompagnata</button><button data-list="moto">Moto</button>
+      <button data-list="auto" aria-pressed="false">Auto</button><button data-list="guida-accompagnata" aria-pressed="false">Guida Accompagnata</button><button data-list="moto" aria-pressed="false">Moto</button>
       <button data-list="quad-leggero">Quadriciclo leggero</button><button data-list="quad-pesante">Quadriciclo pesante</button>
       <button data-list="corso-moto">Corso Moto</button>
     </div>
-    <div class="toolbar checklist-add"><input id="newChecklistLabel" placeholder="Nuova voce"><button id="addChecklistItem">Aggiungi</button></div>
-    <div id="checklistManagerList"></div>
+    <p id="checklistManagerPrompt" class="checklist-manager-prompt">Seleziona una categoria</p>
+    <div id="checklistManagerTools" class="toolbar checklist-add hidden"><input id="newChecklistLabel" placeholder="Nuova voce"><button id="addChecklistItem">Aggiungi</button></div>
+    <div id="checklistManagerList" class="hidden"></div>
   </div>
   <button id="backChecklistManager" class="home-command full">← HOME</button>
 </section>
@@ -273,5 +274,5 @@
     <div id="fullBackupModalButtons" class="choice-buttons"></div>
   </div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.21-r10"></script><script src="documents.js?v=1.21"></script><script src="full-backup.js?v=1.21"></script><script src="r10-features.js?v=1.21-r10"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.21-r10-nav-titles"></script><script src="documents.js?v=1.21"></script><script src="full-backup.js?v=1.21"></script><script src="r10-features.js?v=1.21-r10"></script>
 </body></html>
