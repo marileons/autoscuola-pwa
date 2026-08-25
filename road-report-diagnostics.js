@@ -33,6 +33,7 @@
     renderPanel();
     updateHomeButton();
   }
+  window.roadReportDiagnosticCheckpoint=(event,details={})=>record(event,details);
   function readableLog(){
     return read().map((row,index)=>{
       const details=Object.entries(row).filter(([key])=>!["timestamp","event"].includes(key)).map(([key,value])=>`${key}: ${typeof value==="object"?JSON.stringify(value):value}`).join("\n");
