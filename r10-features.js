@@ -6,7 +6,6 @@
   const ROAD_ENDPOINT="https://nominatim.openstreetmap.org/reverse";
   const MAX_ROAD_REQUESTS=10;
   const REQUEST_INTERVAL_MS=1100;
-  const diagnosticCheckpoint=(event,details={})=>{if(typeof window.roadReportDiagnosticCheckpoint==="function")window.roadReportDiagnosticCheckpoint(event,details)};
   let wakeLock=null;
   let wakeLockGeneration=0;
   let wakeRetryTimer=null;
@@ -92,8 +91,7 @@
 
   function sampleRoute(route,maxRequests=MAX_ROAD_REQUESTS){
     const source=Array.isArray(route)?route:[],limit=Math.max(0,Math.floor(Number(maxRequests)||0));
-    diagnosticCheckpoint("representative-scan-start",{routePoints:source.length,limit});
-    if(!limit||!source.length){diagnosticCheckpoint("representative-scan-end",{validPoints:0,segments:0,representativeCount:0});return[]}
+    if(!limit||!source.length)return[];
     let validCount=0,segmentStarts=0;
     for(let index=0;index<source.length;index++){
       const point=source[index];
@@ -101,12 +99,10 @@
       if(validCount>0&&point.breakBefore===true)segmentStarts++;
       validCount++;
     }
-    diagnosticCheckpoint("representative-count-end",{validPoints:validCount,segments:segmentStarts});
-    if(!validCount){diagnosticCheckpoint("representative-scan-end",{validPoints:0,segments:0,representativeCount:0});return[]}
+    if(!validCount)return[];
     if(validCount<=limit){
       const all=[];
       for(let index=0;index<source.length;index++){const point=source[index];if(Number.isFinite(point?.lat)&&Number.isFinite(point?.lng))all.push({lat:point.lat,lng:point.lng})}
-      diagnosticCheckpoint("representative-scan-end",{validPoints:validCount,segments:segmentStarts,representativeCount:all.length});
       return all;
     }
     const selectedIndexes=new Set(),segmentRanks=new Set();
@@ -134,22 +130,18 @@
     }
     const samples=[];
     for(let index=0;index<source.length;index++)if(selectedIndexes.has(index)){const point=source[index];samples.push({lat:point.lat,lng:point.lng})}
-    diagnosticCheckpoint("representative-scan-end",{validPoints:validCount,segments:segmentStarts,representativeCount:samples.length});
     return samples;
   }
 
   function loadRoadCache(){
-    diagnosticCheckpoint("road-cache-read-start");
-    try{const raw=localStorage.getItem(ROAD_CACHE_KEY)||"{}";diagnosticCheckpoint("road-cache-parse-start",{characters:raw.length});const value=JSON.parse(raw),cache=value&&typeof value==="object"?value:{};diagnosticCheckpoint("road-cache-read-end",{entries:Object.keys(cache).length});return cache}catch(error){diagnosticCheckpoint("road-cache-read-failure",{name:String(error?.name||"Error"),message:String(error?.message||error)});return{}}
+    try{const value=JSON.parse(localStorage.getItem(ROAD_CACHE_KEY)||"{}");return value&&typeof value==="object"?value:{}}catch{return{}}
   }
 
   function saveRoadCache(cache){
-    diagnosticCheckpoint("road-cache-write-start",{entries:Object.keys(cache||{}).length});
     try{
       const entries=Object.entries(cache).sort((a,b)=>(b[1].savedAt||0)-(a[1].savedAt||0)).slice(0,500);
       localStorage.setItem(ROAD_CACHE_KEY,JSON.stringify(Object.fromEntries(entries)));
-      diagnosticCheckpoint("road-cache-write-end",{entries:entries.length});
-    }catch(error){diagnosticCheckpoint("road-cache-write-failure",{name:String(error?.name||"Error"),message:String(error?.message||error)})}
+    }catch{}
   }
 
   function roadCacheKey(point){return`${point.lat.toFixed(4)},${point.lng.toFixed(4)}`}
@@ -159,14 +151,11 @@
     return address.road||address.pedestrian||address.motorway||address.trunk||address.cycleway||address.path||address.footway||data&&data.name||"";
   }
 
-  async function reverseRoad(point,cache,index){
-    diagnosticCheckpoint("geocode-start",{index:index+1});
+  async function reverseRoad(point,cache){
     const key=roadCacheKey(point),cached=cache[key];
-    diagnosticCheckpoint("geocode-cache-checked",{index:index+1,cacheHit:!!(cached&&typeof cached.name==="string")});
-    if(cached&&typeof cached.name==="string"){diagnosticCheckpoint("geocode-end",{index:index+1,cached:true});return{name:cached.name,cached:true}}
+    if(cached&&typeof cached.name==="string")return{name:cached.name,cached:true};
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
     try{
-      diagnosticCheckpoint("geocode-url-build-start",{index:index+1});
       const url=new URL(ROAD_ENDPOINT);
       url.searchParams.set("format","jsonv2");
       url.searchParams.set("lat",String(point.lat));
@@ -175,20 +164,13 @@
       url.searchParams.set("addressdetails","1");
       url.searchParams.set("layer","address");
       url.searchParams.set("accept-language","it");
-      diagnosticCheckpoint("geocode-fetch",{index:index+1});
       const response=await fetch(url,{headers:{Accept:"application/json"},signal:controller.signal});
-      diagnosticCheckpoint("geocode-response",{index:index+1,ok:response.ok,status:response.status});
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
-      diagnosticCheckpoint("geocode-json-start",{index:index+1});
-      const data=await response.json();
-      diagnosticCheckpoint("geocode-json-end",{index:index+1});
-      const name=roadNameFromResponse(data);
+      const data=await response.json(),name=roadNameFromResponse(data);
       cache[key]={name,savedAt:Date.now()};
       saveRoadCache(cache);
-      diagnosticCheckpoint("geocode-end",{index:index+1,cached:false,nameAvailable:!!name});
       return{name,cached:false};
-    }catch(error){diagnosticCheckpoint("geocode-failure",{index:index+1,name:String(error?.name||"Error"),message:String(error?.message||error)});throw error}
-    finally{clearTimeout(timeout);diagnosticCheckpoint("geocode-finally",{index:index+1})}
+    }finally{clearTimeout(timeout)}
   }
 
   function resetRoadReport(){
@@ -204,41 +186,28 @@
   function reportItemLabel(value){return value||"Tratto non identificato"}
 
   async function generateRoadReport(){
-    diagnosticCheckpoint("report-enter");
     const currentLesson=lesson(),currentStudent=student(),button=$("generateRoadReport");
-    diagnosticCheckpoint("report-context-read",{lessonFound:!!currentLesson,studentFound:!!currentStudent,buttonFound:!!button,routePoints:Array.isArray(currentLesson?.route)?currentLesson.route.length:0});
     if(!currentLesson||!Array.isArray(currentLesson.route)||currentLesson.route.length<2){
-      diagnosticCheckpoint("report-abort-no-route");
       $("roadReportStatus").textContent="Percorso GPS non disponibile.";
       return;
     }
     if(!navigator.onLine){
-      diagnosticCheckpoint("report-abort-offline");
       $("roadReportStatus").textContent="Connessione assente: il report strade non può essere generato. I punti GPS restano invariati.";
       return;
     }
-    diagnosticCheckpoint("route-copy-start",{routePoints:currentLesson.route.length});
     const route=currentLesson.route.map(point=>({lat:point.lat,lng:point.lng,time:point.time,accuracy:point.accuracy,breakBefore:!!point.breakBefore}));
-    diagnosticCheckpoint("route-copy-end",{routePoints:route.length});
-    diagnosticCheckpoint("representative-points-start",{routePoints:route.length,maxRequests:MAX_ROAD_REQUESTS});
     const samples=sampleRoute(route);
-    diagnosticCheckpoint("representative-points-end",{routePoints:route.length,representativeCount:samples.length});
     const cache=loadRoadCache(),results=[];
-    diagnosticCheckpoint("report-ui-start",{samples:samples.length});
     button.disabled=true;
     $("roadReportStatus").textContent=`Analisi manuale in corso: 0/${samples.length} punti rappresentativi…`;
-    diagnosticCheckpoint("report-ui-end",{samples:samples.length});
     try{
       for(let index=0;index<samples.length;index++){
-        diagnosticCheckpoint("before-geocode",{index:index+1,total:samples.length});
         let result;
-        try{result=await reverseRoad(samples[index],cache,index)}catch(error){diagnosticCheckpoint("geocode-result-neutralized",{index:index+1,name:String(error?.name||"Error")});result={name:"",cached:false,error:true}}
+        try{result=await reverseRoad(samples[index],cache)}catch{result={name:"",cached:false,error:true}}
         results.push(result);
-        diagnosticCheckpoint("geocode-result-added",{index:index+1,cached:!!result.cached,error:!!result.error});
         $("roadReportStatus").textContent=`Analisi manuale in corso: ${index+1}/${samples.length} punti rappresentativi…`;
-        if(index<samples.length-1&&!result.cached){diagnosticCheckpoint("geocode-delay-start",{index:index+1,milliseconds:REQUEST_INTERVAL_MS});await new Promise(resolve=>setTimeout(resolve,REQUEST_INTERVAL_MS));diagnosticCheckpoint("geocode-delay-end",{index:index+1})}
+        if(index<samples.length-1&&!result.cached)await new Promise(resolve=>setTimeout(resolve,REQUEST_INTERVAL_MS));
       }
-      diagnosticCheckpoint("report-render-start",{results:results.length});
       const ordered=[];
       results.forEach(result=>{const name=reportItemLabel(result.name);if(name!==ordered.at(-1))ordered.push(name)});
       const generated=new Date(),date=new Date(currentLesson.createdAt),metres=routeDistance(route),duration=routeDuration(route);
@@ -250,8 +219,7 @@
       $("toggleRoadReport").textContent="NASCONDI REPORT";
       const unidentified=results.filter(result=>!result.name).length;
       $("roadReportStatus").textContent=unidentified?`Report completato con ${unidentified} tratti non identificati.`:"Report strade completato.";
-      diagnosticCheckpoint("report-render-end",{results:results.length,unidentified});
-    }finally{button.disabled=false;diagnosticCheckpoint("report-finally")}
+    }finally{button.disabled=false}
   }
 
   function toggleRoadReport(){

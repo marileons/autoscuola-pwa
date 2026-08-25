@@ -1,4 +1,4 @@
-const CACHE="agenda-istruttori-v1-21-premium-r10-report-sampling-r5";
+const CACHE="agenda-istruttori-v1-21-premium-r10-report-final-r6";
 const FILES=[
   "./",
   "./index.html",
@@ -11,7 +11,6 @@ const FILES=[
   "./app.js",
   "./student-photo.js",
   "./r10-features.js",
-  "./road-report-diagnostics.js",
   "./documents.js",
   "./full-backup.js",
   "./ui-icons.svg",

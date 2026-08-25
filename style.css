@@ -220,12 +220,3 @@ input,textarea,select{min-height:48px;border:1px solid #b9cdd0;border-radius:14p
 #checklistManager .check-tabs button.active::after{content:"✓";position:absolute;right:9px;top:8px;display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#f0c555;color:#17232c;font-size:.78rem;font-weight:950;box-shadow:0 2px 7px #0005}
 @media(max-width:520px){.page-context-title{margin-bottom:8px;padding-top:4px}.page-context-title::before{height:25px}.page-context-subpage{font-size:.88rem}#checklistManager .check-tabs{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){#home .ga-pro{padding-right:34%}#home .ga-auto-image{width:54%}#home .categories button[data-f="perfezionamento"]>span:last-child,#home .categories button[data-f="esame-revisione"]>span:last-child{font-size:.86rem}.saved-route-actions{grid-template-columns:1fr}.road-report-meta{grid-template-columns:1fr 1fr}.road-report-meta span:last-child{grid-column:1/-1}}
-
-/* Pannello diagnostico temporaneo: sola leggibilità, nessun effetto sulla logica. */
-.road-diagnostic-panel{max-width:100%;background:#0d1921!important;border:1px solid #4b626e!important;border-left:4px solid #e24a56!important;color:#f5f8f9!important;box-shadow:0 10px 28px #0008!important}
-.road-diagnostic-panel>strong{display:block;color:#fff;font-size:1rem;letter-spacing:.035em}
-.road-diagnostic-panel .muted{margin:6px 0 10px;color:#c5d1d7!important;font-size:.84rem;line-height:1.45}
-.road-diagnostic-log{display:block;width:100%;max-width:100%;max-height:44vh;margin:0 0 12px;padding:12px;border:1px solid #3c5360;border-radius:10px;background:#071117;color:#f1f5f7;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:13px;line-height:1.52;white-space:pre-wrap;overflow-x:hidden;overflow-y:auto;overflow-wrap:anywhere;word-break:break-word;-webkit-overflow-scrolling:touch}
-.road-diagnostic-panel .toolbar{width:100%;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-.road-diagnostic-panel .toolbar button{min-width:0;color:#f4f7f8!important;background:linear-gradient(145deg,#2b3d48,#1d2c35)!important;border:1px solid #58707c!important;font-size:.82rem;white-space:normal}
-@media(max-width:520px){.road-diagnostic-panel{padding:13px!important}.road-diagnostic-log{max-height:40vh;font-size:13px;line-height:1.5}.road-diagnostic-panel .toolbar{grid-template-columns:1fr}}
