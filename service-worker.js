@@ -1,4 +1,4 @@
-const CACHE="agenda-istruttori-v1-21-premium-r10-report-diagnostic-checkpoints-r4";
+const CACHE="agenda-istruttori-v1-21-premium-r10-report-sampling-r5";
 const FILES=[
   "./",
   "./index.html",

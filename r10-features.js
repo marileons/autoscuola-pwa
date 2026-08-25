@@ -91,20 +91,50 @@
   }
 
   function sampleRoute(route,maxRequests=MAX_ROAD_REQUESTS){
-    const valid=route.filter(point=>Number.isFinite(point.lat)&&Number.isFinite(point.lng));
-    if(valid.length<=maxRequests)return valid.map(point=>({lat:point.lat,lng:point.lng}));
-    const cumulative=[0];
-    for(let index=1;index<valid.length;index)cumulative.push(cumulative.at(-1)+(valid[index].breakBefore?0:distance(valid[index-1],valid[index])));
-    const total=cumulative.at(-1);
-    if(total<=0)return Array.from({length:maxRequests},(_,index)=>valid[Math.round(index*(valid.length-1)/(maxRequests-1))]).map(point=>({lat:point.lat,lng:point.lng}));
-    const samples=[];
-    for(let index=0;index<maxRequests;index++){
-      const target=total*index/(maxRequests-1);
-      let pointIndex=cumulative.findIndex(value=>value>=target);
-      if(pointIndex<0)pointIndex=valid.length-1;
-      const point=valid[pointIndex];
-      if(!samples.length||point.lat!==samples.at(-1).lat||point.lng!==samples.at(-1).lng)samples.push({lat:point.lat,lng:point.lng});
+    const source=Array.isArray(route)?route:[],limit=Math.max(0,Math.floor(Number(maxRequests)||0));
+    diagnosticCheckpoint("representative-scan-start",{routePoints:source.length,limit});
+    if(!limit||!source.length){diagnosticCheckpoint("representative-scan-end",{validPoints:0,segments:0,representativeCount:0});return[]}
+    let validCount=0,segmentStarts=0;
+    for(let index=0;index<source.length;index++){
+      const point=source[index];
+      if(!Number.isFinite(point?.lat)||!Number.isFinite(point?.lng))continue;
+      if(validCount>0&&point.breakBefore===true)segmentStarts++;
+      validCount++;
     }
+    diagnosticCheckpoint("representative-count-end",{validPoints:validCount,segments:segmentStarts});
+    if(!validCount){diagnosticCheckpoint("representative-scan-end",{validPoints:0,segments:0,representativeCount:0});return[]}
+    if(validCount<=limit){
+      const all=[];
+      for(let index=0;index<source.length;index++){const point=source[index];if(Number.isFinite(point?.lat)&&Number.isFinite(point?.lng))all.push({lat:point.lat,lng:point.lng})}
+      diagnosticCheckpoint("representative-scan-end",{validPoints:validCount,segments:segmentStarts,representativeCount:all.length});
+      return all;
+    }
+    const selectedIndexes=new Set(),segmentRanks=new Set();
+    let firstIndex=-1,lastIndex=-1;
+    for(let index=0;index<source.length;index++){const point=source[index];if(!Number.isFinite(point?.lat)||!Number.isFinite(point?.lng))continue;if(firstIndex<0)firstIndex=index;lastIndex=index}
+    selectedIndexes.add(firstIndex);selectedIndexes.add(lastIndex);
+    const segmentSlots=Math.min(Math.max(0,limit-selectedIndexes.size),segmentStarts);
+    if(segmentSlots===1)segmentRanks.add(1);
+    else for(let slot=0;slot<segmentSlots;slot++)segmentRanks.add(1+Math.round(slot*(segmentStarts-1)/(segmentSlots-1)));
+    let validOrdinal=0,segmentOrdinal=0;
+    for(let index=0;index<source.length&&selectedIndexes.size<limit;index++){
+      const point=source[index];
+      if(!Number.isFinite(point?.lat)||!Number.isFinite(point?.lng))continue;
+      if(validOrdinal>0&&point.breakBefore===true){segmentOrdinal++;if(segmentRanks.has(segmentOrdinal))selectedIndexes.add(index)}
+      validOrdinal++;
+    }
+    const remaining=Math.max(0,limit-selectedIndexes.size),uniformRanks=new Set();
+    for(let slot=1;slot<=remaining;slot++)uniformRanks.add(Math.round(slot*(validCount-1)/(remaining+1)));
+    validOrdinal=0;
+    for(let index=0;index<source.length&&selectedIndexes.size<limit;index++){
+      const point=source[index];
+      if(!Number.isFinite(point?.lat)||!Number.isFinite(point?.lng))continue;
+      if(uniformRanks.has(validOrdinal))selectedIndexes.add(index);
+      validOrdinal++;
+    }
+    const samples=[];
+    for(let index=0;index<source.length;index++)if(selectedIndexes.has(index)){const point=source[index];samples.push({lat:point.lat,lng:point.lng})}
+    diagnosticCheckpoint("representative-scan-end",{validPoints:validCount,segments:segmentStarts,representativeCount:samples.length});
     return samples;
   }
 
@@ -192,7 +222,7 @@
     diagnosticCheckpoint("route-copy-end",{routePoints:route.length});
     diagnosticCheckpoint("representative-points-start",{routePoints:route.length,maxRequests:MAX_ROAD_REQUESTS});
     const samples=sampleRoute(route);
-    diagnosticCheckpoint("representative-points-end",{samples:samples.length});
+    diagnosticCheckpoint("representative-points-end",{routePoints:route.length,representativeCount:samples.length});
     const cache=loadRoadCache(),results=[];
     diagnosticCheckpoint("report-ui-start",{samples:samples.length});
     button.disabled=true;
