@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="transfer.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="documents.css?v=1.21-premium-r10-document-button-accents">
 <link rel="stylesheet" href="full-backup.css?v=1.21-premium-r10">
+<link rel="stylesheet" href="student-photo.css?v=1.21-photo-v1">
 </head>
 <body>
 <section id="loginScreen" class="auth-screen">
@@ -97,6 +98,18 @@
     <label>Telefono<input id="phone" type="tel"></label><label>Patente<input id="license" placeholder="Es. B, A1, A2, AM"></label>
     <label id="pinkSlipIssueField">Data rilascio foglio rosa<input id="pinkSlipIssueDate" type="date"></label>
     <p id="pinkSlipExpiry" class="muted">Scadenza foglio rosa: —</p>
+    <div class="student-photo-form">
+      <input id="studentPhotoInput" type="file" accept="image/*" capture="environment" class="hidden">
+      <button id="captureStudentPhoto" type="button" class="secondary full">SCATTA FOTO</button>
+      <div id="studentPhotoPreviewPanel" class="student-photo-preview-panel hidden">
+        <img id="studentPhotoPreview" alt="Anteprima foto allievo">
+        <div class="student-photo-preview-actions">
+          <button id="useStudentPhoto" type="button">USA FOTO</button>
+          <button id="retakeStudentPhoto" type="button" class="secondary">RIFAI FOTO</button>
+          <button id="cancelStudentPhoto" type="button" class="secondary">ANNULLA</button>
+        </div>
+      </div>
+    </div>
     <label>Note<textarea id="studentNotes" rows="5"></textarea></label>
     <button id="saveStudent" class="full">Salva</button>
   </div>
@@ -114,7 +127,7 @@
 
 <section id="student" class="view">
   <div class="top"><button id="editStudent">Modifica dati</button></div>
-  <div class="card"><h2 id="studentName"></h2><div id="studentDetails"></div></div>
+  <div class="card student-profile-card"><div class="student-profile-copy"><h2 id="studentName"></h2><div id="studentDetails"></div></div><aside class="student-profile-photo"><img id="studentPhoto" class="hidden" alt="Foto allievo"><div id="studentPhotoPlaceholder" class="student-photo-placeholder" aria-label="Foto non presente">Foto<br>non presente</div><button id="changeStudentPhoto" type="button" class="secondary">CAMBIA FOTO</button><button id="removeStudentPhoto" type="button" class="secondary hidden">RIMUOVI FOTO</button></aside></div>
   <button id="newLesson" class="full">Nuova guida</button>
   <button id="shareStudent" class="secondary full">📤 Condividi allievo</button>
   <button id="archiveStudent" class="archive-action full">🗃️ Archivia allievo</button>
@@ -274,5 +287,5 @@
     <div id="fullBackupModalButtons" class="choice-buttons"></div>
   </div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.21-r10-report-times"></script><script src="documents.js?v=1.21"></script><script src="full-backup.js?v=1.21"></script><script src="r10-features.js?v=1.21-r10-report-times"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.21-photo-v1"></script><script src="student-photo.js?v=1.21-photo-v1"></script><script src="documents.js?v=1.21"></script><script src="full-backup.js?v=1.21-photo-duration-v1"></script><script src="r10-features.js?v=1.21-photo-v1"></script><script src="road-report-diagnostics.js?v=1.21-diagnostic-v1"></script>
 </body></html>

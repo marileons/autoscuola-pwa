@@ -217,11 +217,17 @@
   function studentReportHtml(current){
     const base=studentReportHtmlBase(current);
     const notes=base.match(/<h2>Note<\/h2><p>[\s\S]*?<\/p>/)?.[0]||"";
-    return base
+    let report=base
       .replace(notes,"")
       .replace(/<h2>Percorso didattico<\/h2><table>[\s\S]*?<\/table>/,"")
       .replace("<h2>Storico guide (","<h2>STORICO GUIDE (")
       .replace('<footer class="footer">',`${notes}<footer class="footer">`);
+    if(typeof current.photo==="string"&&/^data:image\/(?:jpeg|png|webp);base64,/i.test(current.photo)){
+      report=report
+        .replace("</head>",'<style>.report-identity{display:grid;grid-template-columns:minmax(0,1fr) 105px;gap:16px;align-items:center}.report-photo{width:100px;height:120px;border-radius:12px;object-fit:cover;border:1px solid #ccd7dc}@media(max-width:650px){.report-identity{grid-template-columns:minmax(0,1fr) 82px}.report-photo{width:78px;height:96px}}</style></head>')
+        .replace(/<h2 class="title">([\s\S]*?)<\/h2><div class="data-grid">/,`<div class="report-identity"><h2 class="title">$1</h2><img class="report-photo" src="${current.photo}" alt="Foto allievo"></div><div class="data-grid">`);
+    }
+    return report;
   }
 
   function exportStudentPdf(){

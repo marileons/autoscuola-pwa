@@ -1,4 +1,4 @@
-const CACHE="agenda-istruttori-v1-21-premium-r10-document-button-accents";
+const CACHE="agenda-istruttori-v1-21-premium-r10-photo-auth-prep-diagnostic";
 const FILES=[
   "./",
   "./index.html",
@@ -7,8 +7,11 @@ const FILES=[
   "./transfer.css",
   "./documents.css",
   "./full-backup.css",
+  "./student-photo.css",
   "./app.js",
+  "./student-photo.js",
   "./r10-features.js",
+  "./road-report-diagnostics.js",
   "./documents.js",
   "./full-backup.js",
   "./ui-icons.svg",

@@ -495,11 +495,19 @@
     const cleanRoute=route=>(Array.isArray(route)?route:[]).map(point=>({
       lat:Number(point&&point.lat),lng:Number(point&&point.lng),accuracy:Number(point&&point.accuracy),time:Number(point&&point.time),breakBefore:point&&point.breakBefore===true
     }));
-    const students=(Array.isArray(appData.students)?appData.students:[]).map(student=>({
-      id:String(student&&student.id||""),category:String(student&&student.category||""),firstName:String(student&&student.firstName||""),lastName:String(student&&student.lastName||""),phone:String(student&&student.phone||""),license:String(student&&student.license||""),pinkSlipIssueDate:String(student&&student.pinkSlipIssueDate||""),notes:String(student&&student.notes||student&&student.studentNotes||""),archived:student&&student.archived===true,
-      checklist:cleanItems(student&&student.checklist),
-      lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>({id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist)}))
-    }));
+    const students=(Array.isArray(appData.students)?appData.students:[]).map(student=>{
+      const canonicalStudent={
+        id:String(student&&student.id||""),category:String(student&&student.category||""),firstName:String(student&&student.firstName||""),lastName:String(student&&student.lastName||""),phone:String(student&&student.phone||""),license:String(student&&student.license||""),pinkSlipIssueDate:String(student&&student.pinkSlipIssueDate||""),notes:String(student&&student.notes||student&&student.studentNotes||""),archived:student&&student.archived===true,
+        checklist:cleanItems(student&&student.checklist),
+        lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>{
+          const canonicalLesson={id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist)};
+          if(typeof lesson?.duration==="string"&&lesson.duration.trim())canonicalLesson.duration=lesson.duration.trim();
+          return canonicalLesson;
+        })
+      };
+      if(typeof student?.photo==="string"&&/^data:image\/(?:jpeg|png|webp);base64,/i.test(student.photo))canonicalStudent.photo=student.photo;
+      return canonicalStudent;
+    });
     const checklistSource=appData.checklists&&typeof appData.checklists==="object"&&!Array.isArray(appData.checklists)?appData.checklists:{};
     const checklists={};
     const includedChecklistKeys=Array.isArray(checklistKeys)?checklistKeys:Object.keys(checklistSource);
