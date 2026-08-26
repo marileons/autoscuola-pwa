@@ -10,5 +10,5 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "agenda-istruttori-auth"
-database_id = "REPLACE_AFTER_D1_CREATION"
+database_id = "eff4e064-1e96-48a9-b064-64ed3b9b47e5"
 migrations_dir = "migrations"
