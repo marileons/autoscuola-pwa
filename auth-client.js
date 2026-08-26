@@ -170,7 +170,6 @@
   }
 
   async function boot() {
-    showPublicLogin();
     const form = document.getElementById("loginForm");
     form.onsubmit = login;
     document.getElementById("toggleLoginPassword").onclick = () => {

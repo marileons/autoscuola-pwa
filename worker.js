@@ -1,4 +1,4 @@
-const COOKIE_NAME = "agenda_session";
+const COOKIE_NAME = "agenda_session_v2";
 const SESSION_DAYS = 30;
 const PASSWORD_ITERATIONS = 100000;
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
