@@ -2,11 +2,6 @@
 const KEY="autoscuola_v3_completa";
 const LIST_KEY="autoscuola_v3_checklists_v2";
 const EXAMINERS_KEY="autoscuola_v3_examiners";
-const AUTH_PASSWORD_KEY="autoscuola_auth_user_password";
-const AUTH_REMEMBER_KEY="autoscuola_auth_remembered";
-const AUTH_SESSION_KEY="autoscuola_auth_session";
-const DEFAULT_USER_PASSWORD="ProgettoMR2026";
-const MASTER_PASSWORD="MRleo1964@";
 const APP_NAME="Agenda Istruttore";
 const APP_VERSION="1.21.0";
 const LABELS={auto:"Auto","guida-accompagnata":"Guida Accompagnata",moto:"Moto","quad-leggero":"Quadriciclo leggero AM","quad-pesante":"Quadriciclo pesante B1","corso-moto":"Corso moto ad accesso graduale A2 e A",perfezionamento:"Perfezionamento","esame-revisione":"Revisioni","esame-esperimento":"Esperimenti","da-classificare":"Da classificare"};
@@ -45,14 +40,10 @@ function contextualSubpage(id){if(id==="student")return"Scheda allievo";if(id===
 function updatePageTitle(id){const view=$(id),title=view&&view.querySelector(":scope > .page-context-title");if(!title)return;const section=document.createElement("strong");section.className="page-context-section";section.textContent=navigationSectionLabel(categoryForView(id));title.replaceChildren(section);const subpage=contextualSubpage(id);if(subpage){const detail=document.createElement("span");detail.className="page-context-subpage";detail.textContent=subpage;title.appendChild(detail)}}
 function installPageTitles(){CATEGORY_CONTEXT_VIEWS.forEach(id=>{const view=$(id);if(!view||view.querySelector(":scope > .page-context-title"))return;const title=document.createElement("div");title.className="page-context-title";title.setAttribute("aria-label","Posizione corrente");view.prepend(title);updatePageTitle(id)})}
 function show(id){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));updatePageTitle(id);$(id).classList.add("active");if(id==="home")setNeutralHome();scrollTo(0,0)}
-function userPassword(){return localStorage.getItem(AUTH_PASSWORD_KEY)||DEFAULT_USER_PASSWORD}
-function validPassword(value){return value===userPassword()||value===MASTER_PASSWORD}
-function isAuthenticated(){return localStorage.getItem(AUTH_REMEMBER_KEY)==="1"||sessionStorage.getItem(AUTH_SESSION_KEY)==="1"}
 function showLogin(){stopGps();$("appShell").classList.add("hidden");$("loginScreen").classList.remove("hidden");$("loginForm").reset();$("loginError").classList.add("hidden");setTimeout(()=>$("loginPassword").focus(),0)}
 function showApp(){$("loginScreen").classList.add("hidden");$("appShell").classList.remove("hidden");renderStudents();show("home")}
-function login(event){event.preventDefault();const value=$("loginPassword").value;if(!validPassword(value)){$("loginError").classList.remove("hidden");$("loginPassword").select();return}if($("rememberDevice").checked)localStorage.setItem(AUTH_REMEMBER_KEY,"1");else sessionStorage.setItem(AUTH_SESSION_KEY,"1");showApp()}
-function logout(){localStorage.removeItem(AUTH_REMEMBER_KEY);sessionStorage.removeItem(AUTH_SESSION_KEY);showLogin()}
-function changePassword(){const current=$("currentPassword").value,next=$("newPassword").value,confirmValue=$("confirmPassword").value,message=$("passwordMessage");message.classList.remove("hidden");message.style.color="#d70015";if(!validPassword(current)){message.textContent="La password attuale non è corretta.";return}if(!next){message.textContent="Inserisci una nuova password.";return}if(next!==confirmValue){message.textContent="Le nuove password non coincidono.";return}if(next===MASTER_PASSWORD){message.textContent="Scegli una password diversa dalla Password Master.";return}localStorage.setItem(AUTH_PASSWORD_KEY,next);$("currentPassword").value="";$("newPassword").value="";$("confirmPassword").value="";message.style.color="#248a3d";message.textContent="Password utente aggiornata."}
+function login(event){return window.AgendaAuth.login(event,showApp)}
+function logout(){return window.AgendaAuth.logout(showLogin)}
 function student(){return state.students.find(s=>s.id===state.studentId)}function lesson(){return student()?.lessons.find(l=>l.id===state.lessonId)}
 function nameOf(s){return[s.firstName,s.lastName].filter(Boolean).join(" ")}function esc(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
 function stateIcon(v){return v==="repeat"?"🟡":v==="good"?"✅":"⬜"}function nextState(v){return STATES[(STATES.indexOf(v)+1)%STATES.length]}
@@ -277,7 +268,7 @@ function addHabit(){const input=$("newHabit"),value=input.value.trim();if(!value
 function saveExaminer(){const firstName=$("examinerFirstName").value.trim(),lastName=$("examinerLastName").value.trim(),notes=$("examinerNotes").value;if(!firstName&&!lastName)return alert("Inserisci nome o cognome.");if(state.editingExaminer){const x=state.examiners.find(e=>e.id===state.editingExaminer);Object.assign(x,{firstName,lastName,notes,habits:[...state.habitDraft]})}else state.examiners.push({id:uid(),firstName,lastName,notes,habits:[...state.habitDraft]});saveExaminers();renderExaminers();show("examiners")}
 function deleteExaminer(){if(!state.editingExaminer||!confirm("Eliminare questo esaminatore?"))return;state.examiners=state.examiners.filter(e=>e.id!==state.editingExaminer);saveExaminers();renderExaminers();show("examiners")}
 function moveBackButtonsToBottom(){[["studentForm","backStudentForm"],["studentMultiShare","backStudentMultiShare"],["student","backHome"],["lesson","backLesson"],["checklistManager","backChecklistManager"],["examiners","backExaminers"],["examinerForm","backExaminerForm"],["savedMapView","backSavedMap"],["settings","backSettings"]].forEach(([viewId,buttonId])=>{const view=$(viewId),button=$(buttonId);if(view&&button){button.classList.add("full");view.appendChild(button)}})}
-$("loginForm").onsubmit=login;$("toggleLoginPassword").onclick=()=>{const input=$("loginPassword"),show=input.type==="password";input.type=show?"text":"password";$("toggleLoginPassword").setAttribute("aria-label",show?"Nascondi password":"Mostra password");$("toggleLoginPassword").setAttribute("aria-pressed",String(show))};$("openSettings").onclick=()=>{["currentPassword","newPassword","confirmPassword"].forEach(id=>$(id).value="");$("passwordMessage").classList.add("hidden");show("settings")};$("backSettings").onclick=()=>{renderStudents();show("home")};$("changePassword").onclick=changePassword;$("logout").onclick=logout;
+$("loginForm").onsubmit=login;$("toggleLoginPassword").onclick=()=>{const input=$("loginPassword"),show=input.type==="password";input.type=show?"text":"password";$("toggleLoginPassword").setAttribute("aria-label",show?"Nascondi password":"Mostra password");$("toggleLoginPassword").setAttribute("aria-pressed",String(show))};$("openSettings").onclick=()=>{window.AgendaAuth.updateAccountSummary();show("settings")};$("backSettings").onclick=()=>{renderStudents();show("home")};$("logout").onclick=logout;
 installPageTitles();
 moveBackButtonsToBottom();
 $("pinkSlipIssueDate").addEventListener("input",updatePinkSlipExpiry);
@@ -297,7 +288,7 @@ $("backArchive").onclick=()=>{renderStudents();show("home")};
 $("archiveStudent").onclick=archiveStudent;
 $("restoreStudent").onclick=restoreStudent;
 $("toggleLessons").onclick=()=>{state.lessonsExpanded=!state.lessonsExpanded;renderLessons()};
-saveLists();save();if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));if(isAuthenticated())showApp();else showLogin();
+saveLists();save();if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));window.AgendaAuth.initialize(showApp,showLogin);
 
 $("voiceExaminer")&&($("voiceExaminer").onclick=()=>{$("examinerNotes").focus();toggleVoice()});
 $("openExaminers").onclick=()=>{renderExaminers();show("examiners")};

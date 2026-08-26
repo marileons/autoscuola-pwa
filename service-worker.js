@@ -1,4 +1,4 @@
-const CACHE="agenda-istruttori-v1-21-premium-r10-report-final-r6";
+const CACHE="agenda-istruttori-v1-21-auth-v1";
 const FILES=[
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const FILES=[
   "./full-backup.css",
   "./student-photo.css",
   "./app.js",
+  "./auth-client.js",
   "./student-photo.js",
   "./r10-features.js",
   "./documents.js",
@@ -51,6 +52,8 @@ self.addEventListener("activate",event=>{
   );
 });
 self.addEventListener("fetch",event=>{
+  const url=new URL(event.request.url);
+  if(url.pathname.startsWith("/api/"))return;
   if(event.request.method!=="GET")return;
   event.respondWith(
     fetch(event.request).then(response=>{

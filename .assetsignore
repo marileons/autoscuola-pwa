@@ -1,0 +1,8 @@
+.git
+.wrangler
+.dev.vars*
+node_modules
+migrations
+worker.js
+wrangler.toml
+*.patch

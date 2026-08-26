@@ -1,0 +1,14 @@
+name = "agenda-istruttori"
+main = "worker.js"
+compatibility_date = "2026-08-26"
+
+[assets]
+directory = "."
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "agenda-istruttori-auth"
+database_id = "REPLACE_AFTER_D1_CREATION"
+migrations_dir = "migrations"

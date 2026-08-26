@@ -22,11 +22,11 @@
     <div class="auth-logo-frame"><img src="home-logo-mr-header-v1-21.png" alt="Logo MR Agenda Istruttori" class="auth-logo"></div>
     <h1>AGENDA ISTRUTTORI</h1>
     <p class="muted auth-version">Versione 1.21</p>
-    <p class="muted">Inserisci la password per accedere.</p>
+    <p class="muted">Inserisci le tue credenziali per accedere.</p>
     <form id="loginForm" class="form">
+      <label>Nome utente<input id="loginUsername" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
       <label>Password<span class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" required autofocus><button id="toggleLoginPassword" class="password-toggle" type="button" aria-label="Mostra password" aria-pressed="false"><span aria-hidden="true">◉</span></button></span></label>
-      <label class="remember-row"><input id="rememberDevice" type="checkbox"> <span>Ricorda questo dispositivo</span></label>
-      <p id="loginError" class="auth-error hidden" role="alert">Password non corretta.</p>
+      <p id="loginError" class="auth-error hidden" role="alert">Credenziali non corrette.</p>
       <button type="submit" class="full">Accedi</button>
     </form>
     <p class="muted auth-credit">© 2026 Mario Leoni — Tutti i diritti riservati.</p>
@@ -70,6 +70,7 @@
   <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#settings-pro"/></svg></span> Impostazioni</button>
   <button id="importStudent" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#import-pro"/></svg></span> Importa allievo</button>
   <button id="shareStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#share-pro"/></svg></span> Condividi più allievi</button>
+  <button id="openUserManagement" class="home-pro-action full hidden">GESTIONE UTENTI</button>
   <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#logout-pro"/></svg></span> Esci</button>
   </div>
   </div>
@@ -195,13 +196,8 @@
 
 <section id="settings" class="view">
   <div class="card form"><h2>Impostazioni</h2>
-    <h3>Cambia password utente</h3>
-    <label>Password attuale<input id="currentPassword" type="password" autocomplete="current-password"></label>
-    <label>Nuova password<input id="newPassword" type="password" autocomplete="new-password"></label>
-    <label>Conferma nuova password<input id="confirmPassword" type="password" autocomplete="new-password"></label>
-    <p id="passwordMessage" class="muted hidden" role="status"></p>
-    <button id="changePassword" type="button">Cambia password</button>
-    <p class="muted">La password Master rimane sempre valida e non può essere modificata.</p>
+    <h3>Account</h3>
+    <p id="accountSummary" class="muted">Sessione protetta e gestita centralmente.</p>
   </div>
   <div class="card form"><h2>📦 Backup completo app</h2>
     <p class="muted">Comprende allievi, guide, checklist, esaminatori e Documenti vari.</p>
@@ -212,6 +208,22 @@
     <p id="fullBackupMessage" class="muted hidden" role="status"></p>
   </div>
   <button id="backSettings" class="home-command full">← HOME</button>
+</section>
+<section id="userManagement" class="view">
+  <div class="card form">
+    <h2>Gestione utenti</h2>
+    <p class="muted">Crea, blocca, riattiva o revoca gli accessi degli istruttori.</p>
+    <form id="createUserForm" class="form">
+      <label>Nome e cognome<input id="newUserName" maxlength="100" required></label>
+      <label>Nome utente<input id="newUsername" minlength="3" maxlength="40" autocapitalize="none" spellcheck="false" required></label>
+      <label>Password iniziale<input id="newUserPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label>
+      <label>Ruolo<select id="newUserRole"><option value="ISTRUTTORE">Istruttore</option><option value="ADMIN">Amministratore</option></select></label>
+      <button type="submit">Crea utente</button>
+    </form>
+    <p id="userManagementMessage" class="muted hidden" role="status"></p>
+  </div>
+  <div class="card"><h2>Utenti</h2><div id="userList"></div></div>
+  <button id="backUserManagement" class="home-command full">← HOME</button>
 </section>
 
 <section id="documentsView" class="view">
@@ -287,5 +299,5 @@
     <div id="fullBackupModalButtons" class="choice-buttons"></div>
   </div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="app.js?v=1.21-photo-v1"></script><script src="student-photo.js?v=1.21-photo-v1"></script><script src="documents.js?v=1.21"></script><script src="full-backup.js?v=1.21-photo-duration-v1"></script><script src="r10-features.js?v=1.21-photo-v1"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="auth-client.js?v=1"></script><script src="app.js?v=1.21-auth-v1"></script><script src="student-photo.js?v=1.21-photo-v1"></script><script src="documents.js?v=1.21"></script><script src="full-backup.js?v=1.21-photo-duration-v1"></script><script src="r10-features.js?v=1.21-photo-v1"></script>
 </body></html>
