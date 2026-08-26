@@ -4,6 +4,8 @@
   let onShowApp = null;
   let onShowLogin = null;
   let checkTimer = null;
+  let applicationLoaded = false;
+  let applicationLoading = null;
 
   async function api(path, options = {}) {
     const response = await fetch(path, {
@@ -31,39 +33,61 @@
 
   function loseAccess(message) {
     applyUser(null);
-    onShowLogin?.();
+    if (onShowLogin) onShowLogin(); else showPublicLogin();
     const error = document.getElementById("loginError");
     if (error && message) { error.textContent = message; error.classList.remove("hidden"); }
   }
 
-  async function checkSession(silent = false) {
+  async function checkSession(initial = false) {
     try {
       const data = await api("/api/auth/me", { method: "GET" });
       applyUser(data.user);
       return true;
     } catch (error) {
-      if (error.status === 401) loseAccess("La sessione è scaduta o l’accesso è stato revocato.");
+      if (error.status === 401 && initial) { applyUser(null); showPublicLogin(); }
+      else if (error.status === 401) loseAccess("La sessione è scaduta o l’accesso è stato revocato.");
       else loseAccess("Impossibile verificare l’accesso. Riconnettiti per entrare.");
       return false;
     }
   }
 
-  async function initialize(showApp, showLogin) {
+  function showPublicLogin() {
+    document.getElementById("appShell")?.classList.add("hidden");
+    document.getElementById("loginScreen")?.classList.remove("hidden");
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src; script.onload = resolve; script.onerror = () => reject(new Error(`Caricamento non autorizzato: ${src}`));
+      document.body.appendChild(script);
+    });
+  }
+
+  async function loadApplication() {
+    if (applicationLoaded) { onShowApp?.(); return; }
+    if (applicationLoading) return applicationLoading;
+    applicationLoading = (async () => {
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "app.js?v=1.21-auth-v2", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup.js?v=1.21-photo-duration-v1", "r10-features.js?v=1.21-photo-v1"]) await loadScript(src);
+      applicationLoaded = true;
+      onShowApp?.();
+    })();
+    try { await applicationLoading; } catch { applicationLoading = null; loseAccess("Impossibile caricare le funzioni protette. Riprova."); }
+  }
+
+  function applicationReady(showApp, showLogin) {
     onShowApp = showApp;
     onShowLogin = showLogin;
     bindAdminUi();
-    if (await checkSession()) onShowApp(); else if (!currentUser) onShowLogin();
-    checkTimer = setInterval(() => { if (currentUser) checkSession(true); }, 30000);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden && currentUser) checkSession(true); });
   }
 
-  async function login(event, showApp) {
+  async function login(event) {
     event.preventDefault();
     const form = event.currentTarget, button = form.querySelector("button[type=submit]"), errorBox = document.getElementById("loginError");
     errorBox.classList.add("hidden"); button.disabled = true; button.textContent = "Accesso…";
     try {
       const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ username: document.getElementById("loginUsername").value, password: document.getElementById("loginPassword").value }) });
-      applyUser(data.user); form.reset(); showApp();
+      applyUser(data.user); form.reset(); await loadApplication();
     } catch (error) {
       errorBox.textContent = error.status === 401 ? error.message : "Connessione non disponibile. Riprova.";
       errorBox.classList.remove("hidden"); document.getElementById("loginPassword").select();
@@ -145,5 +169,21 @@
     document.getElementById("createUserForm").onsubmit = createUser;
   }
 
-  window.AgendaAuth = { initialize, login, logout, updateAccountSummary, currentUser: () => currentUser };
+  async function boot() {
+    showPublicLogin();
+    const form = document.getElementById("loginForm");
+    form.onsubmit = login;
+    document.getElementById("toggleLoginPassword").onclick = () => {
+      const input = document.getElementById("loginPassword"), visible = input.type === "password";
+      input.type = visible ? "text" : "password";
+      document.getElementById("toggleLoginPassword").setAttribute("aria-label", visible ? "Nascondi password" : "Mostra password");
+      document.getElementById("toggleLoginPassword").setAttribute("aria-pressed", String(visible));
+    };
+    if (await checkSession(true)) await loadApplication();
+    checkTimer = setInterval(() => { if (currentUser) checkSession(); }, 30000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && currentUser) checkSession(); });
+  }
+
+  window.AgendaAuth = { applicationReady, login, logout, updateAccountSummary, currentUser: () => currentUser };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();
 })();

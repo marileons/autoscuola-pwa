@@ -268,7 +268,7 @@ function addHabit(){const input=$("newHabit"),value=input.value.trim();if(!value
 function saveExaminer(){const firstName=$("examinerFirstName").value.trim(),lastName=$("examinerLastName").value.trim(),notes=$("examinerNotes").value;if(!firstName&&!lastName)return alert("Inserisci nome o cognome.");if(state.editingExaminer){const x=state.examiners.find(e=>e.id===state.editingExaminer);Object.assign(x,{firstName,lastName,notes,habits:[...state.habitDraft]})}else state.examiners.push({id:uid(),firstName,lastName,notes,habits:[...state.habitDraft]});saveExaminers();renderExaminers();show("examiners")}
 function deleteExaminer(){if(!state.editingExaminer||!confirm("Eliminare questo esaminatore?"))return;state.examiners=state.examiners.filter(e=>e.id!==state.editingExaminer);saveExaminers();renderExaminers();show("examiners")}
 function moveBackButtonsToBottom(){[["studentForm","backStudentForm"],["studentMultiShare","backStudentMultiShare"],["student","backHome"],["lesson","backLesson"],["checklistManager","backChecklistManager"],["examiners","backExaminers"],["examinerForm","backExaminerForm"],["savedMapView","backSavedMap"],["settings","backSettings"]].forEach(([viewId,buttonId])=>{const view=$(viewId),button=$(buttonId);if(view&&button){button.classList.add("full");view.appendChild(button)}})}
-$("loginForm").onsubmit=login;$("toggleLoginPassword").onclick=()=>{const input=$("loginPassword"),show=input.type==="password";input.type=show?"text":"password";$("toggleLoginPassword").setAttribute("aria-label",show?"Nascondi password":"Mostra password");$("toggleLoginPassword").setAttribute("aria-pressed",String(show))};$("openSettings").onclick=()=>{window.AgendaAuth.updateAccountSummary();show("settings")};$("backSettings").onclick=()=>{renderStudents();show("home")};$("logout").onclick=logout;
+$("openSettings").onclick=()=>{window.AgendaAuth.updateAccountSummary();show("settings")};$("backSettings").onclick=()=>{renderStudents();show("home")};$("logout").onclick=logout;
 installPageTitles();
 moveBackButtonsToBottom();
 $("pinkSlipIssueDate").addEventListener("input",updatePinkSlipExpiry);
@@ -288,7 +288,7 @@ $("backArchive").onclick=()=>{renderStudents();show("home")};
 $("archiveStudent").onclick=archiveStudent;
 $("restoreStudent").onclick=restoreStudent;
 $("toggleLessons").onclick=()=>{state.lessonsExpanded=!state.lessonsExpanded;renderLessons()};
-saveLists();save();if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));window.AgendaAuth.initialize(showApp,showLogin);
+saveLists();save();if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));window.AgendaAuth.applicationReady(showApp,showLogin);
 
 $("voiceExaminer")&&($("voiceExaminer").onclick=()=>{$("examinerNotes").focus();toggleVoice()});
 $("openExaminers").onclick=()=>{renderExaminers();show("examiners")};

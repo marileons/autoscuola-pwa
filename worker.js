@@ -6,7 +6,12 @@ const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (!url.pathname.startsWith("/api/")) {
+      if (isPublicAsset(url.pathname)) return env.ASSETS.fetch(request);
+      const session = await requireSession(request, env);
+      if (session.response) return session.response;
+      return env.ASSETS.fetch(request);
+    }
     try {
       if (request.method !== "GET" && !sameOrigin(request)) return json({ error: "Richiesta non autorizzata." }, 403);
       if (url.pathname === "/api/auth/login" && request.method === "POST") return login(request, env);
@@ -27,6 +32,9 @@ export default {
     }
   }
 };
+function isPublicAsset(pathname) {
+  return pathname === "/" || pathname === "/index.html" || pathname === "/auth-client.js" || pathname === "/service-worker.js" || pathname === "/manifest.json" || pathname === "/favicon.ico" || /\.(?:css|png|jpg|jpeg|webp)$/i.test(pathname);
+}
 
 function json(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...headers } });
