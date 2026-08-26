@@ -5,7 +5,7 @@ CREATE TABLE users (
   role TEXT NOT NULL CHECK (role IN ('ADMIN', 'ISTRUTTORE')),
   password_hash TEXT NOT NULL,
   password_salt TEXT NOT NULL,
-  password_iterations INTEGER NOT NULL DEFAULT 210000,
+  password_iterations INTEGER NOT NULL DEFAULT 100000,
   active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL

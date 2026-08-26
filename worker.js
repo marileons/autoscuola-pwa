@@ -1,6 +1,6 @@
 const COOKIE_NAME = "agenda_session";
 const SESSION_DAYS = 30;
-const PASSWORD_ITERATIONS = 210000;
+const PASSWORD_ITERATIONS = 100000;
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 
 export default {
