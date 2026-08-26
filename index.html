@@ -198,6 +198,8 @@
   <div class="card form"><h2>Impostazioni</h2>
     <h3>Account</h3>
     <p id="accountSummary" class="muted">Sessione protetta e gestita centralmente.</p>
+    <button id="openOwnPassword" type="button">CAMBIA PASSWORD</button>
+    <p id="accountPasswordMessage" class="muted hidden" role="status"></p>
   </div>
   <div class="card form"><h2>📦 Backup completo app</h2>
     <p class="muted">Comprende allievi, guide, checklist, esaminatori e Documenti vari.</p>
@@ -299,5 +301,18 @@
     <div id="fullBackupModalButtons" class="choice-buttons"></div>
   </div>
 </div>
-<script src="auth-client.js?v=2"></script>
+<div id="ownPasswordModal" class="choice-modal hidden" role="dialog" aria-modal="true" aria-labelledby="ownPasswordTitle">
+  <form id="ownPasswordForm" class="choice-card form">
+    <h2 id="ownPasswordTitle">Cambia password</h2>
+    <label>Password attuale<input id="ownCurrentPassword" type="password" autocomplete="current-password" required></label>
+    <label>Nuova password<input id="ownNewPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label>
+    <label>Conferma nuova password<input id="ownConfirmPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label>
+    <p id="ownPasswordError" class="auth-error hidden" role="alert"></p>
+    <div class="choice-buttons">
+      <button id="cancelOwnPassword" type="button" class="secondary">ANNULLA</button>
+      <button type="submit">SALVA NUOVA PASSWORD</button>
+    </div>
+  </form>
+</div>
+<script src="auth-client.js?v=3"></script>
 </body></html>

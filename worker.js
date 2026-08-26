@@ -20,6 +20,7 @@ export default {
       if (url.pathname === "/api/setup" && request.method === "POST") return setup(request, env);
       const session = await requireSession(request, env);
       if (session.response) return session.response;
+      if (url.pathname === "/api/auth/password" && request.method === "POST") return changeOwnPassword(request, env, session);
       if (url.pathname === "/api/users" && request.method === "GET") return listUsers(env, session.user);
       if (url.pathname === "/api/users" && request.method === "POST") return createUser(request, env, session.user);
       const match = url.pathname.match(/^\/api\/users\/([^/]+)$/);
@@ -112,6 +113,23 @@ async function logout(request, env) {
   const token = cookieValue(request);
   if (token) await env.DB.prepare("DELETE FROM sessions WHERE id_hash=?").bind(await sha256(token)).run();
   return json({ ok: true }, 200, { "set-cookie": sessionCookie("", 0) });
+}
+async function changeOwnPassword(request, env, session) {
+  const body = await request.json();
+  const currentPassword = String(body.currentPassword || "");
+  const newPassword = String(body.newPassword || "");
+  const confirmPassword = String(body.confirmPassword || "");
+  if (!currentPassword) return json({ error: "Inserisci la password attuale." }, 400);
+  if (newPassword !== confirmPassword) return json({ error: "La conferma non coincide con la nuova password." }, 400);
+  if (!validPassword(newPassword)) return json({ error: "La nuova password deve contenere almeno 10 caratteri." }, 400);
+  if (!(await verifyPassword(currentPassword, session.user))) return json({ error: "Password attuale non corretta." }, 400);
+  if (currentPassword === newPassword) return json({ error: "La nuova password deve essere diversa da quella attuale." }, 400);
+  const secret = await makePassword(newPassword);
+  await env.DB.batch([
+    env.DB.prepare("UPDATE users SET password_hash=?,password_salt=?,password_iterations=?,updated_at=? WHERE id=?").bind(secret.hash, secret.salt, secret.iterations, new Date().toISOString(), session.user.id),
+    env.DB.prepare("DELETE FROM sessions WHERE user_id=? AND id_hash<>?").bind(session.user.id, session.idHash)
+  ]);
+  return json({ ok: true, message: "Password modificata correttamente." });
 }
 function requireAdmin(user) { return user.role === "ADMIN" ? null : json({ error: "Funzione riservata all’amministratore." }, 403); }
 async function listUsers(env, admin) {

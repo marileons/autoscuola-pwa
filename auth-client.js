@@ -104,6 +104,40 @@
     if (box) box.textContent = currentUser ? `${currentUser.name} · ${currentUser.username} · ${currentUser.role === "ADMIN" ? "Amministratore" : "Istruttore"}` : "Nessun account attivo.";
   }
 
+  function openOwnPassword() {
+    const form = document.getElementById("ownPasswordForm");
+    form.reset();
+    document.getElementById("ownPasswordError").classList.add("hidden");
+    document.getElementById("ownPasswordModal").classList.remove("hidden");
+    setTimeout(() => document.getElementById("ownCurrentPassword").focus(), 0);
+  }
+  function closeOwnPassword() {
+    document.getElementById("ownPasswordForm").reset();
+    document.getElementById("ownPasswordModal").classList.add("hidden");
+  }
+  async function changeOwnPassword(event) {
+    event.preventDefault();
+    const form = event.currentTarget, submit = form.querySelector("button[type=submit]"), errorBox = document.getElementById("ownPasswordError");
+    const currentPassword = document.getElementById("ownCurrentPassword").value;
+    const newPassword = document.getElementById("ownNewPassword").value;
+    const confirmPassword = document.getElementById("ownConfirmPassword").value;
+    errorBox.classList.add("hidden");
+    if (newPassword !== confirmPassword) { errorBox.textContent = "La conferma non coincide con la nuova password."; errorBox.classList.remove("hidden"); return; }
+    submit.disabled = true;
+    try {
+      const data = await api("/api/auth/password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword, confirmPassword }) });
+      closeOwnPassword();
+      const messageBox = document.getElementById("accountPasswordMessage");
+      messageBox.textContent = data.message || "Password modificata correttamente.";
+      messageBox.style.color = "#70d49a";
+      messageBox.classList.remove("hidden");
+    } catch (error) {
+      if (error.status === 401) { closeOwnPassword(); loseAccess("La sessione è scaduta. Accedi nuovamente."); return; }
+      errorBox.textContent = error.status ? error.message : "Errore di rete. Controlla la connessione e riprova.";
+      errorBox.classList.remove("hidden");
+    } finally { submit.disabled = false; }
+  }
+
   function message(text, error = false) {
     const box = document.getElementById("userManagementMessage");
     box.textContent = text; box.style.color = error ? "#ff7c86" : "#70d49a"; box.classList.remove("hidden");
@@ -167,6 +201,9 @@
     document.getElementById("openUserManagement").onclick = openUsers;
     document.getElementById("backUserManagement").onclick = () => window.show("home");
     document.getElementById("createUserForm").onsubmit = createUser;
+    document.getElementById("openOwnPassword").onclick = openOwnPassword;
+    document.getElementById("cancelOwnPassword").onclick = closeOwnPassword;
+    document.getElementById("ownPasswordForm").onsubmit = changeOwnPassword;
   }
 
   async function boot() {
