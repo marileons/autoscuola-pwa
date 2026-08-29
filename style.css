@@ -245,3 +245,18 @@ input,textarea,select{min-height:48px;border:1px solid #b9cdd0;border-radius:14p
 #studentMultiShare>.home-command,#studentMultiAction>.home-command{margin:0 0 10px}
 
 @media(max-width:520px){#home .categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#home .categories .auto-hero{min-height:116px}#home .categories button.compact-vehicle{grid-column:auto;min-height:78px}#home .categories button.compact-vehicle img{width:72%;object-position:right center}#home .compact-vehicle .hero-copy{left:9px}#home .compact-vehicle .hero-copy strong{max-width:84px;font-size:.76rem;letter-spacing:.015em}#home .categories button.ga-pro,#home .categories button.car-pro{min-height:70px}#home .categories button.car-pro{padding-left:14px}#home .categories button.car-pro>span{max-width:170px;font-size:.83rem}.other-functions-view .other-functions-grid{grid-template-columns:1fr}.other-functions-view .home-pro-action{min-height:54px}}
+
+/* Correzione visiva r12: stile scuro precedente, con il blu riservato a Gestione utenti. */
+#home .other-functions-entry{border:1px solid #405663;border-left:3px solid #d94249;background:linear-gradient(145deg,#2a3943,#202c35);color:#f1f4f5;box-shadow:0 7px 16px #0003}
+#home .other-functions-entry:hover{background:linear-gradient(145deg,#334550,#25333d)}
+#categoryHub button:not(.danger){background:linear-gradient(145deg,#2a3943,#202c35)!important;border:1px solid #405663!important;border-left:3px solid #d94249!important;color:#f1f4f5!important;box-shadow:0 7px 16px #0003!important}
+#categoryHub button:not(.danger):hover{background:linear-gradient(145deg,#334550,#25333d)!important}
+#categoryHub .home-command,#categoryHub #categoryBack{background:linear-gradient(145deg,#263640,#1a2730)!important}
+#home .categories button.car-pro{border-color:#405663;border-left:3px solid #d94249!important;background:linear-gradient(145deg,#2a3943,#202c35);color:#f1f4f5;box-shadow:0 7px 16px #0003}
+#home .categories button.revision-car,#home .categories button.experiment-car{border-left-color:#d94249!important}
+#home .categories button.car-pro>img{object-fit:cover;object-position:center 52%;filter:saturate(.95) contrast(1.06)}
+#home .categories button.car-pro::after{background:linear-gradient(90deg,#202c35fc 0,#202c35ed 48%,#202c3566 72%,transparent 90%)}
+#home .ga-auto-image{object-fit:cover;object-position:center 53%;filter:saturate(.96) contrast(1.06)}
+#home .ga-pro::after{background:linear-gradient(90deg,#202a31fc 0,#202a31ed 48%,#202a3166 72%,transparent 90%)}
+.other-functions-view .home-pro-action:not(.danger):not(.logout-action){background:linear-gradient(145deg,#2a3943,#202c35)!important;border:1px solid #405663!important;border-left:3px solid #d94249!important;color:#f1f4f5!important;box-shadow:0 7px 16px #0003!important}
+.other-functions-view .home-pro-action:not(.danger):not(.logout-action):hover{background:linear-gradient(145deg,#334550,#25333d)!important}
