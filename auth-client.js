@@ -68,7 +68,7 @@
     if (applicationLoaded) { onShowApp?.(); return; }
     if (applicationLoading) return applicationLoading;
     applicationLoading = (async () => {
-      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "app.js?v=1.21-auth-v2", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup.js?v=1.21-photo-duration-v1", "r10-features.js?v=1.21-photo-v1"]) await loadScript(src);
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "app.js?v=1.21-bulk-actions-gps-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup.js?v=1.21-photo-duration-v1", "r10-features.js?v=1.21-photo-v1"]) await loadScript(src);
       applicationLoaded = true;
       onShowApp?.();
     })();

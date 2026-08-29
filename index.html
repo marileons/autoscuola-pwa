@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json?v=1.21-identita-definitiva">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v1-21.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=1.21-premium-r10-title-typography">
+<link rel="stylesheet" href="style.css?v=1.21-bulk-actions-activity">
 <link rel="stylesheet" href="auth.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="transfer.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="documents.css?v=1.21-premium-r10-document-button-accents">
@@ -70,11 +70,23 @@
   <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#settings-pro"/></svg></span> Impostazioni</button>
   <button id="importStudent" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#import-pro"/></svg></span> Importa allievo</button>
   <button id="shareStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#share-pro"/></svg></span> Condividi più allievi</button>
+  <button id="archiveStudents" class="home-pro-action full">🗃️ ARCHIVIA PIÙ ALLIEVI</button>
+  <button id="deleteStudents" class="home-pro-action danger full">🗑️ ELIMINA PIÙ ALLIEVI</button>
   <button id="openUserManagement" class="home-pro-action full hidden">GESTIONE UTENTI</button>
   <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#logout-pro"/></svg></span> Esci</button>
   </div>
   </div>
   <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
+</section>
+
+<section id="studentMultiAction" class="view">
+  <div class="card form"><h2 id="studentMultiActionTitle"></h2>
+    <p id="studentMultiActionPrompt" class="muted"></p>
+    <div id="studentMultiActionList"></div>
+    <p id="studentMultiActionEmpty" class="empty hidden"></p>
+    <button id="executeStudentMultiAction" type="button" class="full"></button>
+  </div>
+  <button id="backStudentMultiAction" type="button" class="home-command full">← HOME</button>
 </section>
 
 <section id="studentArchive" class="view">
@@ -146,7 +158,7 @@
 <label>Durata<select id="lessonDuration"><option>1 ora</option><option>1 ora e 30 minuti</option><option>2 ore</option><option>3 ore</option></select></label>
     <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><button id="voice" class="secondary">🎤 Detta</button>
   </div>
-  <div class="card"><h2>Checklist della guida</h2><div id="lessonChecklist"></div></div>
+  <div class="card"><h2>Attività didattica</h2><button id="toggleLessonActivity" type="button" class="secondary full" aria-expanded="false" aria-controls="lessonChecklist">VISUALIZZA ATTIVITÀ DIDATTICA</button><div id="lessonChecklist" class="hidden"></div></div>
   <div class="card gps-card"><h2>GPS</h2><button id="startGps" type="button" class="gps-toggle full" aria-pressed="false">AVVIA GPS</button><button id="stopGps" type="button" class="hidden" tabindex="-1" aria-hidden="true">Ferma GPS</button><p id="gpsIndicator" class="gps-indicator" role="status">GPS non attivo</p><p id="gpsStatus" class="muted" aria-live="polite">GPS non attivo.</p><p id="wakeLockStatus" class="muted wake-lock-status" aria-live="polite">Schermo attivo: in attesa del GPS.</p><div id="liveMap" class="map"></div></div>
   <button id="openSavedRoute" class="secondary full hidden">Apri percorso salvato</button>
   <div style="margin-bottom:90px"><button id="saveLesson" class="full">💾 Salva guida</button></div>
