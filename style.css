@@ -261,6 +261,11 @@ input,textarea,select{min-height:48px;border:1px solid #b9cdd0;border-radius:14p
 .other-functions-view .home-pro-action:not(.danger):not(.logout-action){background:linear-gradient(145deg,#2a3943,#202c35)!important;border:1px solid #405663!important;border-left:3px solid #d94249!important;color:#f1f4f5!important;box-shadow:0 7px 16px #0003!important}
 .other-functions-view .home-pro-action:not(.danger):not(.logout-action):hover{background:linear-gradient(145deg,#334550,#25333d)!important}
 
+/* Navigazione uniforme delle destinazioni aperte da Altre funzioni. */
+.other-functions-view .home-pro-action{font-weight:850;text-transform:uppercase}.other-functions-view .home-pro-action .ui-icon svg{display:block;overflow:visible}
+.other-functions-subnav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:10px 0}.other-functions-subnav button{width:100%;margin:0;min-height:48px}.other-functions-subnav .home-command{background:linear-gradient(145deg,#263640,#1a2730)}
+@media(max-width:520px){.other-functions-subnav{grid-template-columns:repeat(2,minmax(0,1fr))}.other-functions-subnav button{padding-inline:8px}}
+
 /* Rifinitura r13: sfondi veicoli fusi nelle card e utilitarie sempre intere. */
 #home .categories button.automotive-hero{background:linear-gradient(145deg,#202c35,#172129)}
 #home .categories button.automotive-hero img{mix-blend-mode:screen;-webkit-mask-image:radial-gradient(ellipse 82% 94% at 72% 50%,#000 46%,#000d 64%,transparent 100%);mask-image:radial-gradient(ellipse 82% 94% at 72% 50%,#000 46%,#000d 64%,transparent 100%)}
