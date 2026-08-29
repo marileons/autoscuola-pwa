@@ -260,3 +260,10 @@ input,textarea,select{min-height:48px;border:1px solid #b9cdd0;border-radius:14p
 #home .ga-pro::after{background:linear-gradient(90deg,#202a31fc 0,#202a31ed 48%,#202a3166 72%,transparent 90%)}
 .other-functions-view .home-pro-action:not(.danger):not(.logout-action){background:linear-gradient(145deg,#2a3943,#202c35)!important;border:1px solid #405663!important;border-left:3px solid #d94249!important;color:#f1f4f5!important;box-shadow:0 7px 16px #0003!important}
 .other-functions-view .home-pro-action:not(.danger):not(.logout-action):hover{background:linear-gradient(145deg,#334550,#25333d)!important}
+
+/* Rifinitura r13: sfondi veicoli fusi nelle card e utilitarie sempre intere. */
+#home .categories button.automotive-hero{background:linear-gradient(145deg,#202c35,#172129)}
+#home .categories button.automotive-hero img{mix-blend-mode:screen;-webkit-mask-image:radial-gradient(ellipse 82% 94% at 72% 50%,#000 46%,#000d 64%,transparent 100%);mask-image:radial-gradient(ellipse 82% 94% at 72% 50%,#000 46%,#000d 64%,transparent 100%)}
+#home .categories button.automotive-hero::after,#home .categories button.moto-hero::after,#home .categories button.two-moto-hero::after,#home .categories button.microcar-hero::after,#home .categories button.b1-hero::after{background:linear-gradient(90deg,#202c35fc 0,#202c35e8 38%,#202c3566 66%,#202c3524 100%)}
+#home .ga-auto-image,#home .categories button.car-pro>img{right:2%;top:6%;width:46%;height:88%;object-fit:contain;object-position:right center;filter:saturate(.95) contrast(1.06);mix-blend-mode:normal;-webkit-mask-image:none;mask-image:none}
+#home .categories button.revision-car>img,#home .categories button.experiment-car>img{right:1%;top:3%;width:49%;height:94%}
