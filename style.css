@@ -111,6 +111,7 @@ input,textarea,select{min-height:48px;border:1px solid #b9cdd0;border-radius:14p
 #home{margin:-11px;padding:14px 11px 20px;border-radius:0 0 24px 24px;background:radial-gradient(circle at 90% 4%,#183245 0,transparent 30%),linear-gradient(180deg,#0e1922,#111820 72%,#0c1319);color:#f2f5f6}
 #home .dashboard-intro{padding:4px 4px 10px}
 #home .dashboard-intro p{color:#f1f4f5;letter-spacing:.04em}
+#home .home-authenticated-user{margin:0;padding:3px 4px 1px;text-align:center;color:#a9dce2;font-size:.92rem;font-weight:700;letter-spacing:.02em;overflow-wrap:anywhere}
 #home .categories{gap:10px}
 #home .categories button{border-color:#34434d;color:#f1f4f5;background:linear-gradient(145deg,#1c252d,#151c22);box-shadow:0 8px 20px #0004}
 #home .categories button.automotive-hero{display:block;min-height:132px;padding:0;border-width:1px;border-left-width:1px;background:#07121d}

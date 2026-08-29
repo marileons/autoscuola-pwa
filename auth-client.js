@@ -28,7 +28,16 @@
     currentUser = user;
     const adminButton = document.getElementById("openUserManagement");
     if (adminButton) adminButton.classList.toggle("hidden", user?.role !== "ADMIN");
+    updateHomeUser();
     updateAccountSummary();
+  }
+
+  function updateHomeUser() {
+    const box = document.getElementById("homeAuthenticatedUser");
+    const displayName = String(currentUser?.name || "").trim();
+    if (!box) return;
+    box.textContent = displayName ? `Utente: ${displayName}` : "";
+    box.classList.toggle("hidden", !displayName);
   }
 
   function loseAccess(message) {

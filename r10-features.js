@@ -4,7 +4,8 @@
 (()=>{
   const ROAD_CACHE_KEY="agenda_road_report_cache_r10";
   const ROAD_ENDPOINT="https://nominatim.openstreetmap.org/reverse";
-  const MAX_ROAD_REQUESTS=10;
+  const MAX_ROAD_REQUESTS=26;
+  const ROAD_SAMPLE_MIN_METRES=15;
   const REQUEST_INTERVAL_MS=1100;
   let wakeLock=null;
   let wakeLockGeneration=0;
@@ -92,45 +93,63 @@
   function sampleRoute(route,maxRequests=MAX_ROAD_REQUESTS){
     const source=Array.isArray(route)?route:[],limit=Math.max(0,Math.floor(Number(maxRequests)||0));
     if(!limit||!source.length)return[];
-    let validCount=0,segmentStarts=0;
+    const metres=(a,b)=>{
+      const rad=Math.PI/180,dLat=(b.lat-a.lat)*rad,dLng=(b.lng-a.lng)*rad;
+      const value=Math.sin(dLat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLng/2)**2;
+      return 12742000*Math.asin(Math.sqrt(Math.min(1,value)));
+    };
+    const bearing=(a,b)=>Math.atan2(Math.sin((b.lng-a.lng)*Math.PI/180)*Math.cos(b.lat*Math.PI/180),Math.cos(a.lat*Math.PI/180)*Math.sin(b.lat*Math.PI/180)-Math.sin(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.cos((b.lng-a.lng)*Math.PI/180))*180/Math.PI;
+    const valid=[];
     for(let index=0;index<source.length;index++){
       const point=source[index];
-      if(!Number.isFinite(point?.lat)||!Number.isFinite(point?.lng))continue;
-      if(validCount>0&&point.breakBefore===true)segmentStarts++;
-      validCount++;
+      if(Number.isFinite(point?.lat)&&Number.isFinite(point?.lng))valid.push({lat:point.lat,lng:point.lng,index,breakBefore:point.breakBefore===true});
     }
-    if(!validCount)return[];
-    if(validCount<=limit){
-      const all=[];
-      for(let index=0;index<source.length;index++){const point=source[index];if(Number.isFinite(point?.lat)&&Number.isFinite(point?.lng))all.push({lat:point.lat,lng:point.lng})}
-      return all;
+    if(!valid.length)return[];
+    const candidates=[valid[0]];
+    for(let index=1;index<valid.length-1;index++){
+      const point=valid[index],previous=candidates[candidates.length-1];
+      if(point.breakBefore||metres(previous,point)>=ROAD_SAMPLE_MIN_METRES)candidates.push(point);
     }
-    const selectedIndexes=new Set(),segmentRanks=new Set();
-    let firstIndex=-1,lastIndex=-1;
-    for(let index=0;index<source.length;index++){const point=source[index];if(!Number.isFinite(point?.lat)||!Number.isFinite(point?.lng))continue;if(firstIndex<0)firstIndex=index;lastIndex=index}
-    selectedIndexes.add(firstIndex);selectedIndexes.add(lastIndex);
-    const segmentSlots=Math.min(Math.max(0,limit-selectedIndexes.size),segmentStarts);
-    if(segmentSlots===1)segmentRanks.add(1);
-    else for(let slot=0;slot<segmentSlots;slot++)segmentRanks.add(1+Math.round(slot*(segmentStarts-1)/(segmentSlots-1)));
-    let validOrdinal=0,segmentOrdinal=0;
-    for(let index=0;index<source.length&&selectedIndexes.size<limit;index++){
-      const point=source[index];
-      if(!Number.isFinite(point?.lat)||!Number.isFinite(point?.lng))continue;
-      if(validOrdinal>0&&point.breakBefore===true){segmentOrdinal++;if(segmentRanks.has(segmentOrdinal))selectedIndexes.add(index)}
-      validOrdinal++;
+    const last=valid[valid.length-1];
+    if(last.index!==candidates[candidates.length-1].index){
+      const previous=candidates[candidates.length-1];
+      if(candidates.length>1&&!last.breakBefore&&metres(previous,last)<ROAD_SAMPLE_MIN_METRES)candidates[candidates.length-1]=last;
+      else candidates.push(last);
     }
-    const remaining=Math.max(0,limit-selectedIndexes.size),uniformRanks=new Set();
-    for(let slot=1;slot<=remaining;slot++)uniformRanks.add(Math.round(slot*(validCount-1)/(remaining+1)));
-    validOrdinal=0;
-    for(let index=0;index<source.length&&selectedIndexes.size<limit;index++){
-      const point=source[index];
-      if(!Number.isFinite(point?.lat)||!Number.isFinite(point?.lng))continue;
-      if(uniformRanks.has(validOrdinal))selectedIndexes.add(index);
-      validOrdinal++;
+    if(candidates.length<=limit)return candidates.map(({lat,lng})=>({lat,lng}));
+
+    let travelled=0;
+    candidates[0].travelled=0;
+    for(let index=1;index<candidates.length;index++){
+      if(!candidates[index].breakBefore)travelled+=metres(candidates[index-1],candidates[index]);
+      candidates[index].travelled=travelled;
     }
-    const samples=[];
-    for(let index=0;index<source.length;index++)if(selectedIndexes.has(index)){const point=source[index];samples.push({lat:point.lat,lng:point.lng})}
-    return samples;
+    const selected=new Set([0,candidates.length-1]);
+    const canSelect=index=>!selected.has(index)&&[...selected].every(chosen=>metres(candidates[index],candidates[chosen])>=ROAD_SAMPLE_MIN_METRES);
+    for(let index=1;index<candidates.length-1&&selected.size<limit;index++)if(candidates[index].breakBefore&&canSelect(index))selected.add(index);
+
+    const turns=[];
+    for(let index=1;index<candidates.length-1;index++){
+      if(candidates[index].breakBefore||candidates[index+1].breakBefore)continue;
+      let angle=Math.abs(bearing(candidates[index-1],candidates[index])-bearing(candidates[index],candidates[index+1]));
+      angle=Math.min(angle,360-angle);
+      if(angle>=20)turns.push({index,angle});
+    }
+    turns.sort((a,b)=>b.angle-a.angle);
+    const turnTarget=Math.min(turns.length,Math.floor(limit*.4));
+    let turnCount=0;
+    for(const turn of turns)if(selected.size<limit&&turnCount<turnTarget&&canSelect(turn.index)){selected.add(turn.index);turnCount++}
+
+    for(let slot=1;slot<limit&&selected.size<limit;slot++){
+      const target=travelled*slot/limit;
+      let best=-1,bestDelta=Infinity;
+      for(let index=1;index<candidates.length-1;index++)if(canSelect(index)){
+        const delta=Math.abs(candidates[index].travelled-target);
+        if(delta<bestDelta){best=index;bestDelta=delta}
+      }
+      if(best>=0)selected.add(best);
+    }
+    return [...selected].sort((a,b)=>a-b).map(index=>({lat:candidates[index].lat,lng:candidates[index].lng}));
   }
 
   function loadRoadCache(){
