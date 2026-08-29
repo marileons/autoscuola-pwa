@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json?v=1.21-identita-definitiva">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v1-21.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=1.21-road-report-user-name">
+<link rel="stylesheet" href="style.css?v=1.21-navigation-r11">
 <link rel="stylesheet" href="auth.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="transfer.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="documents.css?v=1.21-premium-r10-document-button-accents">
@@ -40,54 +40,62 @@
   <div class="dashboard-intro"><p>Scegli una sezione</p></div>
   <div class="categories">
     <button data-f="auto" class="automotive-hero auto-hero"><span class="hero-copy"><strong>AUTO</strong></span><img src="home-auto-realistic-r8e.png" alt="Automobile moderna vista frontalmente"></button>
-    <button data-f="moto" class="automotive-hero moto-hero"><span class="hero-copy"><strong>MOTO</strong></span><img src="home-moto-realistic-r8e.png" alt="Motocicletta moderna con pilota vista frontalmente"></button>
-    <button data-f="quad-leggero" class="automotive-hero microcar-hero"><span class="hero-copy"><strong>QUADRICICLO LEGGERO AM</strong></span><img src="home-b1-microcar-realistic-r8g.png" alt="Microcar moderna per patente AM"></button>
-    <button data-f="quad-pesante" class="automotive-hero b1-hero"><span class="hero-copy"><strong>QUADRICICLO PESANTE B1</strong></span><img src="home-microcar-realistic-r8f.png" alt="Microcar moderna di categoria B1"></button>
-    <button data-f="corso-moto" class="automotive-hero two-moto-hero"><span class="hero-copy"><strong>CORSO MOTO A2/A</strong></span><img src="home-moto-scooter-realistic-r10.png" alt="Una motocicletta e uno scooter moderni affiancati"></button>
+    <button data-f="moto" class="automotive-hero compact-vehicle moto-hero"><span class="hero-copy"><strong>MOTO</strong></span><img src="home-moto-realistic-r8e.png" alt="Motocicletta moderna con pilota vista frontalmente"></button>
+    <button data-f="quad-leggero" class="automotive-hero compact-vehicle microcar-hero"><span class="hero-copy"><strong>QUADRICICLO LEGGERO AM</strong></span><img src="home-b1-microcar-realistic-r8g.png" alt="Microcar moderna per patente AM"></button>
+    <button data-f="quad-pesante" class="automotive-hero compact-vehicle b1-hero"><span class="hero-copy"><strong>QUADRICICLO PESANTE B1</strong></span><img src="home-microcar-realistic-r8f.png" alt="Microcar moderna di categoria B1"></button>
+    <button data-f="corso-moto" class="automotive-hero compact-vehicle two-moto-hero"><span class="hero-copy"><strong>CORSO MOTO A2/A</strong></span><img src="home-moto-scooter-realistic-r10.png" alt="Una motocicletta e uno scooter moderni affiancati"></button>
     <button data-f="guida-accompagnata" class="pro-card ga-pro"><span class="category-icon icon-ga" aria-hidden="true">GA</span><span>GUIDA ACCOMPAGNATA</span><img class="ga-auto-image" src="home-auto-realistic-r8e.png" alt=""></button>
-    <button data-f="perfezionamento" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#training-pro"/></svg></span><span>GUIDE DI PERFEZIONAMENTO</span></button>
-    <button data-f="esame-revisione" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#license-pro"/></svg></span><span>ESAMI DI REVISIONE</span></button>
-    <button data-f="esame-esperimento" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#license-test-pro"/></svg></span><span>ESPERIMENTO DI GUIDA</span></button>
-    <button id="openExaminers" class="pro-card"><span class="category-icon pro-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#examiner-pro"/></svg></span><span>ESAMINATORI</span></button>
+    <button data-f="perfezionamento" class="pro-card car-pro"><span>GUIDE DI PERFEZIONAMENTO</span><img src="home-auto-realistic-r8e.png" alt="Automobile berlina per guide di perfezionamento"></button>
+    <button data-f="esame-revisione" class="pro-card car-pro revision-car"><span>ESAMI DI REVISIONE</span><img src="home-b1-microcar-realistic-r8g.png" alt="Automobile compatta per esami di revisione"></button>
+    <button data-f="esame-esperimento" class="pro-card car-pro experiment-car"><span>ESPERIMENTO DI GUIDA</span><img src="home-microcar-realistic-r8f.png" alt="Automobile urbana per esperimento di guida"></button>
   </div>
-  <div id="studentSection" class="card student-section hidden">
-    <button id="studentSectionHome" type="button" class="home-command">← HOME</button>
+  <button id="openOtherFunctions" class="other-functions-entry full">ALTRE FUNZIONI</button>
+  <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
+</section>
+
+<section id="categoryHub" class="view category-hub">
+  <button id="categoryHome" type="button" class="home-command full">← HOME</button>
+  <div id="studentSection" class="card student-section">
     <h2 id="currentSectionTitle">Auto</h2>
-    <button id="newStudent" class="full">➕ Nuovo allievo</button>
-    <input id="search" type="search" placeholder="Cerca allievo">
-    <div id="students"></div><p id="emptyStudents" class="empty hidden">Nessun allievo in questa sezione.</p>
+    <div class="category-primary-actions">
+      <button id="newStudent" class="full">➕ NUOVO ALLIEVO</button>
+      <button id="toggleStudentSearch" type="button" class="secondary full" aria-expanded="false">CERCA ALLIEVO</button>
+      <div id="studentSearchPanel" class="hidden"><input id="search" type="search" placeholder="Cerca per cognome, nome, telefono o patente"></div>
+      <button id="showAllStudents" type="button" class="secondary full">VISUALIZZA TUTTI GLI ALLIEVI</button>
+    </div>
+    <div id="studentResults" class="hidden"><div id="students"></div><p id="emptyStudents" class="empty hidden">Nessun allievo in questa sezione.</p></div>
   </div>
-  <button id="unclassifiedStudents" class="secondary full hidden">⚠️ Allievi da classificare</button>
-  <div class="dashboard-actions">
+  <button id="categoryBack" type="button" class="secondary full">INDIETRO</button>
+</section>
+
+<section id="otherFunctions" class="view other-functions-view">
+  <button id="otherFunctionsHome" type="button" class="home-command full">← HOME</button>
+  <div class="card"><h2>Altre funzioni</h2><div class="other-functions-grid">
+  <button id="openExaminers" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#examiner-pro"/></svg></span> Esaminatori</button>
   <button id="openArchive" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#archive-pro"/></svg></span> ARCHIVIO ALLIEVI</button>
   <a class="home-pro-action link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#road-link-pro"/></svg></span> LINK AL CODICE DELLA STRADA</a>
   <a class="home-pro-action link-button full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#schedule-pro"/></svg></span> TURNI OPERATIVI ESAMINATORI</a>
   <button id="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#documents-pro"/></svg></span> DOCUMENTI VARI</button>
-  </div>
-  <div class="secondary-functions" aria-label="Altre funzioni">
-  <h2>Altre funzioni</h2>
-  <div class="secondary-actions">
-    <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#checklist-pro"/></svg></span> Percorso didattico</button>
+  <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#checklist-pro"/></svg></span> Percorso didattico</button>
   <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#settings-pro"/></svg></span> Impostazioni</button>
   <button id="importStudent" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#import-pro"/></svg></span> Importa allievo</button>
   <button id="shareStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#share-pro"/></svg></span> Condividi più allievi</button>
-  <button id="archiveStudents" class="home-pro-action full">🗃️ ARCHIVIA PIÙ ALLIEVI</button>
-  <button id="deleteStudents" class="home-pro-action danger full">🗑️ ELIMINA PIÙ ALLIEVI</button>
-  <button id="openUserManagement" class="home-pro-action full hidden">GESTIONE UTENTI</button>
+  <button id="archiveStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=navigation-r11#archive-pro"/></svg></span> Archivia più allievi</button>
+  <button id="deleteStudents" class="home-pro-action danger full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=navigation-r11#delete-pro"/></svg></span> Elimina più allievi</button>
+  <button id="unclassifiedStudents" class="home-pro-action full hidden">⚠️ Allievi da classificare</button>
+  </div></div>
+  <button id="openUserManagement" class="user-management-entry full hidden">GESTIONE UTENTI</button>
   <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#logout-pro"/></svg></span> Esci</button>
-  </div>
-  </div>
-  <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
 </section>
 
 <section id="studentMultiAction" class="view">
+  <button id="backStudentMultiAction" type="button" class="home-command full">← HOME</button>
   <div class="card form"><h2 id="studentMultiActionTitle"></h2>
     <p id="studentMultiActionPrompt" class="muted"></p>
     <div id="studentMultiActionList"></div>
     <p id="studentMultiActionEmpty" class="empty hidden"></p>
     <button id="executeStudentMultiAction" type="button" class="full"></button>
   </div>
-  <button id="backStudentMultiAction" type="button" class="home-command full">← HOME</button>
 </section>
 
 <section id="studentArchive" class="view">
@@ -131,12 +139,12 @@
 </section>
 
 <section id="studentMultiShare" class="view">
+  <button id="backStudentMultiShare" type="button" class="home-command full">← HOME</button>
   <div class="card form"><h2>Condividi più allievi</h2>
     <p class="muted">Seleziona gli allievi da includere. Guide, checklist e percorsi GPS rimangono associati.</p>
     <div id="studentMultiShareList"></div>
     <button id="exportSelectedStudents" type="button" class="full">📤 Condividi allievi selezionati</button>
   </div>
-  <button id="backStudentMultiShare" type="button" class="home-command full">← HOME</button>
 </section>
 
 <section id="student" class="view">
