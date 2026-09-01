@@ -116,6 +116,18 @@ test("l'interfaccia usa card espandibili e layout responsive smartphone/tablet",
   assert.match(cssSource, /min-height:46px/);
 });
 
+test("i controlli del Registro evitano auto-zoom iOS senza disabilitare lo zoom manuale", () => {
+  assert.match(cssSource, /\.register-form input:not\(\[type="checkbox"\]\),\.register-form select,\.register-form textarea,\.register-block-editor select,\.register-block-editor input\{font-size:16px\}/);
+  assert.doesNotMatch(cssSource, /\.register-form input\{[^}]*font-size:16px/);
+  const viewport = htmlSource.match(/<meta name="viewport" content="([^"]+)">/)?.[1] || "";
+  assert.match(viewport, /width=device-width/);
+  assert.match(viewport, /initial-scale=1/);
+  assert.doesNotMatch(viewport, /maximum-scale/i);
+  assert.doesNotMatch(viewport, /user-scalable\s*=\s*no/i);
+  assert.match(cssSource, /@media\(max-width:420px\)/);
+  assert.match(cssSource, /\.register-layout main\{margin:0;max-width:none;padding:0;width:100%\}/);
+});
+
 test("HOME e INDIETRO mantengono le destinazioni concordate", () => {
   assert.match(uiSource, /registerHome[\s\S]*?show\("home"\)/);
   assert.match(uiSource, /registerBack[\s\S]*?show\("otherFunctions"\)/);
