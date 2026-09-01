@@ -343,7 +343,7 @@
         const accepted = confirmation(`Il Registro locale attuale verrà sostituito completamente con il backup del ${new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short" }).format(new Date(inspected.createdAt))}.\n\nRecord: ${inspected.records} · Revisioni: ${inspected.revisions}\n\nContinuare?`);
         if (!accepted) return setMessage("Ripristino annullato. Il Registro locale non è stato modificato.");
         const result = await backupService.restoreBackup(user.id, byId("registerImportPassword").value, content);
-        byId("registerImportBackupForm").reset(); closeEditors(); await render();
+        byId("registerImportBackupForm").reset(); byId("registerImportFileName").textContent = "Nessun file selezionato"; closeEditors(); await render();
         setMessage(`Ripristino completato: ${result.records} record e ${result.revisions} revisioni.`);
       } catch (error) { setMessage(error.message, true); }
     }
@@ -435,7 +435,10 @@
       byId("registerOpenRates").onclick = openRates; byId("registerRatesForm").onsubmit = submitRates; byId("registerCancelRates").onclick = closeEditors;
       byId("registerOpenSecurity").onclick = () => { hide("registerWorkspace", "registerDayEditor", "registerRatesPanel"); reveal("registerSecurityPanel"); }; byId("registerCancelSecurity").onclick = closeEditors;
       byId("registerOpenBackup").onclick = () => { hide("registerWorkspace", "registerDayEditor", "registerRatesPanel", "registerSecurityPanel"); reveal("registerBackupPanel"); };
-      byId("registerExportBackupForm").onsubmit = submitBackupExport; byId("registerImportBackupForm").onsubmit = submitBackupImport; byId("registerCancelBackup").onclick = closeEditors;
+      byId("registerExportBackupForm").onsubmit = submitBackupExport; byId("registerImportBackupForm").onsubmit = submitBackupImport;
+      byId("registerChooseImportFile").onclick = () => byId("registerImportFile").click();
+      byId("registerImportFile").onchange = (event) => { byId("registerImportFileName").textContent = event.currentTarget.files?.[0]?.name || "Nessun file selezionato"; };
+      byId("registerCancelBackup").onclick = closeEditors;
       byId("registerOpenPrint").onclick = openPrintPreview; byId("registerPrintNow").onclick = printCurrentReport; byId("registerCancelPrint").onclick = closeEditors;
       byId("registerOpenDeletion").onclick = openDeletionPanel; byId("registerDeletionPeriodForm").onsubmit = inspectDeletionPeriod;
       byId("registerDeletionPeriodConfirm").onchange = (event) => { byId("registerDeletePeriodNow").disabled = !event.currentTarget.checked; };

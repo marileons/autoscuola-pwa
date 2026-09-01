@@ -102,6 +102,20 @@ test("backup, stampa e cancellazione locale sono collegati", () => {
   assert.doesNotMatch(uiSource, /generatePdf|jsPDF|pdfmake/i);
 });
 
+test("il selettore backup usa un gesto sincrono compatibile con iOS", () => {
+  assert.match(htmlSource, /id="registerChooseImportFile"[^>]*type="button"[^>]*>SCEGLI FILE<\/button>/);
+  assert.match(htmlSource, /id="registerImportFile"[^>]*type="file"/);
+  assert.doesNotMatch(htmlSource, /id="registerImportFile"[^>]*disabled/);
+  assert.match(htmlSource, /id="registerImportFile"[^>]*accept="[^"]*\.airb[^"]*application\/octet-stream[^"]*\*\/\*"/);
+  const pickerHandler = uiSource.match(/byId\("registerChooseImportFile"\)\.onclick\s*=\s*\(\)\s*=>\s*byId\("registerImportFile"\)\.click\(\);/)?.[0] || "";
+  assert.ok(pickerHandler);
+  assert.doesNotMatch(pickerHandler, /async|await|Promise|queueMicrotask|setTimeout/);
+  assert.match(uiSource, /byId\("registerImportFile"\)\.onchange/);
+  assert.match(uiSource, /registerImportFileName[\s\S]*?files\?\.\[0\]\?\.name/);
+  assert.match(uiSource, /const file = byId\("registerImportFile"\)\.files\?\.\[0\]/);
+  assert.match(uiSource, /backupService\.inspectBackup[\s\S]*?backupService\.restoreBackup/);
+});
+
 test("i campi P e F sono aggiunti solo per un periodo FULL_TIME", () => {
   assert.match(uiSource, /employment\?\.employmentType === "FULL_TIME" \? \[\.\.\.CATEGORIES, "P", "F"\] : CATEGORIES/);
 });

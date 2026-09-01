@@ -229,7 +229,12 @@
         <form id="registerImportBackupForm" class="register-form register-backup-card">
           <h4>Importa e sostituisci</h4>
           <p class="muted">Il file deve appartenere allo stesso account autenticato.</p>
-          <label>File backup<input id="registerImportFile" type="file" accept=".airb,application/json" required></label>
+          <div class="register-file-picker">
+            <span class="register-file-label">File backup</span>
+            <input id="registerImportFile" class="register-file-input" type="file" accept=".airb,application/json,application/octet-stream,*/*" required>
+            <button id="registerChooseImportFile" type="button" class="secondary full">SCEGLI FILE</button>
+            <output id="registerImportFileName" class="register-file-name">Nessun file selezionato</output>
+          </div>
           <label>Password backup<input id="registerImportPassword" type="password" minlength="12" autocomplete="off" required data-register-sensitive></label>
           <label class="register-check register-replace-confirm"><input id="registerImportReplaceConfirm" type="checkbox" required> Confermo che il Registro locale attuale verrà sostituito completamente.</label>
           <button type="submit" class="danger full">IMPORTA E SOSTITUISCI</button>
