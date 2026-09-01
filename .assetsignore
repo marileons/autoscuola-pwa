@@ -5,6 +5,7 @@
 .dev.vars*
 node_modules
 migrations
+tests/
 worker.js
 wrangler.toml
 *.patch
