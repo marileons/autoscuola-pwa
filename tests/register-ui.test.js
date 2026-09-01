@@ -55,7 +55,7 @@ function createUiHarness(vaultOverrides = {}, options = {}) {
     auth: { currentUser: () => ({ id: "account-background", name: "Utente Test" }), lockRegisterVault: async () => {} },
     fetch: async () => ({ ok: true, json: async () => ({ periods: [{ employmentType: "FULL_TIME", effectiveFrom: "2026-08-31" }] }) }),
     ledgerApi: { createLedger: () => ledger },
-    reportApi: { createReportService: () => ({ build: options.reportBuild || (async () => ({ totals: { workMinutes: 0, absenceRecordedMinutes: 0, totalAmountCents: 0, dayCount: 0 } })) }) },
+    reportApi: { createReportService: () => ({ build: options.reportBuild || (async () => ({ employmentTypes: ["FULL_TIME"], totals: { workMinutes: 0, absenceRecordedMinutes: 0, overtimeMinutes: 0, overtimeAmountCents: 0, totalAmountCents: 0, dayCount: 0 } })) }) },
     backupApi: { createBackupService: () => ({}) },
     deletionApi: { createDeletionService: () => ({}) }
   });
@@ -90,6 +90,41 @@ test("l'editor converte ore e minuti mantenendo minutes come formato interno", (
   assert.match(cssSource, /\.register-block-duration\{display:grid;grid-template-columns:1fr 1fr/);
   assert.match(cssSource, /@media\(max-width:700px\)[^\n]*\.register-block-editor\{grid-template-columns:minmax\(0,1fr\) 42px 42px 42px\}/);
   assert.match(cssSource, /\.register-block-editor input\{font-size:16px\}/);
+});
+
+test("il riepilogo mostra lo straordinario del report solo per FULL TIME", async () => {
+  async function summaryRows(employmentType, overtimeMinutes, overtimeAmountCents) {
+    const harness = createUiHarness({}, {
+      reportBuild: async () => ({
+        employmentTypes: [employmentType],
+        totals: {
+          workMinutes: employmentType === "FULL_TIME" ? 2400 : 180,
+          absenceRecordedMinutes: employmentType === "FULL_TIME" ? 420 : 0,
+          overtimeMinutes,
+          overtimeAmountCents,
+          totalAmountCents: employmentType === "FULL_TIME" ? 81000 : 6000,
+          dayCount: 5
+        }
+      })
+    });
+    await harness.controller.open();
+    harness.document.getElementById("registerUnlockPin").value = "1234";
+    await harness.document.getElementById("registerPinUnlockForm").onsubmit({ preventDefault() {} });
+    return harness.document.getElementById("registerSummary").children
+      .map((row) => row.children.map((child) => child.textContent));
+  }
+
+  const withOvertime = await summaryRows("FULL_TIME", 60, 3000);
+  assert.deepEqual(withOvertime.find(([label]) => label === "Straordinario"), ["Straordinario", "1 h 00 min — 30,00 €"]);
+
+  const withoutOvertime = await summaryRows("FULL_TIME", 0, 0);
+  assert.deepEqual(withoutOvertime.find(([label]) => label === "Straordinario"), ["Straordinario", "0 h 00 min — 0,00 €"]);
+
+  const partTime = await summaryRows("PART_TIME", 0, 0);
+  assert.equal(partTime.some(([label]) => label === "Straordinario"), false);
+  assert.match(uiSource, /overtimeMinutes: currentReport\.totals\.overtimeMinutes/);
+  assert.match(uiSource, /overtimeAmountCents: currentReport\.totals\.overtimeAmountCents/);
+  assert.doesNotMatch(uiSource, /39\s*\*\s*60|2340/);
 });
 
 test("un dato legacy non valido mostra riepilogo non disponibile e il motivo reale", async () => {

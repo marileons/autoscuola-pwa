@@ -216,6 +216,9 @@
       return {
         workMinutes: currentReport.totals.workMinutes,
         absenceMinutes: currentReport.totals.absenceRecordedMinutes,
+        overtimeMinutes: currentReport.totals.overtimeMinutes,
+        overtimeAmountCents: currentReport.totals.overtimeAmountCents,
+        fullTime: currentReport.employmentTypes.includes("FULL_TIME"),
         amountCents: currentReport.totals.totalAmountCents,
         days: currentReport.totals.dayCount
       };
@@ -263,12 +266,16 @@
         );
         return false;
       }
-      byId("registerSummary").replaceChildren(
+      const rows = [
         summaryRow("Giornate", String(result.days)),
         summaryRow("Ore lavorate", formatMinutes(result.workMinutes)),
-        summaryRow("Permessi / ferie", formatMinutes(result.absenceMinutes)),
+        summaryRow("Permessi / ferie", formatMinutes(result.absenceMinutes))
+      ];
+      if (result.fullTime) rows.push(summaryRow("Straordinario", `${formatMinutes(result.overtimeMinutes)} — ${formatMoney(result.overtimeAmountCents)}`));
+      rows.push(
         summaryRow("Compenso", formatMoney(result.amountCents))
       );
+      byId("registerSummary").replaceChildren(...rows);
       return true;
     }
     function closeEditors() { hide("registerDayEditor", "registerRatesPanel", "registerSecurityPanel", "registerBackupPanel", "registerPrintPanel", "registerDeletionPanel"); reveal("registerWorkspace"); }
