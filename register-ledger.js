@@ -166,6 +166,12 @@
       const employment = employmentForDate(input.date);
       const existing = await getDay(input.date);
       const blocks = await normalizeBlocks(input.blocks, employment, input.date, existing);
+      const absenceMinutes = blocks
+        .filter((block) => ABSENCE_CATEGORIES.includes(block.category))
+        .reduce((sum, block) => sum + block.minutes, 0);
+      const weekday = new Date(`${input.date}T00:00:00Z`).getUTCDay();
+      const absenceLimit = weekday === 0 ? 0 : weekday === 6 ? 240 : 420;
+      if (absenceMinutes > absenceLimit) throw new RangeError("P/F oltre limite giornaliero");
       const timestamp = now();
       const revision = (existing?.revision || 0) + 1;
       const day = {

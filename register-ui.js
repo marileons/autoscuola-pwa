@@ -239,9 +239,15 @@
       const days = allDays.filter((day) => day.date >= range.start && day.date <= range.end);
       byId("registerDayCards").replaceChildren(...days.map(dayCard));
       byId("registerEmptyDays").classList.toggle("hidden", days.length > 0);
-      let result = { workMinutes: 0, absenceMinutes: 0, amountCents: 0, days: 0 };
+      let result;
       try { result = await calculateSummary(); } catch (error) {
-        if (!String(error.message).includes("Nessuna tariffa")) setMessage(error.message, true);
+        const reason = error.message || "Errore durante il calcolo del riepilogo.";
+        setMessage(reason, true);
+        byId("registerSummary").replaceChildren(
+          summaryRow("Riepilogo", "Non disponibile"),
+          summaryRow("Motivo", reason)
+        );
+        return false;
       }
       byId("registerSummary").replaceChildren(
         summaryRow("Giornate", String(result.days)),
@@ -249,6 +255,7 @@
         summaryRow("Permessi / ferie", formatMinutes(result.absenceMinutes)),
         summaryRow("Compenso", formatMoney(result.amountCents))
       );
+      return true;
     }
     function closeEditors() { hide("registerDayEditor", "registerRatesPanel", "registerSecurityPanel", "registerBackupPanel", "registerPrintPanel", "registerDeletionPanel"); reveal("registerWorkspace"); }
     function addBlockRow(block = {}) {
@@ -289,7 +296,8 @@
         const date = byId("registerDayDate").value;
         const blocks = [...byId("registerBlocks").children].map((row, index) => ({ id: row.dataset.blockId || undefined, order: index + 1, category: row.querySelector("select").value, minutes: Number(row.querySelector("input").value) }));
         await ledger.saveDay({ date, blocks, note: byId("registerDayNote").value, revisionReason: "MODIFICA DA INTERFACCIA" });
-        byId("registerDayDate").disabled = false; closeEditors(); await render(); setMessage("Giornata salvata nel dispositivo.");
+        byId("registerDayDate").disabled = false; closeEditors();
+        if (await render()) setMessage("Giornata salvata nel dispositivo.");
       } catch (error) { setMessage(error.message, true); }
     }
     async function openRates() {

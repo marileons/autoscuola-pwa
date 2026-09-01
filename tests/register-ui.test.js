@@ -13,7 +13,7 @@ const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const authSource = fs.readFileSync(path.join(root, "auth-client.js"), "utf8");
 const { createController } = require("../register-ui.js");
 
-function createUiHarness(vaultOverrides = {}) {
+function createUiHarness(vaultOverrides = {}, options = {}) {
   const elements = new Map();
   function element(id = "") {
     const classes = new Set();
@@ -48,14 +48,14 @@ function createUiHarness(vaultOverrides = {}) {
     touch() {},
     ...vaultOverrides
   };
-  const ledger = { listDays: async () => [] };
+  const ledger = options.ledger || { listDays: async () => [] };
   const controller = createController({
     document,
     vault,
     auth: { currentUser: () => ({ id: "account-background", name: "Utente Test" }), lockRegisterVault: async () => {} },
     fetch: async () => ({ ok: true, json: async () => ({ periods: [{ employmentType: "FULL_TIME", effectiveFrom: "2026-08-31" }] }) }),
     ledgerApi: { createLedger: () => ledger },
-    reportApi: { createReportService: () => ({ build: async () => ({ totals: { workMinutes: 0, absenceRecordedMinutes: 0, totalAmountCents: 0, dayCount: 0 } }) }) },
+    reportApi: { createReportService: () => ({ build: options.reportBuild || (async () => ({ totals: { workMinutes: 0, absenceRecordedMinutes: 0, totalAmountCents: 0, dayCount: 0 } })) }) },
     backupApi: { createBackupService: () => ({}) },
     deletionApi: { createDeletionService: () => ({}) }
   });
@@ -69,6 +69,47 @@ test("gli helper UI gestiscono settimane, durate e centesimi in modo determinist
   assert.equal(controller.helpers.addDays("2026-08-31", 6), "2026-09-06");
   assert.equal(controller.helpers.centsFromInput("12,34"), 1234);
   assert.equal(controller.helpers.formatMinutes(125), "2 h 05 min");
+});
+
+test("un dato legacy non valido mostra riepilogo non disponibile e il motivo reale", async () => {
+  const harness = createUiHarness({}, {
+    reportBuild: async () => { throw new RangeError("P/F oltre limite giornaliero"); }
+  });
+  await harness.controller.open();
+  harness.document.getElementById("registerUnlockPin").value = "1234";
+  await harness.document.getElementById("registerPinUnlockForm").onsubmit({ preventDefault() {} });
+
+  const message = harness.document.getElementById("registerMessage").textContent;
+  const rows = harness.document.getElementById("registerSummary").children;
+  assert.equal(message, "P/F oltre limite giornaliero");
+  assert.deepEqual(rows.map((row) => row.children.map((child) => child.textContent)), [
+    ["Riepilogo", "Non disponibile"],
+    ["Motivo", "P/F oltre limite giornaliero"]
+  ]);
+  assert.doesNotMatch(rows.flatMap((row) => row.children).map((child) => child.textContent).join(" "), /0 h|0,00|^0$/);
+});
+
+test("un errore di riepilogo dopo il salvataggio non viene sostituito dal messaggio di successo", async () => {
+  const ledger = {
+    listDays: async () => [],
+    saveDay: async () => ({ date: "2026-09-11" })
+  };
+  const harness = createUiHarness({}, {
+    ledger,
+    reportBuild: async () => { throw new RangeError("P/F oltre limite giornaliero"); }
+  });
+  await harness.controller.open();
+  harness.document.getElementById("registerUnlockPin").value = "1234";
+  await harness.document.getElementById("registerPinUnlockForm").onsubmit({ preventDefault() {} });
+  harness.document.getElementById("registerDayDate").value = "2026-09-11";
+  harness.document.getElementById("registerBlocks").children = [{
+    dataset: { blockId: "" },
+    querySelector(selector) { return selector === "select" ? { value: "LG/A" } : { value: "60" }; }
+  }];
+  await harness.document.getElementById("registerDayForm").onsubmit({ preventDefault() {} });
+
+  assert.equal(harness.document.getElementById("registerMessage").textContent, "P/F oltre limite giornaliero");
+  assert.notEqual(harness.document.getElementById("registerMessage").textContent, "Giornata salvata nel dispositivo.");
 });
 
 test("la nuova UI espone tutte le schermate richieste", () => {

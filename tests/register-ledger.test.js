@@ -108,6 +108,69 @@ test("FULL TIME applica P/F e la regola definitiva 40 lavoro più 4 P", async ()
   ], [2340, 60, 240, 0, 40500]);
 });
 
+test("saveDay applica il limite aggregato giornaliero P/F prima di persistere", async () => {
+  const { ledger } = await fixture(fullTime);
+  await ledger.createRateVersion({ effectiveFrom: "2099-01-05", rates: baseRates });
+
+  await assert.rejects(() => ledger.saveDay({
+    date: "2099-01-09", blocks: [{ order: 1, category: "F", minutes: 480 }]
+  }), /P\/F oltre limite giornaliero/);
+  await assert.rejects(() => ledger.saveDay({
+    date: "2099-01-09", blocks: [{ order: 1, category: "P", minutes: 480 }]
+  }), /P\/F oltre limite giornaliero/);
+
+  const valid = await ledger.saveDay({
+    date: "2099-01-09",
+    blocks: [
+      { id: "p-valido", order: 1, category: "P", minutes: 240 },
+      { id: "f-valido", order: 2, category: "F", minutes: 180 }
+    ]
+  });
+  assert.equal(valid.blocks.reduce((sum, block) => sum + block.minutes, 0), 420);
+
+  await assert.rejects(() => ledger.saveDay({
+    date: "2099-01-09",
+    blocks: [
+      { id: "p-valido", order: 1, category: "P", minutes: 240 },
+      { id: "f-valido", order: 2, category: "F", minutes: 240 }
+    ]
+  }), /P\/F oltre limite giornaliero/);
+  await assert.rejects(() => ledger.saveDay({
+    date: "2099-01-09",
+    blocks: [
+      { order: 1, category: "P", minutes: 200 },
+      { order: 2, category: "F", minutes: 200 },
+      { order: 3, category: "P", minutes: 21 }
+    ]
+  }), /P\/F oltre limite giornaliero/);
+  await assert.rejects(() => ledger.saveDay({
+    date: "2099-01-10", blocks: [{ order: 1, category: "F", minutes: 241 }]
+  }), /P\/F oltre limite giornaliero/);
+  await assert.rejects(() => ledger.saveDay({
+    date: "2099-01-11", blocks: [{ order: 1, category: "P", minutes: 1 }]
+  }), /P\/F oltre limite giornaliero/);
+});
+
+test("modifica valida verso P/F non valido non scrive record o revisioni", async () => {
+  const { ledger } = await fixture(fullTime);
+  await ledger.createRateVersion({ effectiveFrom: "2099-01-05", rates: baseRates });
+  const original = await ledger.saveDay({
+    date: "2099-01-09",
+    note: "Versione valida",
+    blocks: [{ id: "ferie", order: 1, category: "F", minutes: 240 }]
+  });
+  const revisionsBefore = await ledger.listDayRevisions("2099-01-09");
+
+  await assert.rejects(() => ledger.saveDay({
+    date: "2099-01-09",
+    note: "Versione non valida",
+    blocks: [{ id: "ferie", order: 1, category: "F", minutes: 480 }]
+  }), /P\/F oltre limite giornaliero/);
+
+  assert.deepEqual(await ledger.getDay("2099-01-09"), original);
+  assert.deepEqual(await ledger.listDayRevisions("2099-01-09"), revisionsBefore);
+});
+
 test("ricalcolo PART TIME usa il motore economico condiviso", async () => {
   const { ledger } = await fixture(partTime);
   await ledger.createRateVersion({ effectiveFrom: "2099-01-05", rates: baseRates });
