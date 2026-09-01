@@ -147,14 +147,25 @@
     }
     async function submitUnlock(event) {
       event.preventDefault(); setMessage("");
+      const vault = getVault();
+      const pin = byId("registerUnlockPin").value;
       try {
-        await getVault().unlock(byId("registerUnlockPin").value);
+        if (!vault.status().active) {
+          const user = getAuth()?.currentUser?.();
+          if (!user?.id) throw new Error("Sessione non valida. Accedi nuovamente.");
+          const state = await vault.activate(user.id);
+          if (state.requiresPinSetup) throw new Error("Configurazione PIN locale non disponibile.");
+        }
+        await vault.unlock(pin);
         byId("registerPinUnlockForm").reset();
         await prepareLedger();
       } catch (error) {
-        const status = error.lockStatus || await getVault().pinLockStatus();
+        let status = error.lockStatus || null;
+        if (!status && vault.status().active) {
+          try { status = await vault.pinLockStatus(); } catch {}
+        }
         const suffix = status?.locked ? ` Riprova fra ${Math.max(1, Math.ceil(status.remainingMs / 60000))} minuti.` : "";
-        setMessage((error.message || "PIN non corretto") + suffix, true);
+        setMessage((error.message || "Impossibile sbloccare il Registro. Riprova.") + suffix, true);
       }
     }
     async function submitRecovery(event) {

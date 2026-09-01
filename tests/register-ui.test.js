@@ -13,6 +13,56 @@ const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const authSource = fs.readFileSync(path.join(root, "auth-client.js"), "utf8");
 const { createController } = require("../register-ui.js");
 
+function createUiHarness(vaultOverrides = {}) {
+  const elements = new Map();
+  function element(id = "") {
+    const classes = new Set();
+    return {
+      id, value: "", textContent: "", tagName: "DIV", children: [], dataset: {}, disabled: false,
+      classList: {
+        add: (...names) => names.forEach((name) => classes.add(name)),
+        remove: (...names) => names.forEach((name) => classes.delete(name)),
+        toggle: (name, force) => force === undefined ? (classes.has(name) ? classes.delete(name) : classes.add(name)) : (force ? classes.add(name) : classes.delete(name)),
+        contains: (name) => classes.has(name)
+      },
+      append(...children) { this.children.push(...children); },
+      replaceChildren(...children) { this.children = children; },
+      querySelectorAll() { return []; },
+      setAttribute() {},
+      reset() { this.resetCalled = true; }
+    };
+  }
+  const document = {
+    getElementById(id) { if (!elements.has(id)) elements.set(id, element(id)); return elements.get(id); },
+    createElement(tag) { const item = element(); item.tagName = tag.toUpperCase(); return item; },
+    querySelectorAll() { return []; },
+    addEventListener() {}
+  };
+  let active = true;
+  const calls = [];
+  const vault = {
+    status: () => ({ active, unlocked: false }),
+    activate: async (accountId) => { calls.push(["activate", accountId]); active = true; return { requiresPinSetup: false }; },
+    unlock: async (pin) => { calls.push(["unlock", pin]); },
+    pinLockStatus: async () => ({ locked: false, remainingMs: 0 }),
+    touch() {},
+    ...vaultOverrides
+  };
+  const ledger = { listDays: async () => [] };
+  const controller = createController({
+    document,
+    vault,
+    auth: { currentUser: () => ({ id: "account-background", name: "Utente Test" }), lockRegisterVault: async () => {} },
+    fetch: async () => ({ ok: true, json: async () => ({ periods: [{ employmentType: "FULL_TIME", effectiveFrom: "2026-08-31" }] }) }),
+    ledgerApi: { createLedger: () => ledger },
+    reportApi: { createReportService: () => ({ build: async () => ({ totals: { workMinutes: 0, absenceRecordedMinutes: 0, totalAmountCents: 0, dayCount: 0 } }) }) },
+    backupApi: { createBackupService: () => ({}) },
+    deletionApi: { createDeletionService: () => ({}) }
+  });
+  controller.bind({ show() {} });
+  return { controller, document, calls, setActive(value) { active = value; } };
+}
+
 test("gli helper UI gestiscono settimane, durate e centesimi in modo deterministico", () => {
   const controller = createController({ document: {} });
   assert.equal(controller.helpers.mondayOf("2026-09-03"), "2026-08-31");
@@ -124,4 +174,44 @@ test("cancellazione usa soltanto il vault locale e richiede riepilogo, frase e P
   assert.match(uiSource, /registerDeleteAllPin/);
   assert.match(uiSource, /requiresPinSetup/);
   assert.doesNotMatch(uiSource, /fetchApi\(["']\/api\/(?:delete|deletion|register|vault)/i);
+});
+
+test("dopo il background riattiva il vault prima di usare il PIN senza uscire dal Registro", async () => {
+  const harness = createUiHarness();
+  await harness.controller.open();
+  harness.calls.length = 0;
+  harness.setActive(false);
+  harness.controller.handleVaultLock();
+  harness.document.getElementById("registerUnlockPin").value = "2468";
+  await harness.document.getElementById("registerPinUnlockForm").onsubmit({ preventDefault() {} });
+  assert.deepEqual(harness.calls, [["activate", "account-background"], ["unlock", "2468"]]);
+  assert.equal(harness.document.getElementById("registerLockBadge").textContent, "SBLOCCATO");
+  assert.equal(harness.document.getElementById("registerWorkspace").classList.contains("hidden"), false);
+});
+
+test("PIN errato mantiene il conteggio e mostra il blocco senza riattivazioni superflue", async () => {
+  let attempts = 0;
+  const error = new Error("PIN non corretto");
+  error.lockStatus = { locked: false, remainingMs: 0, failedAttempts: 1 };
+  const harness = createUiHarness({ unlock: async () => { attempts += 1; throw error; } });
+  await harness.controller.open();
+  harness.calls.length = 0;
+  harness.document.getElementById("registerUnlockPin").value = "0000";
+  await harness.document.getElementById("registerPinUnlockForm").onsubmit({ preventDefault() {} });
+  assert.equal(attempts, 1);
+  assert.deepEqual(harness.calls, []);
+  assert.match(harness.document.getElementById("registerMessage").textContent, /PIN non corretto/);
+});
+
+test("errore di riattivazione resta gestito e viene mostrato nella UI", async () => {
+  const harness = createUiHarness({
+    activate: async () => { throw new Error("Archivio locale non disponibile"); },
+    pinLockStatus: async () => { throw new Error("non deve essere chiamato su vault inattivo"); }
+  });
+  harness.setActive(false);
+  harness.controller.handleVaultLock();
+  harness.document.getElementById("registerUnlockPin").value = "2468";
+  await assert.doesNotReject(() => harness.document.getElementById("registerPinUnlockForm").onsubmit({ preventDefault() {} }));
+  assert.match(harness.document.getElementById("registerMessage").textContent, /Archivio locale non disponibile/);
+  assert.equal(harness.document.getElementById("registerMessage").classList.contains("hidden"), false);
 });
