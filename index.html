@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="documents.css?v=1.21-premium-r10-document-button-accents">
 <link rel="stylesheet" href="full-backup.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="student-photo.css?v=1.21-photo-v1">
+<link rel="stylesheet" href="register-ui.css?v=1.21-register-ui-v4">
 </head>
 <body>
 <section id="loginScreen" class="auth-screen hidden">
@@ -84,9 +85,198 @@
   <button id="archiveStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#archive-pro"/></svg></span> ARCHIVIA PIÙ ALLIEVI</button>
   <button id="deleteStudents" class="home-pro-action danger full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#delete-pro"/></svg></span> ELIMINA PIÙ ALLIEVI</button>
   <button id="unclassifiedStudents" class="home-pro-action full hidden"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#license-test-pro"/></svg></span> ALLIEVI DA CLASSIFICARE</button>
+  <button id="openRegister" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#schedule-pro"/></svg></span> REGISTRO ORE E COMPENSI</button>
   </div></div>
   <button id="openUserManagement" class="user-management-entry full hidden">GESTIONE UTENTI</button>
   <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#logout-pro"/></svg></span> ESCI</button>
+</section>
+
+<section id="registerView" class="view register-view" aria-labelledby="registerTitle">
+  <div class="register-topbar">
+    <button id="registerHome" type="button" class="home-command">HOME</button>
+    <button id="registerBack" type="button" class="secondary">INDIETRO</button>
+  </div>
+  <div class="register-shell">
+    <header class="register-header">
+      <div><p class="register-eyebrow">AGENDA ISTRUTTORI</p><h2 id="registerTitle">Registro ore e compensi</h2></div>
+      <span id="registerLockBadge" class="register-lock-badge">BLOCCATO</span>
+    </header>
+    <div class="register-local-notice"><strong>Solo su questo dispositivo</strong><span>Ore, tariffe, compensi e note restano nel tuo archivio locale cifrato.</span></div>
+    <p id="registerMessage" class="register-message hidden" role="status"></p>
+
+    <div id="registerGate" class="register-gate">
+      <div id="registerPinSetup" class="register-gate-card hidden">
+        <h3>Crea il PIN del Registro</h3>
+        <p>Imposta 4 cifre. Il PIN protegge questo archivio locale e non viene inviato al server.</p>
+        <form id="registerPinSetupForm" class="register-form">
+          <label>PIN<input id="registerNewPin" inputmode="numeric" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" type="password" required data-register-sensitive></label>
+          <label>Conferma PIN<input id="registerConfirmPin" inputmode="numeric" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" type="password" required data-register-sensitive></label>
+          <button type="submit" class="full">CREA PIN</button>
+        </form>
+      </div>
+      <div id="registerPinUnlock" class="register-gate-card hidden">
+        <h3>Sblocca il Registro</h3>
+        <p id="registerPinHint">Inserisci il PIN personale di 4 cifre.</p>
+        <form id="registerPinUnlockForm" class="register-form">
+          <label>PIN<input id="registerUnlockPin" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]{4}" type="password" required data-register-sensitive></label>
+          <button type="submit" class="full">SBLOCCA</button>
+          <button id="registerOpenRecovery" type="button" class="secondary full">USA CODICE DI RECUPERO</button>
+        </form>
+      </div>
+      <div id="registerRecoveryPanel" class="register-gate-card hidden">
+        <h3>Recupera accesso</h3>
+        <form id="registerRecoveryForm" class="register-form">
+          <label>Codice personale<textarea id="registerRecoveryCode" rows="3" autocomplete="off" required data-register-sensitive></textarea></label>
+          <label>Nuovo PIN<input id="registerRecoveryPin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" type="password" required data-register-sensitive></label>
+          <label>Conferma nuovo PIN<input id="registerRecoveryPinConfirm" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" type="password" required data-register-sensitive></label>
+          <button type="submit" class="full">IMPOSTA NUOVO PIN</button>
+          <button id="registerCancelRecovery" type="button" class="secondary full">ANNULLA</button>
+        </form>
+      </div>
+      <div id="registerRecoveryOnce" class="register-gate-card register-recovery-once hidden">
+        <h3>Salva ora il codice di recupero</h3>
+        <p>Viene mostrato una sola volta. Senza PIN e senza questo codice il Registro locale non è recuperabile.</p>
+        <output id="registerRecoveryOnceCode" data-register-sensitive></output>
+        <label class="register-check"><input id="registerRecoverySaved" type="checkbox"> Ho conservato il codice in un luogo sicuro</label>
+        <button id="registerRecoveryContinue" type="button" class="full" disabled>CONTINUA</button>
+      </div>
+    </div>
+
+    <div id="registerWorkspace" class="register-workspace hidden">
+      <section class="register-account-card">
+        <div><span>Account</span><strong id="registerAccountName"></strong></div>
+        <div><span>Tipo lavorativo</span><strong id="registerEmploymentType"></strong></div>
+        <div><span>Decorrenza</span><strong id="registerEmploymentSince"></strong></div>
+      </section>
+      <nav class="register-tabs" aria-label="Vista Registro">
+        <button id="registerWeekTab" type="button" class="active" aria-pressed="true">SETTIMANA</button>
+        <button id="registerMonthTab" type="button" aria-pressed="false">MESE</button>
+      </nav>
+      <div class="register-period-bar">
+        <button id="registerPreviousPeriod" type="button" class="secondary" aria-label="Periodo precedente">‹</button>
+        <strong id="registerPeriodLabel"></strong>
+        <button id="registerNextPeriod" type="button" class="secondary" aria-label="Periodo successivo">›</button>
+      </div>
+      <div class="register-layout">
+        <main>
+          <button id="registerAddDay" type="button" class="full">+ AGGIUNGI GIORNATA</button>
+          <div id="registerDayCards" class="register-day-cards"></div>
+          <p id="registerEmptyDays" class="empty hidden">Nessuna giornata registrata nel periodo.</p>
+        </main>
+        <aside>
+          <section class="register-summary-card"><h3>Riepilogo</h3><div id="registerSummary"></div></section>
+          <section class="register-tools-card">
+            <button id="registerOpenRates" type="button" class="secondary full">TARIFFE PERSONALI</button>
+            <button id="registerOpenSecurity" type="button" class="secondary full">SICUREZZA REGISTRO</button>
+            <button id="registerOpenBackup" type="button" class="secondary full">BACKUP / RIPRISTINO REGISTRO</button>
+            <button id="registerOpenPrint" type="button" class="secondary full">ANTEPRIMA / STAMPA PDF</button>
+            <button id="registerOpenDeletion" type="button" class="secondary danger-outline full">CANCELLAZIONE DATI REGISTRO</button>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <section id="registerDayEditor" class="register-editor hidden">
+      <h3 id="registerDayEditorTitle">Giornata</h3>
+      <form id="registerDayForm" class="register-form">
+        <label>Data<input id="registerDayDate" type="date" required></label>
+        <div id="registerBlocks" class="register-blocks"></div>
+        <button id="registerAddBlock" type="button" class="secondary full">+ AGGIUNGI ATTIVITÀ</button>
+        <label>Note<textarea id="registerDayNote" maxlength="4000" rows="3" data-register-sensitive></textarea></label>
+        <div class="register-form-actions"><button type="submit">SALVA GIORNATA</button><button id="registerCancelDay" type="button" class="secondary">ANNULLA</button></div>
+      </form>
+    </section>
+
+    <section id="registerRatesPanel" class="register-editor hidden">
+      <h3>Tariffe personali</h3>
+      <p class="muted">Gli importi sono locali e versionati dalla decorrenza indicata.</p>
+      <form id="registerRatesForm" class="register-form register-rates-grid">
+        <label>Decorrenza<input id="registerRatesFrom" type="date" required></label>
+        <label>LG/A (€ / ora)<input data-register-rate="LG/A" type="number" min="0" step="0.01" required></label>
+        <label>LG/M (€ / ora)<input data-register-rate="LG/M" type="number" min="0" step="0.01" required></label>
+        <label>M/SE (€ / ora)<input data-register-rate="M/SE" type="number" min="0" step="0.01" required></label>
+        <label>GOLD (€ / ora)<input data-register-rate="GOLD" type="number" min="0" step="0.01" required></label>
+        <label>EX (€ / ora)<input data-register-rate="EX" type="number" min="0" step="0.01" required></label>
+        <label>VARIE (€ / ora)<input data-register-rate="VARIE" type="number" min="0" step="0.01" required></label>
+        <label>Straordinario (€ / ora)<input id="registerOvertimeRate" type="number" min="0" step="0.01" required></label>
+        <div class="register-form-actions"><button type="submit">SALVA NUOVA VERSIONE</button><button id="registerCancelRates" type="button" class="secondary">ANNULLA</button></div>
+      </form>
+      <div id="registerRateVersions"></div>
+    </section>
+
+    <section id="registerSecurityPanel" class="register-editor hidden">
+      <h3>Sicurezza Registro</h3>
+      <p>Il Registro si blocca dopo 5 minuti di inattività, in background, al logout o al cambio account.</p>
+      <form id="registerChangePinForm" class="register-form">
+        <label>PIN corrente<input id="registerCurrentPin" inputmode="numeric" maxlength="4" type="password" required data-register-sensitive></label>
+        <label>Nuovo PIN<input id="registerChangedPin" inputmode="numeric" maxlength="4" type="password" required data-register-sensitive></label>
+        <label>Conferma nuovo PIN<input id="registerChangedPinConfirm" inputmode="numeric" maxlength="4" type="password" required data-register-sensitive></label>
+        <div class="register-form-actions"><button type="submit">CAMBIA PIN</button><button id="registerCancelSecurity" type="button" class="secondary">ANNULLA</button></div>
+      </form>
+    </section>
+
+    <section id="registerBackupPanel" class="register-editor register-backup-panel hidden">
+      <h3>Backup personale del Registro</h3>
+      <div class="register-backup-warning"><strong>Backup separato dall’Agenda</strong><span>Questo file contiene esclusivamente il Registro dell’account autenticato. Non include il backup operativo generale.</span></div>
+      <div class="register-backup-columns">
+        <form id="registerExportBackupForm" class="register-form register-backup-card">
+          <h4>Esporta backup Registro</h4>
+          <p class="muted">Scegli una password dedicata di almeno 12 caratteri, diversa dal PIN.</p>
+          <label>Password backup<input id="registerExportPassword" type="password" minlength="12" autocomplete="new-password" required data-register-sensitive></label>
+          <label>Conferma password<input id="registerExportPasswordConfirm" type="password" minlength="12" autocomplete="new-password" required data-register-sensitive></label>
+          <button type="submit" class="full">ESPORTA BACKUP REGISTRO</button>
+        </form>
+        <form id="registerImportBackupForm" class="register-form register-backup-card">
+          <h4>Importa e sostituisci</h4>
+          <p class="muted">Il file deve appartenere allo stesso account autenticato.</p>
+          <label>File backup<input id="registerImportFile" type="file" accept=".airb,application/json" required></label>
+          <label>Password backup<input id="registerImportPassword" type="password" minlength="12" autocomplete="off" required data-register-sensitive></label>
+          <label class="register-check register-replace-confirm"><input id="registerImportReplaceConfirm" type="checkbox" required> Confermo che il Registro locale attuale verrà sostituito completamente.</label>
+          <button type="submit" class="danger full">IMPORTA E SOSTITUISCI</button>
+        </form>
+      </div>
+      <button id="registerCancelBackup" type="button" class="secondary full">INDIETRO AL REGISTRO</button>
+    </section>
+
+    <section id="registerPrintPanel" class="register-editor register-print-panel hidden">
+      <div class="register-print-actions">
+        <button id="registerPrintNow" type="button">STAMPA / SALVA PDF</button>
+        <button id="registerCancelPrint" type="button" class="secondary">INDIETRO AL REGISTRO</button>
+      </div>
+      <p class="register-print-hint">Si aprirà il pannello di stampa del browser o del dispositivo. Il prospetto non viene caricato né archiviato su server.</p>
+      <div id="registerPrintPreview" class="register-print-preview" aria-live="polite"></div>
+    </section>
+
+    <section id="registerDeletionPanel" class="register-editor register-deletion-panel hidden">
+      <h3>Cancellazione volontaria del Registro</h3>
+      <div class="register-deletion-backup-warning"><strong>Prima di cancellare</strong><span>Se desideri conservare una copia, torna al Registro ed esegui prima <b>ESPORTA BACKUP REGISTRO</b>. I file `.airb` e i PDF già salvati non verranno eliminati.</span></div>
+      <div class="register-deletion-columns">
+        <section class="register-deletion-card">
+          <h4>Cancella dati di un periodo</h4>
+          <p class="muted">Saranno eliminate soltanto le giornate del periodo e le relative revisioni. Le tariffe globali e le altre giornate resteranno disponibili.</p>
+          <form id="registerDeletionPeriodForm" class="register-form">
+            <label>Data iniziale<input id="registerDeletionStart" type="date" required></label>
+            <label>Data finale<input id="registerDeletionEnd" type="date" required></label>
+            <button type="submit" class="secondary full">VERIFICA DATI DEL PERIODO</button>
+          </form>
+          <div id="registerDeletionPeriodSummary" class="register-deletion-summary hidden" role="status"></div>
+          <label id="registerDeletionPeriodConfirmLabel" class="register-check register-replace-confirm hidden"><input id="registerDeletionPeriodConfirm" type="checkbox"> Confermo la cancellazione definitiva dei dati riepilogati.</label>
+          <button id="registerDeletePeriodNow" type="button" class="danger full hidden" disabled>CANCELLA DATI DEL PERIODO</button>
+        </section>
+        <section class="register-deletion-card register-delete-all-card">
+          <h4>Cancella tutto il Registro</h4>
+          <p>Elimina definitivamente dati economici, tariffe, revisioni, PIN, recovery code e chiavi locali dell’account corrente su questo dispositivo.</p>
+          <form id="registerDeleteAllForm" class="register-form">
+            <label class="register-check register-replace-confirm"><input id="registerDeleteAllBackupAware" type="checkbox" required> Ho compreso che devo esportare prima un backup se desidero conservare questi dati.</label>
+            <label>Digita la frase esatta<input id="registerDeleteAllPhrase" type="text" autocomplete="off" placeholder="CANCELLA TUTTO IL REGISTRO" required data-register-sensitive></label>
+            <label>PIN personale<input id="registerDeleteAllPin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" type="password" autocomplete="off" required data-register-sensitive></label>
+            <button type="submit" class="danger full">CANCELLA TUTTO IL REGISTRO</button>
+          </form>
+        </section>
+      </div>
+      <button id="registerCancelDeletion" type="button" class="secondary full">INDIETRO AL REGISTRO</button>
+    </section>
+  </div>
 </section>
 
 <section id="studentMultiAction" class="view">
@@ -242,6 +432,9 @@
       <label>Nome utente<input id="newUsername" minlength="3" maxlength="40" autocapitalize="none" spellcheck="false" required></label>
       <label>Password iniziale<input id="newUserPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label>
       <label>Ruolo<select id="newUserRole"><option value="ISTRUTTORE">Istruttore</option><option value="ADMIN">Amministratore</option></select></label>
+      <label>Tipo lavorativo<select id="newUserEmploymentType" required><option value="PART_TIME">PART TIME</option><option value="FULL_TIME">FULL TIME</option></select></label>
+      <label>Decorrenza prevista<input id="newUserEmploymentEffectiveFrom" type="date" required></label>
+      <p class="muted">La decorrenza viene applicata dal lunedì della settimana selezionata.</p>
       <button type="submit">Crea utente</button>
     </form>
     <p id="userManagementMessage" class="muted hidden" role="status"></p>

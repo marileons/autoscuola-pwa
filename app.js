@@ -39,7 +39,7 @@ function categoryForView(id){if(id==="studentForm"){if(state.editingStudent)retu
 function contextualSubpage(id){if(id==="student")return"Scheda allievo";if(id==="savedMapView")return"Mappa / percorso salvato";return""}
 function updatePageTitle(id){const view=$(id),title=view&&view.querySelector(":scope > .page-context-title");if(!title)return;const section=document.createElement("strong");section.className="page-context-section";section.textContent=navigationSectionLabel(categoryForView(id));title.replaceChildren(section);const subpage=contextualSubpage(id);if(subpage){const detail=document.createElement("span");detail.className="page-context-subpage";detail.textContent=subpage;title.appendChild(detail)}}
 function installPageTitles(){CATEGORY_CONTEXT_VIEWS.forEach(id=>{const view=$(id);if(!view||view.querySelector(":scope > .page-context-title"))return;const title=document.createElement("div");title.className="page-context-title";title.setAttribute("aria-label","Posizione corrente");view.prepend(title);updatePageTitle(id)})}
-function show(id){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));updatePageTitle(id);$(id).classList.add("active");if(id==="home")setNeutralHome();scrollTo(0,0)}
+function show(id){const previous=document.querySelector(".view.active")?.id;if(previous==="registerView"&&id!=="registerView")window.RegisterUI?.leave?.();document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));updatePageTitle(id);$(id).classList.add("active");if(id==="home")setNeutralHome();scrollTo(0,0)}
 function showLogin(){stopGps();$("appShell").classList.add("hidden");$("loginScreen").classList.remove("hidden");$("loginForm").reset();$("loginError").classList.add("hidden");setTimeout(()=>$("loginPassword").focus(),0)}
 function showApp(){$("loginScreen").classList.add("hidden");$("appShell").classList.remove("hidden");renderStudents();show("home")}
 function login(event){return window.AgendaAuth.login(event,showApp)}
@@ -306,9 +306,11 @@ $("categoryBack").onclick=()=>show("home");
 $("toggleStudentSearch").onclick=toggleStudentSearch;
 $("showAllStudents").onclick=showAllStudents;
 $("openOtherFunctions").onclick=()=>show("otherFunctions");
+$("openRegister").onclick=()=>window.RegisterUI.open();
 $("otherFunctionsHome").onclick=()=>show("home");
 $("examinerFormHome").onclick=()=>show("home");
 document.querySelectorAll("[data-other-functions-back]").forEach(button=>button.onclick=()=>show("otherFunctions"));
+window.RegisterUI?.bind?.({show});
 $("openArchive").onclick=()=>{renderArchivedStudents();show("studentArchive")};
 $("backArchive").onclick=()=>{renderStudents();show("home")};
 $("archiveStudent").onclick=archiveStudent;
