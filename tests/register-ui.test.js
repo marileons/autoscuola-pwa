@@ -69,6 +69,27 @@ test("gli helper UI gestiscono settimane, durate e centesimi in modo determinist
   assert.equal(controller.helpers.addDays("2026-08-31", 6), "2026-09-06");
   assert.equal(controller.helpers.centsFromInput("12,34"), 1234);
   assert.equal(controller.helpers.formatMinutes(125), "2 h 05 min");
+  assert.deepEqual(controller.helpers.splitMinutes(210), { hours: 3, minutes: 30 });
+  assert.equal(controller.helpers.durationToMinutes("0", "45"), 45);
+  assert.equal(controller.helpers.durationToMinutes("1", "30"), 90);
+  assert.equal(controller.helpers.durationToMinutes("7", "0"), 420);
+  assert.equal(controller.helpers.durationToMinutes("0", "59"), 59);
+  for (const values of [["0", "60"], ["-1", "0"], ["0", "-1"], ["1.5", "0"], ["0", "1.5"], ["0", "0"], [String(Number.MAX_SAFE_INTEGER), "0"]]) {
+    assert.throws(() => controller.helpers.durationToMinutes(...values));
+  }
+});
+
+test("l'editor converte ore e minuti mantenendo minutes come formato interno", () => {
+  assert.match(uiSource, /className = "register-block-hours"/);
+  assert.match(uiSource, /className = "register-block-minute-part"/);
+  assert.match(uiSource, /hours\.inputMode = "numeric"/);
+  assert.match(uiSource, /minutes\.max = "59"/);
+  assert.match(uiSource, /const parts = splitMinutes\(block\.minutes \|\| 60\)/);
+  assert.match(uiSource, /minutes: durationToMinutes\(row\.querySelector\("\.register-block-hours"\)\.value, row\.querySelector\("\.register-block-minute-part"\)\.value\)/);
+  assert.doesNotMatch(uiSource, /aria-label", "Durata in minuti"/);
+  assert.match(cssSource, /\.register-block-duration\{display:grid;grid-template-columns:1fr 1fr/);
+  assert.match(cssSource, /@media\(max-width:700px\)[^\n]*\.register-block-editor\{grid-template-columns:minmax\(0,1fr\) 42px 42px 42px\}/);
+  assert.match(cssSource, /\.register-block-editor input\{font-size:16px\}/);
 });
 
 test("un dato legacy non valido mostra riepilogo non disponibile e il motivo reale", async () => {
@@ -104,7 +125,11 @@ test("un errore di riepilogo dopo il salvataggio non viene sostituito dal messag
   harness.document.getElementById("registerDayDate").value = "2026-09-11";
   harness.document.getElementById("registerBlocks").children = [{
     dataset: { blockId: "" },
-    querySelector(selector) { return selector === "select" ? { value: "LG/A" } : { value: "60" }; }
+    querySelector(selector) {
+      if (selector === "select") return { value: "LG/A" };
+      if (selector === ".register-block-hours") return { value: "1" };
+      return { value: "0" };
+    }
   }];
   await harness.document.getElementById("registerDayForm").onsubmit({ preventDefault() {} });
 

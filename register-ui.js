@@ -20,6 +20,20 @@
   function formatDate(value) { return new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" }).format(parseIso(value)); }
   function formatMoney(cents) { return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format((cents || 0) / 100); }
   function formatMinutes(minutes) { return `${Math.floor((minutes || 0) / 60)} h ${String((minutes || 0) % 60).padStart(2, "0")} min`; }
+  function splitMinutes(totalMinutes) {
+    if (!Number.isSafeInteger(totalMinutes) || totalMinutes <= 0) throw new RangeError("Durata salvata non valida");
+    return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
+  }
+  function durationToMinutes(hoursValue, minutesValue) {
+    if (String(hoursValue).trim() === "" || String(minutesValue).trim() === "") throw new RangeError("Inserisci ore e minuti");
+    const hours = Number(hoursValue), minutes = Number(minutesValue);
+    if (!Number.isSafeInteger(hours) || hours < 0) throw new RangeError("Le ore devono essere un numero intero maggiore o uguale a zero");
+    if (!Number.isSafeInteger(minutes) || minutes < 0 || minutes > 59) throw new RangeError("I minuti devono essere un numero intero da 0 a 59");
+    if (hours > Math.floor((Number.MAX_SAFE_INTEGER - minutes) / 60)) throw new RangeError("Durata troppo grande");
+    const total = hours * 60 + minutes;
+    if (!Number.isSafeInteger(total) || total <= 0) throw new RangeError("La durata totale deve essere maggiore di zero");
+    return total;
+  }
   function centsFromInput(value) {
     const normalized = String(value || "").replace(",", ".");
     const amount = Number(normalized);
@@ -264,11 +278,17 @@
       const select = doc.createElement("select"); select.className = "register-block-category"; select.setAttribute("aria-label", "Categoria attività");
       const options = employment?.employmentType === "FULL_TIME" ? [...CATEGORIES, "P", "F"] : CATEGORIES;
       options.forEach((value) => { const option = doc.createElement("option"); option.value = value; option.textContent = value; option.selected = value === block.category; select.append(option); });
-      const minutes = doc.createElement("input"); minutes.type = "number"; minutes.min = "1"; minutes.step = "1"; minutes.required = true; minutes.className = "register-block-minutes"; minutes.value = block.minutes || 60; minutes.setAttribute("aria-label", "Durata in minuti");
+      const duration = doc.createElement("div"); duration.className = "register-block-duration";
+      const parts = splitMinutes(block.minutes || 60);
+      const hoursLabel = doc.createElement("label"); hoursLabel.textContent = "ORE";
+      const hours = doc.createElement("input"); hours.type = "number"; hours.inputMode = "numeric"; hours.min = "0"; hours.step = "1"; hours.required = true; hours.className = "register-block-hours"; hours.value = parts.hours; hours.setAttribute("aria-label", "Ore attività");
+      const minutesLabel = doc.createElement("label"); minutesLabel.textContent = "MINUTI";
+      const minutes = doc.createElement("input"); minutes.type = "number"; minutes.inputMode = "numeric"; minutes.min = "0"; minutes.max = "59"; minutes.step = "1"; minutes.required = true; minutes.className = "register-block-minute-part"; minutes.value = parts.minutes; minutes.setAttribute("aria-label", "Minuti attività");
+      hoursLabel.append(hours); minutesLabel.append(minutes); duration.append(hoursLabel, minutesLabel);
       const moveUp = doc.createElement("button"); moveUp.type = "button"; moveUp.className = "secondary"; moveUp.textContent = "↑"; moveUp.setAttribute("aria-label", "Sposta prima"); moveUp.onclick = () => row.previousElementSibling && row.parentElement.insertBefore(row, row.previousElementSibling);
       const moveDown = doc.createElement("button"); moveDown.type = "button"; moveDown.className = "secondary"; moveDown.textContent = "↓"; moveDown.setAttribute("aria-label", "Sposta dopo"); moveDown.onclick = () => row.nextElementSibling && row.parentElement.insertBefore(row.nextElementSibling, row);
       const remove = doc.createElement("button"); remove.type = "button"; remove.className = "danger"; remove.textContent = "×"; remove.setAttribute("aria-label", "Rimuovi attività"); remove.onclick = () => row.remove();
-      row.append(select, minutes, moveUp, moveDown, remove); byId("registerBlocks").append(row);
+      row.append(select, duration, moveUp, moveDown, remove); byId("registerBlocks").append(row);
     }
     function refreshBlockCategories() {
       const fullTime = employmentFor(byId("registerDayDate").value)?.employmentType === "FULL_TIME";
@@ -294,7 +314,12 @@
       event.preventDefault(); setMessage("");
       try {
         const date = byId("registerDayDate").value;
-        const blocks = [...byId("registerBlocks").children].map((row, index) => ({ id: row.dataset.blockId || undefined, order: index + 1, category: row.querySelector("select").value, minutes: Number(row.querySelector("input").value) }));
+        const blocks = [...byId("registerBlocks").children].map((row, index) => ({
+          id: row.dataset.blockId || undefined,
+          order: index + 1,
+          category: row.querySelector("select").value,
+          minutes: durationToMinutes(row.querySelector(".register-block-hours").value, row.querySelector(".register-block-minute-part").value)
+        }));
         await ledger.saveDay({ date, blocks, note: byId("registerDayNote").value, revisionReason: "MODIFICA DA INTERFACCIA" });
         byId("registerDayDate").disabled = false; closeEditors();
         if (await render()) setMessage("Giornata salvata nel dispositivo.");
@@ -453,7 +478,7 @@
       byId("registerDeletePeriodNow").onclick = deleteSelectedPeriod; byId("registerDeleteAllForm").onsubmit = deleteEntireRegister; byId("registerCancelDeletion").onclick = closeEditors;
       doc.addEventListener("agenda:register-vault-locked", handleVaultLock);
     }
-    return Object.freeze({ bind, open, leave, handleVaultLock, helpers: Object.freeze({ mondayOf, addDays, centsFromInput, formatMinutes }) });
+    return Object.freeze({ bind, open, leave, handleVaultLock, helpers: Object.freeze({ mondayOf, addDays, centsFromInput, formatMinutes, splitMinutes, durationToMinutes }) });
   }
   return Object.freeze({ createController });
 });

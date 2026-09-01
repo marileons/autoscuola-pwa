@@ -134,6 +134,21 @@ test("Gestione utenti richiede tipo e decorrenza per i nuovi account", () => {
   assert.match(client, /employmentEffectiveFrom:\s*document\.getElementById\("newUserEmploymentEffectiveFrom"\)\.value/);
 });
 
+test("la modifica del tipo lavorativo usa scelte touch e conserva il payload API", () => {
+  const client = fs.readFileSync(path.join(root, "auth-client.js"), "utf8");
+  const start = client.indexOf("async function changeEmployment");
+  const end = client.indexOf("function userRow", start);
+  const body = client.slice(start, end);
+  assert.match(body, /window\.chooseAction/);
+  assert.match(body, /label: "PART TIME", value: "PART_TIME"/);
+  assert.match(body, /label: "FULL TIME", value: "FULL_TIME"/);
+  assert.match(body, /label: "ANNULLA", value: ""/);
+  assert.doesNotMatch(body, /prompt\("Tipo lavorativo/);
+  assert.match(body, /if \(!employmentType\) return;/);
+  assert.match(body, /prompt\("Decorrenza \(YYYY-MM-DD\)/);
+  assert.match(body, /update\(user\.id, \{ employmentType, employmentEffectiveFrom \}\)/);
+});
+
 test("le API utenti applicano il controllo ADMIN prima delle modifiche", () => {
   const worker = fs.readFileSync(path.join(root, "worker.js"), "utf8");
   for (const functionName of ["createUser", "updateUser", "listUsers"]) {

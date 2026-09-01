@@ -92,7 +92,7 @@
     if (applicationLoaded) { await activateRegisterVault(); onShowApp?.(); return; }
     if (applicationLoading) return applicationLoading;
     applicationLoading = (async () => {
-      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-economic-engine.js?v=1.21-register-v1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v1", "register-report.js?v=1.21-register-report-v2", "register-backup.js?v=1.21-register-backup-v1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v4", "app.js?v=1.21-navigation-r11", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup.js?v=1.21-photo-duration-v1", "r10-features.js?v=1.21-photo-v1"]) await loadScript(src);
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-economic-engine.js?v=1.21-register-v1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v1", "register-report.js?v=1.21-register-report-v2", "register-backup.js?v=1.21-register-backup-v1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v5", "app.js?v=1.21-navigation-r11", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup.js?v=1.21-photo-duration-v1", "r10-features.js?v=1.21-photo-v1"]) await loadScript(src);
       applicationLoaded = true;
       await activateRegisterVault();
       onShowApp?.();
@@ -213,9 +213,13 @@
 
   async function changeEmployment(user) {
     const current = user.scheduledEmploymentType || user.employmentType || "PART_TIME";
-    const employmentType = String(prompt("Tipo lavorativo: PART_TIME oppure FULL_TIME", current) || "").trim().toUpperCase();
+    if (typeof window.chooseAction !== "function") return message("Selettore tipo lavorativo non disponibile.", true);
+    const employmentType = await window.chooseAction("Tipo lavorativo", "Scegli il tipo da applicare dalla nuova decorrenza.", [
+      { label: "PART TIME", value: "PART_TIME", className: current === "PART_TIME" ? "" : "secondary" },
+      { label: "FULL TIME", value: "FULL_TIME", className: current === "FULL_TIME" ? "" : "secondary" },
+      { label: "ANNULLA", value: "", className: "secondary" }
+    ]);
     if (!employmentType) return;
-    if (!["PART_TIME", "FULL_TIME"].includes(employmentType)) return message("Tipo lavorativo non valido.", true);
     const proposedDate = user.scheduledEmploymentEffectiveFrom || nextMondayIso();
     const employmentEffectiveFrom = String(prompt("Decorrenza (YYYY-MM-DD). Sarà applicata dal lunedì della settimana indicata.", proposedDate) || "").trim();
     if (!employmentEffectiveFrom) return;
