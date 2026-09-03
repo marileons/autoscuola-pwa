@@ -40,7 +40,9 @@
     if (!Number.isFinite(amount) || amount < 0) throw new Error("Tariffa non valida");
     return Math.round(amount * 100);
   }
-  function dateInputToday() { return isoDate(new Date()); }
+  function localDateInput(value = new Date()) {
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  }
   function escapeText(value) { return String(value ?? ""); }
 
   function createController(dependencies = {}) {
@@ -52,6 +54,8 @@
     const getBackupApi = () => dependencies.backupApi || root.RegisterBackup;
     const getDeletionApi = () => dependencies.deletionApi || root.RegisterDeletion;
     const getAuth = () => dependencies.auth || root.AgendaAuth;
+    const now = dependencies.now || (() => new Date());
+    const dateInputToday = () => localDateInput(now());
     let showView = null;
     let ledger = null;
     let backupService = null;
@@ -312,7 +316,7 @@
     function openDayEditor(day = null) {
       hide("registerWorkspace", "registerRatesPanel", "registerSecurityPanel"); reveal("registerDayEditor");
       byId("registerDayEditorTitle").textContent = day ? "Modifica giornata" : "Nuova giornata";
-      byId("registerDayDate").value = day?.date || (mode === "week" ? currentRange().start : `${monthKey(cursor)}-01`);
+      byId("registerDayDate").value = day?.date || dateInputToday();
       byId("registerDayDate").disabled = Boolean(day);
       byId("registerDayNote").value = day?.note || "";
       byId("registerBlocks").replaceChildren(); (day?.blocks || [{}]).forEach(addBlockRow);
@@ -485,7 +489,7 @@
       byId("registerDeletePeriodNow").onclick = deleteSelectedPeriod; byId("registerDeleteAllForm").onsubmit = deleteEntireRegister; byId("registerCancelDeletion").onclick = closeEditors;
       doc.addEventListener("agenda:register-vault-locked", handleVaultLock);
     }
-    return Object.freeze({ bind, open, leave, handleVaultLock, helpers: Object.freeze({ mondayOf, addDays, centsFromInput, formatMinutes, splitMinutes, durationToMinutes }) });
+    return Object.freeze({ bind, open, leave, handleVaultLock, helpers: Object.freeze({ mondayOf, addDays, centsFromInput, formatMinutes, splitMinutes, durationToMinutes, localDateInput }) });
   }
   return Object.freeze({ createController });
 });

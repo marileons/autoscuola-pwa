@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 
 const root = path.resolve(__dirname, "..");
@@ -57,7 +58,8 @@ function createUiHarness(vaultOverrides = {}, options = {}) {
     ledgerApi: { createLedger: () => ledger },
     reportApi: { createReportService: () => ({ build: options.reportBuild || (async () => ({ employmentTypes: ["FULL_TIME"], totals: { workMinutes: 0, absenceRecordedMinutes: 0, overtimeMinutes: 0, overtimeAmountCents: 0, totalAmountCents: 0, dayCount: 0 } })) }) },
     backupApi: { createBackupService: () => ({}) },
-    deletionApi: { createDeletionService: () => ({}) }
+    deletionApi: { createDeletionService: () => ({}) },
+    now: options.now
   });
   controller.bind({ show() {} });
   return { controller, document, calls, setActive(value) { active = value; } };
@@ -77,6 +79,63 @@ test("gli helper UI gestiscono settimane, durate e centesimi in modo determinist
   for (const values of [["0", "60"], ["-1", "0"], ["0", "-1"], ["1.5", "0"], ["0", "1.5"], ["0", "0"], [String(Number.MAX_SAFE_INTEGER), "0"]]) {
     assert.throws(() => controller.helpers.durationToMinutes(...values));
   }
+});
+
+test("una nuova giornata propone sempre la data locale odierna, indipendente dal periodo visualizzato", async () => {
+  let current = new Date(2026, 8, 3, 9, 15);
+  const harness = createUiHarness({}, { now: () => current });
+
+  harness.document.getElementById("registerAddDay").onclick();
+  assert.equal(harness.document.getElementById("registerDayDate").value, "2026-09-03");
+  assert.equal(harness.document.getElementById("registerDayDate").disabled, false);
+
+  harness.document.getElementById("registerDayDate").value = "2026-09-05";
+  assert.equal(harness.document.getElementById("registerDayDate").value, "2026-09-05");
+  harness.document.getElementById("registerCancelDay").onclick();
+
+  harness.document.getElementById("registerPreviousPeriod").onclick();
+  harness.document.getElementById("registerAddDay").onclick();
+  assert.equal(harness.document.getElementById("registerDayDate").value, "2026-09-03");
+  harness.document.getElementById("registerCancelDay").onclick();
+
+  harness.document.getElementById("registerMonthTab").onclick();
+  harness.document.getElementById("registerPreviousPeriod").onclick();
+  harness.document.getElementById("registerAddDay").onclick();
+  assert.equal(harness.document.getElementById("registerDayDate").value, "2026-09-03");
+  harness.document.getElementById("registerCancelDay").onclick();
+
+  current = new Date(2026, 8, 4, 0, 1);
+  harness.document.getElementById("registerAddDay").onclick();
+  assert.equal(harness.document.getElementById("registerDayDate").value, "2026-09-04");
+});
+
+test("la data locale resta corretta vicino a mezzanotte e con l'ora legale Europe/Rome", () => {
+  const modulePath = path.join(root, "register-ui.js");
+  const script = `const {createController}=require(${JSON.stringify(modulePath)});const h=createController({document:{}}).helpers;console.log(h.localDateInput(new Date(process.argv[1])))`;
+  function inRome(instant) {
+    const result = spawnSync(process.execPath, ["-e", script, instant], { encoding: "utf8", env: { ...process.env, TZ: "Europe/Rome" } });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  }
+  assert.equal(inRome("2026-09-02T22:30:00.000Z"), "2026-09-03");
+  assert.equal(inRome("2026-07-01T22:30:00.000Z"), "2026-07-02");
+  assert.equal(inRome("2026-01-03T23:30:00.000Z"), "2026-01-04");
+});
+
+test("la modifica conserva la data originale della giornata", async () => {
+  const existing = { date: "2026-09-02", note: "esistente", blocks: [{ id: "b1", order: 1, category: "LG/A", minutes: 180 }] };
+  const harness = createUiHarness({}, {
+    now: () => new Date(2026, 8, 3, 10, 0),
+    ledger: { listDays: async () => [existing] }
+  });
+  await harness.controller.open();
+  harness.document.getElementById("registerUnlockPin").value = "1234";
+  await harness.document.getElementById("registerPinUnlockForm").onsubmit({ preventDefault() {} });
+  const card = harness.document.getElementById("registerDayCards").children[0];
+  const edit = card.children[1].children.at(-1);
+  edit.onclick();
+  assert.equal(harness.document.getElementById("registerDayDate").value, "2026-09-02");
+  assert.equal(harness.document.getElementById("registerDayDate").disabled, true);
 });
 
 test("l'editor converte ore e minuti mantenendo minutes come formato interno", () => {
