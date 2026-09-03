@@ -16,8 +16,10 @@
     if(element)element.textContent=message;
   };
 
+  const gpsRecordingActive=()=>state.watch!==null||!!window.ExaminerRoutesUI?.isRecording?.();
+
   async function requestGpsWakeLock(){
-    if(state.watch===null)return;
+    if(!gpsRecordingActive())return;
     if(!("wakeLock" in navigator)){
       wakeStatus("Schermo attivo non disponibile su questo browser; il GPS continua normalmente.");
       return;
@@ -30,7 +32,7 @@
     const generation=++wakeLockGeneration;
     try{
       const sentinel=await navigator.wakeLock.request("screen");
-      if(state.watch===null||document.visibilityState!=="visible"||generation!==wakeLockGeneration){
+      if(!gpsRecordingActive()||document.visibilityState!=="visible"||generation!==wakeLockGeneration){
         try{await sentinel.release()}catch{}
         return;
       }
@@ -39,9 +41,9 @@
       sentinel.addEventListener("release",()=>{
         if(generation!==wakeLockGeneration)return;
         wakeLock=null;
-        wakeStatus(state.watch===null?"Schermo attivo rilasciato.":"Mantenimento schermo temporaneamente sospeso.");
+        wakeStatus(!gpsRecordingActive()?"Schermo attivo rilasciato.":"Mantenimento schermo temporaneamente sospeso.");
         clearTimeout(wakeRetryTimer);
-        if(state.watch!==null&&document.visibilityState==="visible")wakeRetryTimer=setTimeout(requestGpsWakeLock,500);
+        if(gpsRecordingActive()&&document.visibilityState==="visible")wakeRetryTimer=setTimeout(requestGpsWakeLock,500);
       },{once:true});
     }catch(error){
       if(generation===wakeLockGeneration){
@@ -64,8 +66,8 @@
   window.requestGpsWakeLock=requestGpsWakeLock;
   window.releaseGpsWakeLock=releaseGpsWakeLock;
   document.addEventListener("visibilitychange",()=>{
-    if(document.visibilityState==="visible"&&state.watch!==null)requestGpsWakeLock();
-    else if(document.visibilityState!=="visible"&&state.watch!==null)wakeStatus("Schermo attivo sospeso mentre l’app è in background.");
+    if(document.visibilityState==="visible"&&gpsRecordingActive())requestGpsWakeLock();
+    else if(document.visibilityState!=="visible"&&gpsRecordingActive())wakeStatus("Schermo attivo sospeso mentre l’app è in background.");
   });
   window.addEventListener("pagehide",releaseGpsWakeLock);
 
@@ -214,6 +216,11 @@
       $("roadReportStatus").textContent="Connessione assente: il report strade non può essere generato. I punti GPS restano invariati.";
       return;
     }
+    window.AgendaRoadReportCoordinator=window.AgendaRoadReportCoordinator||{owner:null,acquire(owner){if(this.owner&&this.owner!==owner)return false;this.owner=owner;return true},release(owner){if(this.owner===owner)this.owner=null}};
+    if(!window.AgendaRoadReportCoordinator.acquire("lesson")){
+      $("roadReportStatus").textContent="Un altro report delle vie è già in elaborazione su questo dispositivo.";
+      return;
+    }
     const route=currentLesson.route.map(point=>({lat:point.lat,lng:point.lng,time:point.time,accuracy:point.accuracy,breakBefore:!!point.breakBefore}));
     const samples=sampleRoute(route);
     const cache=loadRoadCache(),results=[];
@@ -238,7 +245,7 @@
       $("toggleRoadReport").textContent="NASCONDI REPORT";
       const unidentified=results.filter(result=>!result.name).length;
       $("roadReportStatus").textContent=unidentified?`Report completato con ${unidentified} tratti non identificati.`:"Report strade completato.";
-    }finally{button.disabled=false}
+    }finally{button.disabled=false;window.AgendaRoadReportCoordinator.release("lesson")}
   }
 
   function toggleRoadReport(){
@@ -250,12 +257,19 @@
 
   function statusLabel(status){return status==="good"?"Acquisito":status==="repeat"?"Da ripetere":"Non valutato"}
 
+  function drivingErrorsReportHtml(item){
+    const errors=window.DrivingErrors.normalizeErrors(item&&item.errors);
+    if(!errors.length)return'<h4>Errori segnalati</h4><p>Nessun errore segnalato.</p>';
+    const rows=errors.map((error,index)=>`<tr><td>${index+1}</td><td>${new Date(error.occurredAt).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</td><td>${esc(window.DrivingErrors.categoryLabel(error.category))}</td><td>${esc(error.note||"—")}</td><td>${error.locationStatus==="available"?"GPS presente":"GPS non disponibile"}</td></tr>`).join("");
+    return`<h4>Errori segnalati (${errors.length})</h4><table><thead><tr><th>N.</th><th>Ora</th><th>Categoria</th><th>Nota</th><th>Posizione</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
   function studentReportHtmlBase(current){
     const generated=new Date(),checklistRows="";
     const lessons=[...(current.lessons||[])].sort((a,b)=>a.createdAt-b.createdAt).map((item,index)=>{
       const selected=(item.checklist||[]).filter(entry=>entry.status!=="none").map(entry=>`<li>${esc(entry.label)} — ${statusLabel(entry.status)}</li>`).join("")||"<li>Nessuna valutazione registrata</li>";
       const date=new Date(item.createdAt),metres=routeDistance(item.route||[]),gpsDuration=routeDuration(item.route||[]),timing=lessonTiming(item),duration=item.duration||(timing.source==="gps"?`${formatDuration(timing.elapsed)} (GPS)`:"Non disponibile");
-      return`<section class="lesson"><h3>Guida ${index+1}</h3><p><strong>${formatLessonDate(date)}</strong><br>${lessonTimeRange(item)}</p><dl><div><dt>Durata</dt><dd>${esc(duration)}</dd></div><div><dt>Durata GPS</dt><dd>${formatDuration(gpsDuration)}</dd></div><div><dt>Distanza GPS</dt><dd>${item.route&&item.route.length>1?formatDistance(metres):"GPS non usato"}</dd></div></dl><p><strong>Note:</strong> ${esc(item.notes||"Nessuna nota")}</p><ul>${selected}</ul></section>`;
+      return`<section class="lesson"><h3>Guida ${index+1}</h3><p><strong>${formatLessonDate(date)}</strong><br>${lessonTimeRange(item)}</p><dl><div><dt>Durata</dt><dd>${esc(duration)}</dd></div><div><dt>Durata GPS</dt><dd>${formatDuration(gpsDuration)}</dd></div><div><dt>Distanza GPS</dt><dd>${item.route&&item.route.length>1?formatDistance(metres):"GPS non usato"}</dd></div></dl><p><strong>Note:</strong> ${esc(item.notes||"Nessuna nota")}</p><ul>${selected}</ul>${drivingErrorsReportHtml(item)}</section>`;
     }).join("")||'<p class="empty-report">Nessuna guida registrata.</p>';
     return`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report allievo - ${esc(nameOf(current)||"Allievo")}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#17242d;background:#eef2f3}.toolbar{position:sticky;top:0;display:flex;gap:8px;padding:10px;background:#0d1b24;color:#fff}.toolbar button{border:0;border-radius:10px;padding:10px 14px;background:#1687e8;color:#fff;font-weight:800}.toolbar button.secondary{background:#344955}.sheet{width:min(100%,210mm);min-height:297mm;margin:14px auto;padding:16mm;background:#fff;box-shadow:0 10px 28px #0002}.brand{border-bottom:3px solid #1687e8;padding-bottom:10px}.brand h1{margin:0;font-size:24px}.brand p{margin:2px 0 0;color:#526772}.title{margin:24px 0 14px;color:#12616c}.data-grid,dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.data-grid div,dl div{padding:9px;border:1px solid #d7e0e4;border-radius:8px}.data-grid strong,dt{display:block;color:#526772;font-size:11px;text-transform:uppercase}.data-grid span,dd{margin:2px 0 0;font-weight:700}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid #d7e0e4;text-align:left}.lesson{break-inside:avoid;margin:14px 0;padding:12px;border:1px solid #d7e0e4;border-left:4px solid #d63c49;border-radius:8px}.lesson h3{margin:0 0 8px}.lesson ul{margin-bottom:0}.empty-report{padding:14px;background:#f2f5f6}.footer{margin-top:24px;padding-top:10px;border-top:1px solid #ccd7dc;text-align:center;color:#667983;font-size:12px}.hint{margin-left:auto;align-self:center;color:#c9d4da;font-size:12px}@media(max-width:650px){.sheet{margin:0;min-height:0;padding:18px}.data-grid,dl{grid-template-columns:1fr}.hint{display:none}}@media print{body{background:#fff}.toolbar{display:none}.sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}}</style></head><body><div class="toolbar"><button onclick="window.print()">STAMPA / SALVA PDF</button><button class="secondary" onclick="window.close()">CHIUDI</button><span class="hint">Su iPhone/Android usa il pannello di stampa per salvare o condividere il PDF.</span></div><article class="sheet"><header class="brand"><h1>AGENDA ISTRUTTORI</h1><p>Report Allievo</p></header><h2 class="title">${esc(nameOf(current)||"Allievo")}</h2><div class="data-grid"><div><strong>Categoria</strong><span>${esc(sectionLabel(current.category))}</span></div><div><strong>Patente</strong><span>${esc(current.license||"Non indicata")}</span></div><div><strong>Telefono</strong><span>${esc(current.phone||"Non indicato")}</span></div><div><strong>Stato</strong><span>${current.archived?"Archiviato":"Attivo"}</span></div><div><strong>Foglio rosa</strong><span>${formatStoredDate(current.pinkSlipIssueDate)}</span></div><div><strong>Generato</strong><span>${generated.toLocaleString("it-IT")}</span></div></div><h2>Note</h2><p>${esc(current.notes||"Nessuna nota")}</p><h2>Percorso didattico</h2><table><thead><tr><th>Voce</th><th>Stato</th></tr></thead><tbody>${checklistRows}</tbody></table><h2>Storico guide (${current.lessons.length})</h2>${lessons}<footer class="footer">© 2026 Mario Leoni — Tutti i diritti riservati.</footer></article></body></html>`;
   }

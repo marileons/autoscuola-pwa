@@ -33,6 +33,7 @@ export default {
       if (url.pathname === "/api/auth/login" && request.method === "POST") return login(request, env);
       if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
       if (url.pathname === "/api/auth/me" && request.method === "GET") return me(request, env);
+      if (url.pathname === "/api/public-config/road-report" && request.method === "GET") return json({roadReport:{enabled:env.ROAD_REPORT_ENABLED!=="false",provider:"OpenStreetMap Nominatim pubblico",endpoint:"https://nominatim.openstreetmap.org/reverse",maxRequests:40,intervalMs:1250},enabled:env.ROAD_REPORT_ENABLED!=="false",provider:"OpenStreetMap Nominatim pubblico",endpoint:"https://nominatim.openstreetmap.org/reverse",maxRequests:40,intervalMs:1250});
       if (url.pathname === "/api/setup" && request.method === "POST") return setup(request, env);
       const session = await requireSession(request, env);
       if (session.response) return session.response;

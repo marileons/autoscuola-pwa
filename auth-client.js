@@ -39,6 +39,7 @@
     const nextId = user?.id || null;
     if (previousId && previousId !== nextId) {
       void lockRegisterVault();
+      window.ExaminerRoutesUI?.stopAll?.();
     }
     currentUser = user;
     const adminButton = document.getElementById("openUserManagement");
@@ -92,7 +93,7 @@
     if (applicationLoaded) { await activateRegisterVault(); onShowApp?.(); return; }
     if (applicationLoading) return applicationLoading;
     applicationLoading = (async () => {
-      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-economic-engine.js?v=1.21-register-v1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v1", "register-report.js?v=1.21-register-report-v2", "register-backup.js?v=1.21-register-backup-v1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v5", "app.js?v=1.21-navigation-r11", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup.js?v=1.21-photo-duration-v1", "r10-features.js?v=1.21-photo-v1"]) await loadScript(src);
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-economic-engine.js?v=1.21-register-v1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v1", "register-report.js?v=1.21-register-report-v2", "register-backup.js?v=1.21-register-backup-v1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v5", "driving-errors.js?v=1.21-driving-errors-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "app.js?v=1.21-exam-routes-v1", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup.js?v=1.21-exam-routes-v1", "r10-features.js?v=1.21-driving-errors-v1"]) await loadScript(src);
       applicationLoaded = true;
       await activateRegisterVault();
       onShowApp?.();
@@ -121,6 +122,7 @@
 
   async function logout(showLogin) {
     try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } catch {}
+    window.ExaminerRoutesUI?.stopAll?.();
     await lockRegisterVault();
     applyUser(null); showLogin();
   }

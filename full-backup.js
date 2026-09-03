@@ -3,7 +3,8 @@
   "use strict";
 
   const FORMAT="AgendaIstruttoriFullBackup";
-  const FORMAT_VERSION=1;
+  const FORMAT_VERSION=3;
+  const SUPPORTED_FORMAT_VERSIONS=new Set([1,2,3]);
   const APP_VERSION="1.21.0";
   const BACKUP_EXTENSION="agendabackup";
   const DATA_KEYS={
@@ -343,6 +344,7 @@
       await new Promise(resolve=>setTimeout(resolve,0));
     }
     if(documents.length!==documentKeys.length)throw new Error("Conteggio documenti non coerente durante la creazione del backup.");
+    const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     const payload={
       format:FORMAT,
       formatVersion:FORMAT_VERSION,
@@ -351,6 +353,7 @@
       createdAt:new Date().toISOString(),
       metadata:{students:appData.students.length,documents:documents.length,approximateBytes:0},
       appData,
+      examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,
       documents
     };
     return payload;
@@ -358,9 +361,10 @@
 
   async function validateBackupPayload(payload){
     if(!payload||payload.format!==FORMAT)throw new Error("Il file non è un backup completo di Agenda Istruttori.");
-    if(payload.formatVersion!==FORMAT_VERSION)throw new Error("Versione del backup non supportata.");
+    if(!SUPPORTED_FORMAT_VERSIONS.has(payload.formatVersion))throw new Error("Versione del backup non supportata.");
     if(typeof payload.createdAt!=="string"||!Number.isFinite(Date.parse(payload.createdAt)))throw new Error("Data del backup non valida.");
     validateAppData(payload.appData);
+    if(payload.formatVersion>=3&&(!payload.examinerRoutes||typeof payload.examinerRoutes!=="object"))throw new Error("Archivio percorsi esaminatori non valido.");
     if(!Array.isArray(payload.documents))throw new Error("Sezione documenti non valida.");
     if(!payload.metadata||payload.metadata.students!==payload.appData.students.length||payload.metadata.documents!==payload.documents.length)throw new Error("Conteggi del backup non coerenti con il contenuto.");
     const restoredDocuments=[];
@@ -500,7 +504,7 @@
         id:String(student&&student.id||""),category:String(student&&student.category||""),firstName:String(student&&student.firstName||""),lastName:String(student&&student.lastName||""),phone:String(student&&student.phone||""),license:String(student&&student.license||""),pinkSlipIssueDate:String(student&&student.pinkSlipIssueDate||""),notes:String(student&&student.notes||student&&student.studentNotes||""),archived:student&&student.archived===true,
         checklist:cleanItems(student&&student.checklist),
         lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>{
-          const canonicalLesson={id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist)};
+          const canonicalLesson={id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist),errors:window.DrivingErrors.normalizeErrors(lesson&&lesson.errors)};
           if(typeof lesson?.duration==="string"&&lesson.duration.trim())canonicalLesson.duration=lesson.duration.trim();
           return canonicalLesson;
         })
@@ -524,19 +528,22 @@
   async function createRestoreManifest(validated){
     const checklistKeys=Object.keys(validated.payload.appData.checklists).sort();
     const canonical=canonicalAppData(validated.payload.appData,checklistKeys);
+    const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");
+    const examinerRoutes=validated.payload.examinerRoutes?{...validated.payload.examinerRoutes,accountId:currentAccount}:null;
     return {
-      version:1,
+      version:2,
       students:canonical.students.length,
       lessons:canonical.students.reduce((total,student)=>total+student.lessons.length,0),
       examiners:canonical.examiners.length,
       checklistKeys,
       appDataSha256:await textSha256(JSON.stringify(canonical)),
+      examinerRoutesSha256:examinerRoutes?await textSha256(JSON.stringify(examinerRoutes)):null,
       documents:validated.payload.documents.map(documentRecord=>({id:documentRecord.id,originalName:documentRecord.originalName,mimeType:documentRecord.mimeType,size:documentRecord.size,sha256:documentRecord.sha256}))
     };
   }
 
   async function verifyRestoreManifest(manifest){
-    if(!manifest||manifest.version!==1||!Array.isArray(manifest.documents)||!Array.isArray(manifest.checklistKeys))throw new Error("Manifest di verifica non valido.");
+    if(!manifest||![1,2].includes(manifest.version)||!Array.isArray(manifest.documents)||!Array.isArray(manifest.checklistKeys))throw new Error("Manifest di verifica non valido.");
     const appData={
       students:parsedStorageValue(DATA_KEYS.students,[]),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
@@ -549,6 +556,7 @@
     if(lessons!==manifest.lessons)throw new Error(`Verifica post-riavvio guide fallita: attese ${manifest.lessons}, trovate ${lessons}.`);
     if(canonical.examiners.length!==manifest.examiners)throw new Error(`Verifica post-riavvio esaminatori fallita: attesi ${manifest.examiners}, trovati ${canonical.examiners.length}.`);
     if(await textSha256(JSON.stringify(canonical))!==manifest.appDataSha256)throw new Error("Verifica post-riavvio dei dati applicativi fallita.");
+    if(manifest.examinerRoutesSha256){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),examinerRoutes=window.ExaminerRoutesUI.snapshot(currentAccount);if(await textSha256(JSON.stringify(examinerRoutes))!==manifest.examinerRoutesSha256)throw new Error("Verifica post-riavvio dei percorsi esaminatori fallita.")}
     const documents=await readDocuments();
     if(documents.length!==manifest.documents.length)throw new Error(`Verifica post-riavvio documenti fallita: attesi ${manifest.documents.length}, trovati ${documents.length}.`);
     const documentsById=new Map(documents.map(documentRecord=>[documentRecord.id,documentRecord]));
@@ -566,6 +574,7 @@
     const currentChecklists=parsedStorageValue(DATA_KEYS.checklists,{});
     const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]);
     if(JSON.stringify(currentStudents)!==JSON.stringify(validated.payload.appData.students)||JSON.stringify(currentChecklists)!==JSON.stringify(validated.payload.appData.checklists)||JSON.stringify(currentExaminers)!==JSON.stringify(validated.payload.appData.examiners))throw new Error("Verifica dei dati applicativi non riuscita.");
+    if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}
     const documents=await readDocuments();
     if(documents.length!==validated.restoredDocuments.length)throw new Error("Verifica dei documenti non riuscita.");
     const byDocumentId=new Map(documents.map(record=>[record.id,record]));
@@ -586,6 +595,7 @@
     try{
       await replaceDocuments(validated.restoredDocuments);
       writeAppData(validated.payload.appData);
+      if(validated.payload.formatVersion>=3){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.ExaminerRoutesUI.restore(currentAccount,{...validated.payload.examinerRoutes,accountId:currentAccount})}
       await verifyRestoredData(validated);
       const manifest=await createRestoreManifest(validated);
       localStorage.setItem(PENDING_RESTORE_KEY,JSON.stringify(manifest));
@@ -593,6 +603,7 @@
       try{
         await replaceDocuments(safetyValidated.restoredDocuments);
         writeAppData(safetyValidated.payload.appData);
+        if(safetyValidated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.ExaminerRoutesUI.restore(currentAccount,{...safetyValidated.payload.examinerRoutes,accountId:currentAccount})}
         await verifyRestoredData(safetyValidated);
       }catch(rollbackError){
         throw new Error("Ripristino fallito e rollback non completato. La copia preventiva resta nell'archivio di sicurezza locale.");
