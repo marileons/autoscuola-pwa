@@ -6,7 +6,7 @@
   "use strict";
 
   const DAY_MS = 86400000;
-  const WORK_CATEGORIES = ["LG/A", "LG/M", "M/SE", "GOLD", "EX", "VARIE"];
+  const WORK_CATEGORIES = ["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"];
   const MONTHS = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
   const COMPONENT_LABELS = Object.freeze({
     CATEGORY_WORK: "Attività per categoria", ORDINARY_BASE: "Base ordinaria LG/A",

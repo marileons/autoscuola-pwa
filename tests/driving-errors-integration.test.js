@@ -18,21 +18,25 @@ test("il flusso applicativo salva errori, bozze, marcatori e non interrompe il G
   assert.match(source,/createDraftStore\(localStorage\)/);
   assert.match(source,/drawDrivingErrorMarkers\(state\.savedMap/);
   assert.match(source,/lastGpsFix=\{\.\.\.p,routeIndex:state\.tempRoute\.length-1\}/);
+  assert.match(source,/driving-error-note"\)\.oninput=.*updateDrivingErrorFromCard/);
+  assert.match(source,/driving-error-specifics"\)\.onchange=.*updateDrivingErrorFromCard/);
   assert.doesNotMatch(signal,/stopGps\s*\(/);
 });
 
 test("gli asset sono caricati nell'ordine corretto e con versione dedicata",()=>{
-  const source=read("auth-client.js"),moduleIndex=source.indexOf('driving-errors.js?v=1.21-driving-errors-v1'),appIndex=source.indexOf('app.js?v=1.21-exam-routes-v1');
+  const source=read("auth-client.js"),moduleIndex=source.indexOf('driving-errors.js?v=1.21-driving-errors-v2'),appIndex=source.indexOf('app.js?v=1.21-driving-errors-v2');
   assert.ok(moduleIndex>=0&&appIndex>moduleIndex);
-  assert.match(source,/full-backup\.js\?v=1\.21-exam-routes-v1/);
-  assert.match(source,/r10-features\.js\?v=1\.21-driving-errors-v1/);
+  assert.match(source,/full-backup\.js\?v=1\.21-full-backup-v2/);
+  assert.match(source,/r10-features\.js\?v=1\.21-driving-errors-v2/);
 });
 
 test("backup corrente include gli errori e mantiene l'importazione dei formati precedenti",()=>{
   const source=read("full-backup.js");
-  assert.match(source,/FORMAT_VERSION=3/);
-  assert.match(source,/SUPPORTED_FORMAT_VERSIONS=new Set\(\[1,2,3\]\)/);
+  assert.match(source,/FORMAT_VERSION=4/);
+  assert.match(source,/SUPPORTED_FORMAT_VERSIONS=new Set\(\[1,2,3,4\]\)/);
   assert.match(source,/errors:window\.DrivingErrors\.normalizeErrors/);
+  assert.match(source,/drivingErrorCatalog/);
+  assert.match(source,/formatVersion>=4/);
 });
 
 test("il report allievo include la sezione errori senza ricalcoli GPS",()=>{
@@ -40,6 +44,16 @@ test("il report allievo include la sezione errori senza ricalcoli GPS",()=>{
   assert.match(source,/function drivingErrorsReportHtml/);
   assert.match(source,/Errori segnalati/);
   assert.match(source,/drivingErrorsReportHtml\(item\)/);
+  assert.match(source,/Errori specifici/);
+});
+
+test("il catalogo avanzato resta fuori dal gesto rapido e dispone di gestione separata",()=>{
+  const html=read("index.html"),source=read("app.js");
+  for(const id of ["manageDrivingErrorCatalog","drivingErrorCatalogManager","addDrivingErrorCategory","resetDrivingErrorCatalog"])assert.match(html,new RegExp(`id=["']${id}["']`));
+  const signal=source.match(/function signalDrivingError\(\)\{[\s\S]*?\}\nasync function leaveLesson/)?.[0]||"";
+  assert.doesNotMatch(signal,/prompt\s*\(|chooseAction\s*\(|confirm\s*\(/);
+  assert.match(source,/specificErrors/);
+  assert.match(source,/categoryLabelSnapshot/);
 });
 
 test("i moduli della funzione non introducono richieste di rete",()=>{

@@ -1,10 +1,13 @@
 // Backup completo e separato: dati applicativi in localStorage e documenti in IndexedDB.
 (()=>{
   "use strict";
+  if(window.__agendaFullBackupInitialized)return;
+  window.__agendaFullBackupInitialized=true;
 
   const FORMAT="AgendaIstruttoriFullBackup";
-  const FORMAT_VERSION=3;
-  const SUPPORTED_FORMAT_VERSIONS=new Set([1,2,3]);
+  const FORMAT_VERSION=4;
+  const SUPPORTED_FORMAT_VERSIONS=new Set([1,2,3,4]);
+  const MAX_BACKUP_FILE_BYTES=128*1024*1024;
   const APP_VERSION="1.21.0";
   const BACKUP_EXTENSION="agendabackup";
   const DATA_KEYS={
@@ -21,6 +24,7 @@
   const PENDING_RESTORE_KEY="agenda_istruttori_full_restore_pending";
   const RESTORE_RESULT_KEY="agenda_istruttori_full_restore_result";
   const byId=id=>document.getElementById(id);
+  let restoreInProgress=false,restoreReloadScheduled=false;
   localStorage.removeItem("agenda_istruttori_full_backup_diagnostic_v1");
 
   function showMessage(text,isError=false){
@@ -52,6 +56,17 @@
     if(!Array.isArray(appData.students))throw new Error("Archivio allievi non valido.");
     if(!appData.checklists||typeof appData.checklists!=="object"||Array.isArray(appData.checklists))throw new Error("Checklist non valide.");
     if(!Array.isArray(appData.examiners))throw new Error("Archivio esaminatori non valido.");
+    const studentIds=new Set();
+    for(const student of appData.students){
+      if(!student||typeof student!=="object"||typeof student.id!=="string"||!student.id||studentIds.has(student.id))throw new Error("Il backup contiene allievi duplicati o non validi.");
+      if(!Array.isArray(student.lessons)||!Array.isArray(student.checklist))throw new Error("Scheda allievo incompleta nel backup.");
+      const lessonIds=new Set();
+      for(const lesson of student.lessons){if(!lesson||typeof lesson!=="object"||typeof lesson.id!=="string"||!lesson.id||lessonIds.has(lesson.id)||!Array.isArray(lesson.route)||!Array.isArray(lesson.checklist)||!Array.isArray(lesson.errors||[]))throw new Error("Guida duplicata o non valida nel backup.");lessonIds.add(lesson.id)}
+      studentIds.add(student.id);
+    }
+    const examinerIds=new Set();
+    for(const examiner of appData.examiners){if(!examiner||typeof examiner!=="object"||typeof examiner.id!=="string"||!examiner.id||examinerIds.has(examiner.id)||!Array.isArray(examiner.habits))throw new Error("Esaminatore duplicato o non valido nel backup.");examinerIds.add(examiner.id)}
+    for(const value of Object.values(appData.checklists))if(!Array.isArray(value))throw new Error("Checklist non valida nel backup.");
   }
 
   function openDocumentDatabase(){
@@ -147,7 +162,7 @@
       request.onerror=()=>reject(request.error);
     });
     db.close();
-    if(!saved||!saved.payload||saved.payload.format!==FORMAT)throw new Error("Copia di sicurezza non verificabile.");
+    if(!saved||!saved.payload||saved.payload.version!==1)throw new Error("Copia di sicurezza non verificabile.");
     return saved.payload;
   }
 
@@ -163,6 +178,22 @@
     db.close();
     if(!saved||!saved.payload)throw new Error("Copia di sicurezza preventiva non disponibile.");
     return saved.payload;
+  }
+
+  async function createSafetySnapshot(){
+    const appData={students:parsedStorageValue(DATA_KEYS.students,[]),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[])};
+    validateAppData(appData);
+    const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
+    return{version:1,appData,documents:await readDocuments(),examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId)};
+  }
+  async function restoreSafetySnapshot(snapshot){
+    if(!snapshot||snapshot.version!==1||!Array.isArray(snapshot.documents))throw new Error("Copia di sicurezza locale non valida.");
+    validateAppData(snapshot.appData);
+    await replaceDocuments(snapshot.documents);
+    writeAppData(snapshot.appData);
+    const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
+    if(snapshot.examinerRoutes)window.ExaminerRoutesUI.restore(accountId,{...snapshot.examinerRoutes,accountId});
+    window.DrivingErrors.createCatalogStore(localStorage).restore(accountId,snapshot.drivingErrorCatalog||window.DrivingErrors.defaultCatalog());
   }
 
   function arrayBufferToBase64(buffer){
@@ -354,6 +385,7 @@
       metadata:{students:appData.students.length,documents:documents.length,approximateBytes:0},
       appData,
       examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,
+      drivingErrorCatalog:window.DrivingErrors?.createCatalogStore?.(localStorage).snapshot(accountId)||null,
       documents
     };
     return payload;
@@ -365,6 +397,7 @@
     if(typeof payload.createdAt!=="string"||!Number.isFinite(Date.parse(payload.createdAt)))throw new Error("Data del backup non valida.");
     validateAppData(payload.appData);
     if(payload.formatVersion>=3&&(!payload.examinerRoutes||typeof payload.examinerRoutes!=="object"))throw new Error("Archivio percorsi esaminatori non valido.");
+    if(payload.formatVersion>=4)window.DrivingErrors.normalizeCatalog(payload.drivingErrorCatalog,{strict:true});
     if(!Array.isArray(payload.documents))throw new Error("Sezione documenti non valida.");
     if(!payload.metadata||payload.metadata.students!==payload.appData.students.length||payload.metadata.documents!==payload.documents.length)throw new Error("Conteggi del backup non coerenti con il contenuto.");
     const restoredDocuments=[];
@@ -483,6 +516,8 @@
   }
 
   async function readBackupFile(file){
+    if(!file||!Number.isFinite(file.size)||file.size<=0)throw new Error("File backup vuoto o non leggibile.");
+    if(file.size>MAX_BACKUP_FILE_BYTES)throw new Error(`Il backup supera il limite di ${formatBytes(MAX_BACKUP_FILE_BYTES)} e non può essere elaborato in sicurezza su questo dispositivo.`);
     let payload;
     try{payload=JSON.parse(await file.text())}catch(error){throw new Error("File non leggibile o JSON corrotto.")}
     return validateBackupPayload(payload);
@@ -530,6 +565,7 @@
     const canonical=canonicalAppData(validated.payload.appData,checklistKeys);
     const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");
     const examinerRoutes=validated.payload.examinerRoutes?{...validated.payload.examinerRoutes,accountId:currentAccount}:null;
+    const drivingErrorCatalog=validated.payload.formatVersion>=4?window.DrivingErrors.normalizeCatalog(validated.payload.drivingErrorCatalog,{strict:true}):window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);
     return {
       version:2,
       students:canonical.students.length,
@@ -538,6 +574,7 @@
       checklistKeys,
       appDataSha256:await textSha256(JSON.stringify(canonical)),
       examinerRoutesSha256:examinerRoutes?await textSha256(JSON.stringify(examinerRoutes)):null,
+      drivingErrorCatalogSha256:await textSha256(JSON.stringify(drivingErrorCatalog)),
       documents:validated.payload.documents.map(documentRecord=>({id:documentRecord.id,originalName:documentRecord.originalName,mimeType:documentRecord.mimeType,size:documentRecord.size,sha256:documentRecord.sha256}))
     };
   }
@@ -557,6 +594,7 @@
     if(canonical.examiners.length!==manifest.examiners)throw new Error(`Verifica post-riavvio esaminatori fallita: attesi ${manifest.examiners}, trovati ${canonical.examiners.length}.`);
     if(await textSha256(JSON.stringify(canonical))!==manifest.appDataSha256)throw new Error("Verifica post-riavvio dei dati applicativi fallita.");
     if(manifest.examinerRoutesSha256){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),examinerRoutes=window.ExaminerRoutesUI.snapshot(currentAccount);if(await textSha256(JSON.stringify(examinerRoutes))!==manifest.examinerRoutesSha256)throw new Error("Verifica post-riavvio dei percorsi esaminatori fallita.")}
+    if(manifest.drivingErrorCatalogSha256){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),catalog=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(await textSha256(JSON.stringify(catalog))!==manifest.drivingErrorCatalogSha256)throw new Error("Verifica post-riavvio delle classificazioni errori fallita.")}
     const documents=await readDocuments();
     if(documents.length!==manifest.documents.length)throw new Error(`Verifica post-riavvio documenti fallita: attesi ${manifest.documents.length}, trovati ${documents.length}.`);
     const documentsById=new Map(documents.map(documentRecord=>[documentRecord.id,documentRecord]));
@@ -575,6 +613,7 @@
     const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]);
     if(JSON.stringify(currentStudents)!==JSON.stringify(validated.payload.appData.students)||JSON.stringify(currentChecklists)!==JSON.stringify(validated.payload.appData.checklists)||JSON.stringify(currentExaminers)!==JSON.stringify(validated.payload.appData.examiners))throw new Error("Verifica dei dati applicativi non riuscita.");
     if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}
+    if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected=window.DrivingErrors.normalizeCatalog(validated.payload.drivingErrorCatalog,{strict:true}),actual=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica delle classificazioni errori non riuscita.")}
     const documents=await readDocuments();
     if(documents.length!==validated.restoredDocuments.length)throw new Error("Verifica dei documenti non riuscita.");
     const byDocumentId=new Map(documents.map(record=>[record.id,record]));
@@ -588,23 +627,19 @@
   }
 
   async function applyValidatedBackup(validated){
-    const safetyPayload=await createBackupPayload();
-    await validateBackupPayload(safetyPayload);
-    const storedSafetyPayload=await writeSafetyCopy(safetyPayload);
-    const safetyValidated=await validateBackupPayload(storedSafetyPayload);
+    const safetySnapshot=await createSafetySnapshot();
+    await writeSafetyCopy(safetySnapshot);
     try{
       await replaceDocuments(validated.restoredDocuments);
       writeAppData(validated.payload.appData);
       if(validated.payload.formatVersion>=3){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.ExaminerRoutesUI.restore(currentAccount,{...validated.payload.examinerRoutes,accountId:currentAccount})}
+      if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.DrivingErrors.createCatalogStore(localStorage).restore(currentAccount,validated.payload.drivingErrorCatalog)}
       await verifyRestoredData(validated);
       const manifest=await createRestoreManifest(validated);
       localStorage.setItem(PENDING_RESTORE_KEY,JSON.stringify(manifest));
     }catch(error){
       try{
-        await replaceDocuments(safetyValidated.restoredDocuments);
-        writeAppData(safetyValidated.payload.appData);
-        if(safetyValidated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.ExaminerRoutesUI.restore(currentAccount,{...safetyValidated.payload.examinerRoutes,accountId:currentAccount})}
-        await verifyRestoredData(safetyValidated);
+        await restoreSafetySnapshot(safetySnapshot);
       }catch(rollbackError){
         throw new Error("Ripristino fallito e rollback non completato. La copia preventiva resta nell'archivio di sicurezza locale.");
       }
@@ -613,6 +648,8 @@
   }
 
   async function restoreSelectedBackup(file){
+    if(restoreInProgress){showMessage("Un ripristino è già in corso. Attendi il completamento.",true);return}
+    restoreInProgress=true;
     clearMessage();
     byId("restoreFullBackup").disabled=true;
     try{
@@ -629,11 +666,12 @@
       if(confirmation!=="restore")return;
       showMessage("Creazione copia di sicurezza e ripristino in corso…");
       await applyValidatedBackup(validated);
+      restoreReloadScheduled=true;
       location.replace(location.href);
     }catch(error){
       showMessage(error&&error.message?error.message:"Non è stato possibile ripristinare il backup completo.",true);
     }finally{
-      byId("restoreFullBackup").disabled=false;
+      if(!restoreReloadScheduled){restoreInProgress=false;byId("restoreFullBackup").disabled=false}
     }
   }
 
@@ -675,11 +713,8 @@
       displayRestoreResult(`Ripristino completo verificato dopo il riavvio: ${manifest.students} allievi, ${manifest.documents.length} documenti.`,false);
     }catch(error){
       try{
-        const safetyPayload=await readSafetyCopy();
-        const safetyValidated=await validateBackupPayload(safetyPayload);
-        await replaceDocuments(safetyValidated.restoredDocuments);
-        writeAppData(safetyValidated.payload.appData);
-        await verifyRestoredData(safetyValidated);
+        const safetySnapshot=await readSafetyCopy();
+        await restoreSafetySnapshot(safetySnapshot);
         localStorage.removeItem(PENDING_RESTORE_KEY);
         localStorage.setItem(RESTORE_RESULT_KEY,JSON.stringify({isError:true,message:`Verifica post-riavvio fallita: ${error&&error.message?error.message:"errore imprevisto"}. È stato ripristinato lo stato precedente.`}));
         location.replace(location.href);
@@ -698,6 +733,7 @@
   byId("restoreFullBackup").addEventListener("click",event=>{
     event.preventDefault();
     event.stopPropagation();
+    if(restoreInProgress){showMessage("Un ripristino è già in corso. Attendi il completamento.",true);return}
     byId("fullBackupFile").click();
   });
   byId("fullBackupFile").addEventListener("change",async event=>{

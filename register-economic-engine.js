@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   const WEEK_MINUTES = 39 * 60;
-  const WORK_CATEGORIES = Object.freeze(["LG/A", "LG/M", "M/SE", "GOLD", "EX", "VARIE"]);
+  const WORK_CATEGORIES = Object.freeze(["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"]);
   const ABSENCE_CATEGORIES = Object.freeze(["P", "F"]);
   const DAY_MS = 86400000;
   function assertInteger(value, label, minimum = 0) {
@@ -30,8 +30,11 @@
     if (!source?.categories) throw new TypeError(`Tariffe mancanti ${label}`.trim());
     const categories = {};
     for (const category of WORK_CATEGORIES) {
-      assertInteger(source.categories[category], `Tariffa ${category} ${label}`.trim());
-      categories[category] = source.categories[category];
+      const legacyGold = source.categories.GOLD;
+      const value = category === "GOLD AUTO" ? (source.categories[category] ?? legacyGold)
+        : category === "GOLD MOTO" ? (source.categories[category] ?? legacyGold) : source.categories[category];
+      assertInteger(value, `Tariffa ${category} ${label}`.trim());
+      categories[category] = value;
     }
     if (employmentType === "FULL_TIME") assertInteger(source.overtime, `Tariffa straordinario ${label}`.trim());
     return { categories, overtime: source.overtime || 0 };
@@ -46,14 +49,15 @@
       if (weekStart === null) weekStart = blockWeek;
       if (blockWeek !== weekStart) throw new RangeError("Blocchi di settimane diverse");
       assertInteger(source.order, "Ordine"); assertInteger(source.minutes, "Durata", 1);
-      if (!WORK_CATEGORIES.includes(source.category) && !ABSENCE_CATEGORIES.includes(source.category)) throw new TypeError("Categoria non valida");
+      const category = source.category === "GOLD" ? "GOLD AUTO" : source.category;
+      if (!WORK_CATEGORIES.includes(category) && !ABSENCE_CATEGORIES.includes(category)) throw new TypeError("Categoria non valida");
       if (input.employmentType === "PART_TIME" && ABSENCE_CATEGORIES.includes(source.category)) throw new TypeError("P/F solo FULL_TIME");
       const blockRates = source.rates
         ? normalizeRates(source.rates, input.employmentType, `blocco ${inputIndex + 1}`)
         : defaultRates;
       return {
         date: source.date, order: source.order, minutes: source.minutes,
-        category: source.category, rates: blockRates, inputIndex
+        category, rates: blockRates, inputIndex
       };
     }).sort(compareBlocks);
     const orders = new Set(), absenceByDay = new Map();

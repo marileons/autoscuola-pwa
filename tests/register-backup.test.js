@@ -123,3 +123,13 @@ test("il modulo backup non usa rete, D1, localStorage o segreti del PIN", () => 
   assert.doesNotMatch(backupSource, /\bfetch\s*\(|XMLHttpRequest|WebSocket|localStorage|sessionStorage|\bD1\b/);
   assert.doesNotMatch(backupSource, /pinSecurity|pinWrappedDek|recoveryWrappedDek|deviceWrappingKey|sessionToken/);
 });
+test("backup storico GOLD viene ripristinato come GOLD AUTO senza perdere tariffe", async () => {
+  const source = newVault(); await open(source.vault, ACCOUNT_A, "1234"); await populate(source.vault);
+  const oldDay = await source.vault.getRecord("day:2099-01-05"); oldDay.blocks[0].category = "GOLD"; await source.vault.putRecord("day:2099-01-05", oldDay);
+  const exported = await service(source.vault).exportBackup(ACCOUNT_A, PASSWORD);
+  const target = newVault(); await open(target.vault, ACCOUNT_A, "9876"); await service(target.vault).restoreBackup(ACCOUNT_A, PASSWORD, exported.content);
+  const restored = await target.vault.getRecord("day:2099-01-05");
+  assert.equal(restored.blocks[0].category, "GOLD AUTO");
+  assert.equal(restored.blocks[0].rateSnapshot.categories["GOLD AUTO"], 1800);
+  assert.equal(restored.blocks[0].rateSnapshot.categories["GOLD MOTO"], 1800);
+});

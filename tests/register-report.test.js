@@ -83,6 +83,15 @@ test("anteprima usa esattamente i valori del modello condiviso con la UI", async
   assert.ok(html.includes("Rev. 1 / 1"));
   assert.ok(!html.includes("<script>")); assert.ok(html.includes("&lt;nota fittizia&gt;"));
 });
+test("prospetto e PDF distinguono GOLD AUTO e GOLD MOTO", async () => {
+  const { ledger, reports } = await fixture([{ employmentType: "PART_TIME", effectiveFrom: "2026-01-05" }]);
+  await ledger.createRateVersion({ effectiveFrom: "2026-01-12", rates: { categories: { ...RATES.categories, "GOLD AUTO": 1800, "GOLD MOTO": 2300 }, overtime: RATES.overtime } });
+  await ledger.saveDay({ date: "2026-01-12", blocks: [{ order: 1, category: "GOLD AUTO", minutes: 60 }, { order: 2, category: "GOLD MOTO", minutes: 30 }] });
+  const model = await reports.build({ mode: "week", cursor: "2026-01-12", account: { name: "Test" } });
+  assert.equal(model.categories["GOLD AUTO"], 60); assert.equal(model.categories["GOLD MOTO"], 30);
+  const html = require("../register-report.js").renderHtml(model);
+  assert.match(html, /GOLD AUTO/); assert.match(html, /GOLD MOTO/);
+});
 
 test("il modulo prospetti non usa rete, servizi PDF o persistenza", () => {
   assert.doesNotMatch(reportSource, /\bfetch\s*\(|XMLHttpRequest|WebSocket|localStorage|sessionStorage|putRecord|appendRevision|replaceSnapshot|pdfmake|jspdf/i);

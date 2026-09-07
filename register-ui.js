@@ -7,7 +7,7 @@
 
   const DAY_MS = 86400000;
   const MONTHS = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
-  const CATEGORIES = ["LG/A", "LG/M", "M/SE", "GOLD", "EX", "VARIE"];
+  const CATEGORIES = ["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"];
 
   function isoDate(value) { return value.toISOString().slice(0, 10); }
   function parseIso(value) { return new Date(`${value}T00:00:00Z`); }

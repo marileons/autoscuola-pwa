@@ -50,7 +50,10 @@ test("giornata locale conserva blocchi ordinati, note e fotografia tariffaria", 
   assert.equal(day.note, "Nota fittizia");
   assert.deepEqual(day.blocks.map((block) => block.id), ["blocco-1", "blocco-2"]);
   assert.ok(day.blocks.every((block) => block.rateVersionId === rate.id));
-  assert.deepEqual(day.blocks[0].rateSnapshot, baseRates);
+  assert.deepEqual(day.blocks[0].rateSnapshot, {
+    categories: { "LG/A": 1000, "LG/M": 1200, "M/SE": 1300, "GOLD AUTO": 1500, "GOLD MOTO": 1500, EX: 1400, VARIE: 900 },
+    overtime: 1500
+  });
   assert.equal(day.employmentType, "PART_TIME");
   assert.equal(day.employmentEffectiveFrom, "2099-01-05");
 });
@@ -269,6 +272,13 @@ test("ordine duplicato, tariffa mancante e decorrenza tariffaria duplicata sono 
       { order: 1, category: "LG/M", minutes: 60 }
     ]
   }), /Ordine blocco duplicato/);
+});
+test("GOLD AUTO e GOLD MOTO sono salvati separatamente e lo storico GOLD resta compatibile", async () => {
+  const { ledger } = await fixture(partTime);
+  await ledger.createRateVersion({ effectiveFrom: "2099-01-05", rates: { categories: { ...baseRates.categories, "GOLD AUTO": 1800, "GOLD MOTO": 2300 }, overtime: baseRates.overtime } });
+  const day = await ledger.saveDay({ date: "2099-01-05", blocks: [{ order: 1, category: "GOLD AUTO", minutes: 60 }, { order: 2, category: "GOLD MOTO", minutes: 60 }] });
+  assert.deepEqual(day.blocks.map(item => item.category), ["GOLD AUTO", "GOLD MOTO"]);
+  assert.equal((await ledger.calculateWeek("2099-01-05")).totals.totalAmountCents, 4100);
 });
 
 test("servizio Registro non usa rete né storage esterni al vault", () => {

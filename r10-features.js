@@ -260,8 +260,8 @@
   function drivingErrorsReportHtml(item){
     const errors=window.DrivingErrors.normalizeErrors(item&&item.errors);
     if(!errors.length)return'<h4>Errori segnalati</h4><p>Nessun errore segnalato.</p>';
-    const rows=errors.map((error,index)=>`<tr><td>${index+1}</td><td>${new Date(error.occurredAt).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</td><td>${esc(window.DrivingErrors.categoryLabel(error.category))}</td><td>${esc(error.note||"—")}</td><td>${error.locationStatus==="available"?"GPS presente":"GPS non disponibile"}</td></tr>`).join("");
-    return`<h4>Errori segnalati (${errors.length})</h4><table><thead><tr><th>N.</th><th>Ora</th><th>Categoria</th><th>Nota</th><th>Posizione</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const rows=errors.map((error,index)=>`<tr><td>${index+1}</td><td>${new Date(error.occurredAt).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</td><td>${esc(window.DrivingErrors.categoryLabel(error.category,null,error))}</td><td>${esc(error.specificErrors.map(item=>item.label).join("; ")||"—")}</td><td>${esc(error.note||"—")}</td><td>${error.locationStatus==="available"?"GPS presente":"GPS non disponibile"}</td></tr>`).join("");
+    return`<h4>Errori segnalati (${errors.length})</h4><table><thead><tr><th>N.</th><th>Ora</th><th>Categoria</th><th>Errori specifici</th><th>Nota</th><th>Posizione</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function studentReportHtmlBase(current){

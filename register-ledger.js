@@ -8,7 +8,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function createModule(defaultEngine) {
   "use strict";
 
-  const WORK_CATEGORIES = Object.freeze(["LG/A", "LG/M", "M/SE", "GOLD", "EX", "VARIE"]);
+  const WORK_CATEGORIES = Object.freeze(["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"]);
   const ABSENCE_CATEGORIES = Object.freeze(["P", "F"]);
   const EMPLOYMENT_TYPES = Object.freeze(["PART_TIME", "FULL_TIME"]);
   const DAY_MS = 86400000;
@@ -56,11 +56,25 @@
     if (!input?.categories) throw new TypeError("Tariffe mancanti");
     const categories = {};
     for (const category of WORK_CATEGORIES) {
-      assertInteger(input.categories[category], `Tariffa ${category}`);
-      categories[category] = input.categories[category];
+      const legacyGold = input.categories.GOLD;
+      const value = category === "GOLD AUTO" ? (input.categories[category] ?? legacyGold)
+        : category === "GOLD MOTO" ? (input.categories[category] ?? legacyGold) : input.categories[category];
+      assertInteger(value, `Tariffa ${category}`);
+      categories[category] = value;
     }
     assertInteger(input.overtime || 0, "Tariffa straordinario");
     return { categories, overtime: input.overtime || 0 };
+  }
+  function normalizeStoredRates(input) { return normalizeRates(input); }
+  function normalizeStoredDay(record) {
+    if (record?.kind !== "day") return record;
+    const day = clone(record);
+    day.blocks = (day.blocks || []).map((block) => ({
+      ...block,
+      category: block.category === "GOLD" ? "GOLD AUTO" : block.category,
+      rateSnapshot: normalizeStoredRates(block.rateSnapshot)
+    }));
+    return day;
   }
 
   function createLedger({
@@ -89,6 +103,7 @@
     async function listRateVersions() {
       return (await allRecords())
         .filter((record) => record?.kind === "rateVersion")
+        .map((record) => ({ ...clone(record), rates: normalizeStoredRates(record.rates) }))
         .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
     }
     async function rateForDate(date) {
@@ -119,11 +134,12 @@
     async function getDay(date) {
       if (!validDate(date)) throw new TypeError("Data non valida");
       const record = await vault.getRecord(`day:${date}`);
-      return record?.kind === "day" ? record : null;
+      return record?.kind === "day" ? normalizeStoredDay(record) : null;
     }
     async function listDays() {
       return (await allRecords())
         .filter((record) => record?.kind === "day")
+        .map(normalizeStoredDay)
         .sort((a, b) => a.date.localeCompare(b.date));
     }
 
@@ -137,7 +153,7 @@
         assertInteger(order, "Ordine blocco", 1);
         if (orders.has(order)) throw new RangeError("Ordine blocco duplicato");
         orders.add(order);
-        const category = String(input.category || "");
+        const category = String(input.category || "") === "GOLD" ? "GOLD AUTO" : String(input.category || "");
         if (!WORK_CATEGORIES.includes(category) && !ABSENCE_CATEGORIES.includes(category)) {
           throw new TypeError("Categoria attività non valida");
         }
@@ -208,6 +224,7 @@
       if (!day) return [];
       return (await vault.listRevisions(day.id))
         .filter((revision) => revision?.kind === "dayRevision")
+        .map((revision) => ({ ...clone(revision), snapshot: normalizeStoredDay(revision.snapshot) }))
         .sort((a, b) => a.revision - b.revision);
     }
 

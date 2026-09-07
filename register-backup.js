@@ -10,7 +10,7 @@
   const DEFAULT_ITERATIONS = 600000;
   const MIN_PASSWORD_LENGTH = 12;
   const MAX_FILE_BYTES = 50 * 1024 * 1024;
-  const WORK_CATEGORIES = new Set(["LG/A", "LG/M", "M/SE", "GOLD", "EX", "VARIE"]);
+  const WORK_CATEGORIES = new Set(["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"]);
   const ALL_CATEGORIES = new Set([...WORK_CATEGORIES, "P", "F"]);
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -57,6 +57,28 @@
     for (const category of WORK_CATEGORIES) if (!safeInteger(rates.categories[category])) throw new Error("Tariffe backup non valide");
     if (!safeInteger(rates.overtime || 0)) throw new Error("Tariffa straordinario non valida");
   }
+  function normalizeLegacyGoldSnapshot(source) {
+    const snapshot = clone(source);
+    const normalizeRates = (rates) => {
+      if (!rates?.categories || rates.categories.GOLD === undefined) return;
+      if (rates.categories["GOLD AUTO"] === undefined) rates.categories["GOLD AUTO"] = rates.categories.GOLD;
+      if (rates.categories["GOLD MOTO"] === undefined) rates.categories["GOLD MOTO"] = rates.categories.GOLD;
+      delete rates.categories.GOLD;
+    };
+    const normalizeDay = (day) => {
+      if (!day || day.kind !== "day") return;
+      for (const block of day.blocks || []) {
+        if (block.category === "GOLD") block.category = "GOLD AUTO";
+        normalizeRates(block.rateSnapshot);
+      }
+    };
+    for (const item of snapshot?.records || []) {
+      if (item.payload?.kind === "rateVersion") normalizeRates(item.payload.rates);
+      normalizeDay(item.payload);
+    }
+    for (const item of snapshot?.revisions || []) normalizeDay(item.revision?.snapshot);
+    return snapshot;
+  }
   function validateDay(day) {
     if (day?.kind !== "day" || day.schemaVersion !== 1 || !validDate(day.date) || typeof day.id !== "string" || !day.id) throw new Error("Giornata backup non valida");
     if (!Array.isArray(day.blocks) || !safeInteger(day.revision, 1) || typeof day.note !== "string" || day.note.length > 4000) throw new Error("Contenuto giornata non valido");
@@ -74,6 +96,7 @@
     validateRateSnapshot(rate.rates);
   }
   function validateSnapshot(snapshot) {
+    snapshot = normalizeLegacyGoldSnapshot(snapshot);
     if (snapshot?.schemaVersion !== 1 || !Array.isArray(snapshot.records) || !Array.isArray(snapshot.revisions)) throw new Error("Contenuto backup non supportato");
     const recordIds = new Set(), dayIds = new Set(), rateIds = new Set(), days = [];
     for (const item of snapshot.records) {

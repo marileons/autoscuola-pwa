@@ -31,7 +31,7 @@ test("il report usa solo Nominatim gratuito, consenso, stop e limite dichiarato 
 
 test("backup generale include archivio e bozze dei percorsi esaminatori con rollback",()=>{
   const backup=read("full-backup.js");
-  assert.match(backup,/FORMAT_VERSION=3/);assert.match(backup,/examinerRoutes:window\.ExaminerRoutesUI\?\.snapshot/);assert.match(backup,/ExaminerRoutesUI(?:\.|\?\.)restore/);assert.match(backup,/examinerRoutesSha256/);
+  assert.match(backup,/FORMAT_VERSION=4/);assert.match(backup,/examinerRoutes:window\.ExaminerRoutesUI\?\.snapshot/);assert.match(backup,/ExaminerRoutesUI(?:\.|\?\.)restore/);assert.match(backup,/examinerRoutesSha256/);
 });
 
 test("integrazione elimina percorsi solo con conferma e impedisce GPS concorrenti",()=>{

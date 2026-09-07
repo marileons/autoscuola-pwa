@@ -72,7 +72,7 @@ test("straordinario è uniforme e indipendente dalla categoria", () => {
 });
 test("blocco a cavallo della soglia viene diviso", () => {
   const result = full([b("2026-08-31", 1, "LG/A", 38), b("2026-09-01", 1, "GOLD", 2)]);
-  const crossing = result.classifiedBlocks.find((item) => item.category === "GOLD");
+  const crossing = result.classifiedBlocks.find((item) => item.category === "GOLD AUTO");
   assert.deepEqual([crossing.ordinaryMinutes, crossing.overtimeMinutes], [60, 60]);
   assert.equal(amount(result, "CATEGORY_PREMIUM"), 500);
   assert.equal(amount(result, "OVERTIME"), 1500);
@@ -97,7 +97,7 @@ test("ordine cronologico e manuale determina il superamento soglia", () => {
     b("2026-09-01", 2, "GOLD", 2), b("2026-08-31", 1, "LG/A", 38), b("2026-09-01", 1, "LG/M", 1)
   ]);
   const lgm = result.classifiedBlocks.find((item) => item.category === "LG/M");
-  const gold = result.classifiedBlocks.find((item) => item.category === "GOLD");
+  const gold = result.classifiedBlocks.find((item) => item.category === "GOLD AUTO");
   assert.deepEqual([lgm.ordinaryMinutes, lgm.overtimeMinutes, gold.ordinaryMinutes, gold.overtimeMinutes], [60, 0, 0, 120]);
 });
 test("mezzo centesimo sale e l'aggregazione precede l'arrotondamento", () => {
@@ -137,4 +137,16 @@ test("ogni blocco conserva e usa la propria versione tariffaria", () => {
   const result = calculateWeek({ employmentType: "PART_TIME", rates: oldRates, blocks: [first, second] });
   assert.equal(result.totals.totalAmountCents, 2600);
   assert.deepEqual(result.components.map((item) => item.rateCentsPerHour), [1200, 1400]);
+});
+test("GOLD AUTO e GOLD MOTO restano separati con tariffe differenti", () => {
+  const splitRates = { categories: { ...rates.categories, "GOLD AUTO": 1800, "GOLD MOTO": 2400 }, overtime: rates.overtime };
+  const result = calculateWeek({ employmentType: "PART_TIME", rates: splitRates, blocks: [b("2026-08-31", 1, "GOLD AUTO", 1), b("2026-08-31", 2, "GOLD MOTO", 2)] });
+  assert.equal(result.components.find(item => item.category === "GOLD AUTO").amountCents, 1800);
+  assert.equal(result.components.find(item => item.category === "GOLD MOTO").amountCents, 4800);
+  assert.equal(result.totals.totalAmountCents, 6600);
+});
+test("la categoria storica GOLD viene interpretata come GOLD AUTO", () => {
+  const result = calculateWeek({ employmentType: "PART_TIME", rates, blocks: [b("2026-08-31", 1, "GOLD", 1)] });
+  assert.equal(result.classifiedBlocks.length, 0);
+  assert.equal(result.components[0].category, "GOLD AUTO");
 });
