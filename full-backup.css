@@ -1,2 +1,3 @@
 .full-backup-dialog{max-width:520px}.full-backup-dialog h2{margin-top:0}.full-backup-summary{display:grid;gap:8px;margin:14px 0}.full-backup-warning{color:#b00020;font-weight:700;line-height:1.45}.full-backup-error{color:#d70015}.full-backup-success{color:#248a3d}
 .full-backup-summary{padding:12px;border:1px solid #354b57;border-radius:14px;background:#101c24}.full-backup-warning{color:#f4ba63}.full-backup-error{color:#ff6572}.full-backup-success{color:#66d493}
+.full-backup-progress{display:grid;gap:7px;margin-top:12px}.full-backup-progress progress{width:100%;height:14px}.full-backup-progress span{font-size:14px;line-height:1.35}.full-backup-progress.hidden{display:none}

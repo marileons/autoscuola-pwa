@@ -7,7 +7,6 @@
   const FORMAT="AgendaIstruttoriFullBackup";
   const FORMAT_VERSION=4;
   const SUPPORTED_FORMAT_VERSIONS=new Set([1,2,3,4]);
-  const MAX_BACKUP_FILE_BYTES=128*1024*1024;
   const APP_VERSION="1.21.0";
   const BACKUP_EXTENSION="agendabackup";
   const DATA_KEYS={
@@ -20,11 +19,14 @@
   const DOCUMENT_STORE="documents";
   const SAFETY_DB="agenda_istruttori_full_backup_safety";
   const SAFETY_STORE="snapshots";
+  const SAFETY_DOCUMENT_STORE="documents";
   const SAFETY_KEY="beforeRestore";
+  const STAGING_DB="agenda_istruttori_full_backup_staging";
+  const STAGING_DOCUMENT_STORE="documents";
   const PENDING_RESTORE_KEY="agenda_istruttori_full_restore_pending";
   const RESTORE_RESULT_KEY="agenda_istruttori_full_restore_result";
   const byId=id=>document.getElementById(id);
-  let restoreInProgress=false,restoreReloadScheduled=false;
+  let restoreInProgress=false,restoreReloadScheduled=false,restoreAbortController=null;
   localStorage.removeItem("agenda_istruttori_full_backup_diagnostic_v1");
 
   function showMessage(text,isError=false){
@@ -37,6 +39,15 @@
   function clearMessage(){
     byId("fullBackupMessage").classList.add("hidden");
   }
+
+  function showProgress(phase,loaded=0,total=0){
+    const box=byId("fullBackupProgress"),bar=byId("fullBackupProgressBar"),text=byId("fullBackupProgressText");
+    box.classList.remove("hidden");
+    const percent=total>0?Math.min(100,Math.round(loaded/total*100)):0;
+    bar.value=percent;text.textContent=`${phase}${total>0?` · ${percent}%`:""}`;
+  }
+  function hideProgress(){byId("fullBackupProgress")?.classList.add("hidden")}
+  function idlePause(){return new Promise(resolve=>setTimeout(resolve,0))}
 
   function formatBytes(bytes){
     if(!bytes)return "0 B";
@@ -85,18 +96,6 @@
     });
   }
 
-  async function readDocuments(){
-    const db=await openDocumentDatabase();
-    return new Promise((resolve,reject)=>{
-      const transaction=db.transaction(DOCUMENT_STORE,"readonly");
-      const request=transaction.objectStore(DOCUMENT_STORE).getAll();
-      request.onsuccess=()=>resolve(request.result);
-      request.onerror=()=>reject(request.error);
-      transaction.oncomplete=()=>db.close();
-      transaction.onabort=()=>{db.close();reject(transaction.error)};
-    });
-  }
-
   async function readDocumentKeys(){
     const db=await openDocumentDatabase();
     return new Promise((resolve,reject)=>{
@@ -121,24 +120,12 @@
     });
   }
 
-  async function replaceDocuments(records){
-    const db=await openDocumentDatabase();
-    return new Promise((resolve,reject)=>{
-      const transaction=db.transaction(DOCUMENT_STORE,"readwrite");
-      const store=transaction.objectStore(DOCUMENT_STORE);
-      store.clear();
-      records.forEach(record=>store.put(record));
-      transaction.oncomplete=()=>{db.close();resolve()};
-      transaction.onerror=()=>{db.close();reject(transaction.error)};
-      transaction.onabort=()=>{db.close();reject(transaction.error)};
-    });
-  }
-
   function openSafetyDatabase(){
     return new Promise((resolve,reject)=>{
-      const request=indexedDB.open(SAFETY_DB,1);
+      const request=indexedDB.open(SAFETY_DB,2);
       request.onupgradeneeded=()=>{
         if(!request.result.objectStoreNames.contains(SAFETY_STORE))request.result.createObjectStore(SAFETY_STORE,{keyPath:"id"});
+        if(!request.result.objectStoreNames.contains(SAFETY_DOCUMENT_STORE))request.result.createObjectStore(SAFETY_DOCUMENT_STORE,{keyPath:"id"});
       };
       request.onsuccess=()=>resolve(request.result);
       request.onerror=()=>reject(request.error);
@@ -146,10 +133,29 @@
     });
   }
 
+  function openStagingDatabase(){
+    return new Promise((resolve,reject)=>{
+      const request=indexedDB.open(STAGING_DB,1);
+      request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(STAGING_DOCUMENT_STORE))request.result.createObjectStore(STAGING_DOCUMENT_STORE,{keyPath:"id"})};
+      request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);request.onblocked=()=>reject(new Error("Area temporanea del ripristino bloccata."));
+    });
+  }
+  async function clearStore(openDatabase,storeName){const db=await openDatabase();await new Promise((resolve,reject)=>{const transaction=db.transaction(storeName,"readwrite");transaction.objectStore(storeName).clear();transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)});db.close()}
+  async function putStoreRecord(openDatabase,storeName,record){const db=await openDatabase();await new Promise((resolve,reject)=>{const transaction=db.transaction(storeName,"readwrite");transaction.objectStore(storeName).put(record);transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)});db.close()}
+  async function readStoreKeys(openDatabase,storeName){const db=await openDatabase(),keys=await new Promise((resolve,reject)=>{const transaction=db.transaction(storeName,"readonly"),request=transaction.objectStore(storeName).getAllKeys();request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});db.close();return keys}
+  async function readStoreRecord(openDatabase,storeName,key){const db=await openDatabase(),record=await new Promise((resolve,reject)=>{const transaction=db.transaction(storeName,"readonly"),request=transaction.objectStore(storeName).get(key);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});db.close();return record}
+  async function replaceDocumentsFromStore(openSource,sourceStore,onProgress){
+    const keys=await readStoreKeys(openSource,sourceStore),target=await openDocumentDatabase();
+    await new Promise((resolve,reject)=>{const transaction=target.transaction(DOCUMENT_STORE,"readwrite");transaction.objectStore(DOCUMENT_STORE).clear();transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)});
+    target.close();
+    for(let index=0;index<keys.length;index++){const record=await readStoreRecord(openSource,sourceStore,keys[index]);if(!record)throw new Error("Documento temporaneo mancante.");const db=await openDocumentDatabase();await new Promise((resolve,reject)=>{const transaction=db.transaction(DOCUMENT_STORE,"readwrite");transaction.objectStore(DOCUMENT_STORE).put(record);transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)});db.close();onProgress?.(index+1,keys.length);await idlePause()}
+  }
+
   async function writeSafetyCopy(payload){
     const db=await openSafetyDatabase();
     await new Promise((resolve,reject)=>{
-      const transaction=db.transaction(SAFETY_STORE,"readwrite");
+      const transaction=db.transaction([SAFETY_STORE,SAFETY_DOCUMENT_STORE],"readwrite");
+      transaction.objectStore(SAFETY_DOCUMENT_STORE).clear();
       transaction.objectStore(SAFETY_STORE).put({id:SAFETY_KEY,createdAt:Date.now(),payload});
       transaction.oncomplete=resolve;
       transaction.onerror=()=>reject(transaction.error);
@@ -163,6 +169,8 @@
     });
     db.close();
     if(!saved||!saved.payload||saved.payload.version!==1)throw new Error("Copia di sicurezza non verificabile.");
+    const keys=await readDocumentKeys();
+    for(let index=0;index<keys.length;index++){const record=await readDocumentByKey(keys[index]);await putStoreRecord(openSafetyDatabase,SAFETY_DOCUMENT_STORE,record);showProgress("Copia di sicurezza",index+1,keys.length);await idlePause()}
     return saved.payload;
   }
 
@@ -184,12 +192,12 @@
     const appData={students:parsedStorageValue(DATA_KEYS.students,[]),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[])};
     validateAppData(appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
-    return{version:1,appData,documents:await readDocuments(),examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId)};
+    return{version:1,appData,examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId)};
   }
   async function restoreSafetySnapshot(snapshot){
-    if(!snapshot||snapshot.version!==1||!Array.isArray(snapshot.documents))throw new Error("Copia di sicurezza locale non valida.");
+    if(!snapshot||snapshot.version!==1)throw new Error("Copia di sicurezza locale non valida.");
     validateAppData(snapshot.appData);
-    await replaceDocuments(snapshot.documents);
+    await replaceDocumentsFromStore(openSafetyDatabase,SAFETY_DOCUMENT_STORE,(done,total)=>showProgress("Rollback documenti",done,total));
     writeAppData(snapshot.appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     if(snapshot.examinerRoutes)window.ExaminerRoutesUI.restore(accountId,{...snapshot.examinerRoutes,accountId});
@@ -411,6 +419,16 @@
     return {payload,restoredDocuments,students:payload.appData.students.length,documents:restoredDocuments.length};
   }
 
+  function validateBackupHeader(payload){
+    if(!payload||payload.format!==FORMAT)throw new Error("Il file non è un backup completo di Agenda Istruttori.");
+    if(!SUPPORTED_FORMAT_VERSIONS.has(payload.formatVersion))throw new Error("Versione del backup non supportata.");
+    if(typeof payload.createdAt!=="string"||!Number.isFinite(Date.parse(payload.createdAt)))throw new Error("Data del backup non valida.");
+    validateAppData(payload.appData);
+    if(payload.formatVersion>=3&&(!payload.examinerRoutes||typeof payload.examinerRoutes!=="object"))throw new Error("Archivio percorsi esaminatori non valido.");
+    if(payload.formatVersion>=4)window.DrivingErrors.normalizeCatalog(payload.drivingErrorCatalog,{strict:true});
+    if(!payload.metadata||payload.metadata.students!==payload.appData.students.length||!Number.isInteger(payload.metadata.documents)||payload.metadata.documents<0)throw new Error("Conteggi del backup non coerenti con il contenuto.");
+  }
+
   function modalChoice(title,body,buttons){
     return new Promise(resolve=>{
       const modal=byId("fullBackupModal");
@@ -443,7 +461,9 @@
       ["Creato",new Date(validated.payload.createdAt).toLocaleString("it-IT")],
       ["Allievi",String(validated.students)],
       ["Documenti",String(validated.documents)],
-      ["Dimensione",formatBytes(validated.payload.metadata&&validated.payload.metadata.approximateBytes||0)]
+      ["Dimensione",formatBytes(validated.fileSize||validated.payload.metadata&&validated.payload.metadata.approximateBytes||0)],
+      ["Formato",`Agenda Istruttori ${validated.payload.formatVersion}`],
+      ["Spazio stimato",validated.capacity?.supported?`${formatBytes(validated.capacity.requiredBytes)} necessari · ${formatBytes(validated.capacity.availableBytes)} disponibili`:"API spazio non disponibile; saranno gestiti eventuali errori reali di quota"]
     ];
     rows.forEach(([label,value])=>{
       const row=document.createElement("div");
@@ -517,10 +537,24 @@
 
   async function readBackupFile(file){
     if(!file||!Number.isFinite(file.size)||file.size<=0)throw new Error("File backup vuoto o non leggibile.");
-    if(file.size>MAX_BACKUP_FILE_BYTES)throw new Error(`Il backup supera il limite di ${formatBytes(MAX_BACKUP_FILE_BYTES)} e non può essere elaborato in sicurezza su questo dispositivo.`);
-    let payload;
-    try{payload=JSON.parse(await file.text())}catch(error){throw new Error("File non leggibile o JSON corrotto.")}
-    return validateBackupPayload(payload);
+    if(!window.AgendaFullBackupStream)throw new Error("Modulo di lettura progressiva non disponibile.");
+    const currentKeys=await readDocumentKeys();let currentBytes=0;
+    for(const key of currentKeys){const record=await readDocumentByKey(key);currentBytes+=Number(record?.size||record?.blob?.size||0)}
+    const capacity=await window.AgendaFullBackupStream.estimateCapacity(file.size,currentBytes,navigator.storage);
+    if(capacity.supported&&!capacity.sufficient)throw new Error(`Spazio fisico insufficiente sul dispositivo: servono circa ${formatBytes(capacity.requiredBytes)}, sono disponibili ${formatBytes(capacity.availableBytes)}.`);
+    await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);
+    const ids=new Set(),documentManifest=[];
+    let payload=null;
+    try{
+      const parsed=await window.AgendaFullBackupStream.parseLegacyBackup(file,{
+        signal:restoreAbortController?.signal,
+        onHeader:header=>{validateBackupHeader(header);payload=header;showProgress("Lettura e validazione",0,file.size)},
+        onProgress:progress=>showProgress(progress.phase==="reading"?"Lettura file":"Validazione documenti",progress.loaded,progress.total),
+        onDocument:async item=>{const record=await deserializeDocument(item);if(ids.has(record.id))throw new Error("Il backup contiene documenti duplicati.");ids.add(record.id);documentManifest.push({id:record.id,originalName:record.originalName,mimeType:record.mimeType,size:record.size,sha256:item.sha256});await putStoreRecord(openStagingDatabase,STAGING_DOCUMENT_STORE,record)}
+      });
+      if(!payload||parsed.count!==payload.metadata.documents)throw new Error(`Conteggio documenti non coerente: attesi ${payload?.metadata?.documents??0}, trovati ${parsed.count}.`);
+      return{payload,documentManifest,students:payload.appData.students.length,documents:parsed.count,fileSize:file.size,capacity};
+    }catch(error){await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);if(error?.name==="AbortError")throw error;if(error?.name==="QuotaExceededError")throw new Error("Spazio fisico insufficiente durante lo staging. I dati esistenti sono rimasti invariati.");throw error}
   }
 
   function writeAppData(appData){
@@ -575,7 +609,7 @@
       appDataSha256:await textSha256(JSON.stringify(canonical)),
       examinerRoutesSha256:examinerRoutes?await textSha256(JSON.stringify(examinerRoutes)):null,
       drivingErrorCatalogSha256:await textSha256(JSON.stringify(drivingErrorCatalog)),
-      documents:validated.payload.documents.map(documentRecord=>({id:documentRecord.id,originalName:documentRecord.originalName,mimeType:documentRecord.mimeType,size:documentRecord.size,sha256:documentRecord.sha256}))
+      documents:validated.documentManifest.map(documentRecord=>({...documentRecord}))
     };
   }
 
@@ -595,11 +629,10 @@
     if(await textSha256(JSON.stringify(canonical))!==manifest.appDataSha256)throw new Error("Verifica post-riavvio dei dati applicativi fallita.");
     if(manifest.examinerRoutesSha256){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),examinerRoutes=window.ExaminerRoutesUI.snapshot(currentAccount);if(await textSha256(JSON.stringify(examinerRoutes))!==manifest.examinerRoutesSha256)throw new Error("Verifica post-riavvio dei percorsi esaminatori fallita.")}
     if(manifest.drivingErrorCatalogSha256){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),catalog=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(await textSha256(JSON.stringify(catalog))!==manifest.drivingErrorCatalogSha256)throw new Error("Verifica post-riavvio delle classificazioni errori fallita.")}
-    const documents=await readDocuments();
-    if(documents.length!==manifest.documents.length)throw new Error(`Verifica post-riavvio documenti fallita: attesi ${manifest.documents.length}, trovati ${documents.length}.`);
-    const documentsById=new Map(documents.map(documentRecord=>[documentRecord.id,documentRecord]));
+    const documentKeys=await readDocumentKeys();
+    if(documentKeys.length!==manifest.documents.length)throw new Error(`Verifica post-riavvio documenti fallita: attesi ${manifest.documents.length}, trovati ${documentKeys.length}.`);
     for(const expected of manifest.documents){
-      const actual=documentsById.get(expected.id);
+      const actual=await readDocumentByKey(expected.id);
       if(!actual)throw new Error(`Documento mancante dopo il riavvio: ${expected.originalName}.`);
       if(actual.size!==expected.size||actual.mimeType!==expected.mimeType||actual.blob.size!==expected.size||actual.blob.type!==expected.mimeType)throw new Error(`Dimensione o MIME non valido dopo il riavvio: ${expected.originalName}.`);
       const buffer=await actual.blob.arrayBuffer();
@@ -614,15 +647,14 @@
     if(JSON.stringify(currentStudents)!==JSON.stringify(validated.payload.appData.students)||JSON.stringify(currentChecklists)!==JSON.stringify(validated.payload.appData.checklists)||JSON.stringify(currentExaminers)!==JSON.stringify(validated.payload.appData.examiners))throw new Error("Verifica dei dati applicativi non riuscita.");
     if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}
     if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected=window.DrivingErrors.normalizeCatalog(validated.payload.drivingErrorCatalog,{strict:true}),actual=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica delle classificazioni errori non riuscita.")}
-    const documents=await readDocuments();
-    if(documents.length!==validated.restoredDocuments.length)throw new Error("Verifica dei documenti non riuscita.");
-    const byDocumentId=new Map(documents.map(record=>[record.id,record]));
-    for(const expected of validated.restoredDocuments){
-      const actual=byDocumentId.get(expected.id);
+    const documentKeys=await readDocumentKeys();
+    if(documentKeys.length!==validated.documentManifest.length)throw new Error("Verifica dei documenti non riuscita.");
+    for(const expected of validated.documentManifest){
+      const actual=await readDocumentByKey(expected.id);
       if(!actual||actual.size!==expected.size||actual.mimeType!==expected.mimeType)throw new Error("Verifica dei documenti non riuscita.");
       const actualBuffer=await actual.blob.arrayBuffer();
-      const expectedBuffer=await expected.blob.arrayBuffer();
-      if(arrayBufferToBase64(actualBuffer)!==arrayBufferToBase64(expectedBuffer))throw new Error(`Verifica del documento ${expected.originalName} non riuscita.`);
+      if(await sha256(actualBuffer)!==expected.sha256)throw new Error(`Verifica del documento ${expected.originalName} non riuscita.`);
+      await idlePause();
     }
   }
 
@@ -630,19 +662,22 @@
     const safetySnapshot=await createSafetySnapshot();
     await writeSafetyCopy(safetySnapshot);
     try{
-      await replaceDocuments(validated.restoredDocuments);
+      await replaceDocumentsFromStore(openStagingDatabase,STAGING_DOCUMENT_STORE,(done,total)=>showProgress("Applicazione documenti",done,total));
       writeAppData(validated.payload.appData);
       if(validated.payload.formatVersion>=3){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.ExaminerRoutesUI.restore(currentAccount,{...validated.payload.examinerRoutes,accountId:currentAccount})}
       if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.DrivingErrors.createCatalogStore(localStorage).restore(currentAccount,validated.payload.drivingErrorCatalog)}
       await verifyRestoredData(validated);
       const manifest=await createRestoreManifest(validated);
       localStorage.setItem(PENDING_RESTORE_KEY,JSON.stringify(manifest));
+      await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);
     }catch(error){
       try{
         await restoreSafetySnapshot(safetySnapshot);
       }catch(rollbackError){
+        await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);
         throw new Error("Ripristino fallito e rollback non completato. La copia preventiva resta nell'archivio di sicurezza locale.");
       }
+      await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);
       throw new Error(`Ripristino annullato: ${error&&error.message?error.message:"errore imprevisto"}. I dati precedenti sono stati ripristinati.`);
     }
   }
@@ -650,28 +685,34 @@
   async function restoreSelectedBackup(file){
     if(restoreInProgress){showMessage("Un ripristino è già in corso. Attendi il completamento.",true);return}
     restoreInProgress=true;
+    restoreAbortController=new AbortController();
     clearMessage();
+    hideProgress();
     byId("restoreFullBackup").disabled=true;
+    byId("cancelFullBackupRestore").classList.remove("hidden");
     try{
       const validated=await readBackupFile(file);
       const preview=await modalChoice("Backup completo Agenda Istruttori",restorePreview(validated),[
         {label:"Annulla",value:"cancel",className:"secondary"},
         {label:"Continua",value:"continue"}
       ]);
-      if(preview!=="continue")return;
+      if(preview!=="continue"){await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);return}
       const confirmation=await modalChoice("ATTENZIONE","Il ripristino completo sostituirà i dati di Agenda Istruttori presenti su questo dispositivo. Prima dell'operazione verrà creata una copia di sicurezza. Continuare?",[
         {label:"ANNULLA",value:"cancel",className:"secondary"},
         {label:"RIPRISTINA",value:"restore",className:"danger"}
       ]);
-      if(confirmation!=="restore")return;
+      if(confirmation!=="restore"){await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);return}
+      byId("cancelFullBackupRestore").classList.add("hidden");
       showMessage("Creazione copia di sicurezza e ripristino in corso…");
       await applyValidatedBackup(validated);
       restoreReloadScheduled=true;
       location.replace(location.href);
     }catch(error){
-      showMessage(error&&error.message?error.message:"Non è stato possibile ripristinare il backup completo.",true);
+      showMessage(error?.name==="AbortError"?"Ripristino annullato. I dati esistenti non sono stati modificati.":error&&error.message?error.message:"Non è stato possibile ripristinare il backup completo.",true);
     }finally{
-      if(!restoreReloadScheduled){restoreInProgress=false;byId("restoreFullBackup").disabled=false}
+      restoreAbortController=null;
+      byId("cancelFullBackupRestore").classList.add("hidden");
+      if(!restoreReloadScheduled){restoreInProgress=false;byId("restoreFullBackup").disabled=false;hideProgress()}
     }
   }
 
@@ -679,8 +720,8 @@
     const summary=byId("fullBackupSummary");
     try{
       const students=parsedStorageValue(DATA_KEYS.students,[]);
-      const documents=await readDocuments();
-      summary.textContent=`Dati attuali: ${Array.isArray(students)?students.length:0} allievi, ${documents.length} documenti.`;
+      const documentKeys=await readDocumentKeys();
+      summary.textContent=`Dati attuali: ${Array.isArray(students)?students.length:0} allievi, ${documentKeys.length} documenti.`;
     }catch(error){
       summary.textContent="Conteggio dati non disponibile.";
     }
@@ -736,6 +777,7 @@
     if(restoreInProgress){showMessage("Un ripristino è già in corso. Attendi il completamento.",true);return}
     byId("fullBackupFile").click();
   });
+  byId("cancelFullBackupRestore").addEventListener("click",()=>{if(restoreAbortController&&!restoreAbortController.signal.aborted){restoreAbortController.abort();showMessage("Annullamento richiesto: conclusione del blocco in corso…")}});
   byId("fullBackupFile").addEventListener("change",async event=>{
     const file=event.target.files[0];
     event.target.value="";

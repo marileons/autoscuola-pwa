@@ -5,8 +5,9 @@ const source=fs.readFileSync(path.join(__dirname,"..","full-backup.js"),"utf8");
 test("il ripristino valida interamente prima di scrivere",()=>{
   const restore=source.match(/async function restoreSelectedBackup\(file\)\{[\s\S]*?\n  \}/)?.[0]||"";
   assert.ok(restore.indexOf("await readBackupFile(file)")<restore.indexOf("await applyValidatedBackup(validated)"));
-  assert.match(source,/MAX_BACKUP_FILE_BYTES=128\*1024\*1024/);
-  assert.match(source,/JSON\.parse/);
+  assert.doesNotMatch(source,/MAX_BACKUP_FILE_BYTES|128\*1024\*1024/);
+  assert.doesNotMatch(restore,/file\.text\(\)|readAsText|arrayBuffer\(\)/);
+  assert.match(source,/AgendaFullBackupStream\.parseLegacyBackup/);
   assert.match(source,/validateAppData/);
 });
 
@@ -30,8 +31,19 @@ test("errore di applicazione ripristina lo stato precedente",()=>{
 
 test("la copia preventiva evita duplicazioni Base64 dei documenti",()=>{
   const safety=source.match(/async function createSafetySnapshot\(\)\{[\s\S]*?\n  \}/)?.[0]||"";
-  assert.match(safety,/documents:await readDocuments\(\)/);
+  assert.doesNotMatch(safety,/documents:await readDocuments\(\)|getAll\(\)/);
+  assert.match(source,/SAFETY_DOCUMENT_STORE/);
+  assert.match(source,/putStoreRecord\(openSafetyDatabase/);
   assert.doesNotMatch(safety,/arrayBufferToBase64|createBackupPayload/);
+});
+
+test("staging, spazio reale, avanzamento e annullamento sono espliciti",()=>{
+  assert.match(source,/STAGING_DOCUMENT_STORE/);
+  assert.match(source,/navigator\.storage/);
+  assert.match(source,/Spazio fisico insufficiente/);
+  assert.match(source,/fullBackupProgress/);
+  assert.match(source,/AbortController/);
+  assert.match(source,/QuotaExceededError/);
 });
 
 test("backup vecchi restano supportati e il Registro economico resta separato",()=>{

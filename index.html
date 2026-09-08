@@ -429,7 +429,9 @@
     <p id="fullBackupSummary" class="muted" aria-live="polite">Conteggio dati in corso…</p>
     <button id="exportFullBackup" type="button">📤 Backup completo</button>
     <button id="restoreFullBackup" type="button" class="secondary">📥 Ripristino backup completo</button>
+    <button id="cancelFullBackupRestore" type="button" class="danger hidden">ANNULLA RIPRISTINO</button>
     <input id="fullBackupFile" class="hidden" type="file" accept=".agendabackup,.json,application/json,application/octet-stream,*/*">
+    <div id="fullBackupProgress" class="full-backup-progress hidden" aria-live="polite"><progress id="fullBackupProgressBar" max="100" value="0"></progress><span id="fullBackupProgressText"></span></div>
     <p id="fullBackupMessage" class="muted hidden" role="status"></p>
   </div>
   <div class="other-functions-subnav"><button id="backSettings" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
