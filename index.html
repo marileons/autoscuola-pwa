@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#12616c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Agenda Istruttori</title>
-<link rel="manifest" href="manifest.json?v=1.21-identita-definitiva">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v1-21.png">
+<link rel="manifest" href="manifest.json?v=1.21-branding-v2">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v1-21.png?v=branding-v2">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css?v=1.21-navigation-r12">
 <link rel="stylesheet" href="auth.css?v=1.21-premium-r10">
@@ -20,7 +20,7 @@
 <body>
 <section id="loginScreen" class="auth-screen hidden">
   <div class="auth-card">
-    <div class="auth-logo-frame"><img src="home-logo-mr-header-v1-21.png" alt="Logo MR Agenda Istruttori" class="auth-logo"></div>
+    <div class="auth-logo-frame"><img src="home-logo-mr-header-v1-21.png?v=branding-v2" alt="Logo Applicazione Istruttori MR con cartelli Genova e Sassari" class="auth-logo"></div>
     <h1>AGENDA ISTRUTTORI</h1>
     <p class="muted auth-version">Versione 1.21</p>
     <p class="muted">Inserisci le tue credenziali per accedere.</p>
@@ -34,7 +34,7 @@
   </div>
 </section>
 <div id="appShell" class="hidden">
-<header class="app-header"><img src="home-logo-mr-header-v1-21.png" alt="Logo MR con automobile, moto, volante e strada" class="main-logo"><h1>AGENDA ISTRUTTORI</h1><div>Gestione Allievi e Guide · v1.21</div></header>
+<header class="app-header"><img src="home-logo-mr-header-v1-21.png?v=branding-v2" alt="Logo MR con automobile, moto, volante e strada" class="main-logo"><h1>AGENDA ISTRUTTORI</h1><div>Gestione Allievi e Guide · v1.21</div></header>
 <main>
 <section id="home" class="view active">
   <p id="homeAuthenticatedUser" class="home-authenticated-user hidden" aria-live="polite"></p>
@@ -53,6 +53,7 @@
   <button id="openOtherFunctions" class="other-functions-entry full">ALTRE FUNZIONI</button>
   <button id="logoutHome" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#logout-pro"/></svg></span> Esci</button>
   <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
+  <input id="studentsImportFile" class="hidden" type="file" accept=".json,application/json">
 </section>
 
 <section id="categoryHub" class="view category-hub">
@@ -81,6 +82,7 @@
   <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#checklist-pro"/></svg></span> PERCORSO DIDATTICO</button>
   <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#settings-pro"/></svg></span> IMPOSTAZIONI</button>
   <button id="importStudent" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#import-pro"/></svg></span> IMPORTA ALLIEVO</button>
+  <button id="importStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#import-pro"/></svg></span> IMPORTA PIÙ ALLIEVI</button>
   <button id="shareStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#share-pro"/></svg></span> CONDIVIDI PIÙ ALLIEVI</button>
   <button id="archiveStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#archive-pro"/></svg></span> ARCHIVIA PIÙ ALLIEVI</button>
   <button id="deleteStudents" class="home-pro-action danger full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#delete-pro"/></svg></span> ELIMINA PIÙ ALLIEVI</button>
@@ -341,6 +343,17 @@
     <p class="muted">Seleziona gli allievi da includere. Guide, checklist e percorsi GPS rimangono associati.</p>
     <div id="studentMultiShareList"></div>
     <button id="exportSelectedStudents" type="button" class="full">📤 Condividi allievi selezionati</button>
+  </div>
+</section>
+
+<section id="studentMultiImport" class="view">
+  <div class="other-functions-subnav"><button id="studentMultiImportHome" type="button" class="home-command">HOME</button><button id="cancelStudentMultiImportTop" type="button" class="secondary">INDIETRO</button></div>
+  <div class="card form"><h2>Importa più allievi</h2>
+    <p id="studentMultiImportSummary" class="muted"></p><div id="studentMultiImportPreview"></div>
+    <div id="studentMultiImportProgress" class="student-import-progress hidden" aria-live="polite"><progress id="studentMultiImportProgressBar" max="100" value="0"></progress><span id="studentMultiImportProgressText"></span></div>
+    <p id="studentMultiImportMessage" class="muted hidden" role="status"></p>
+    <button id="applyStudentMultiImport" type="button" class="full">IMPORTA ALLIEVI</button>
+    <button id="cancelStudentMultiImport" type="button" class="secondary full">ANNULLA</button>
   </div>
 </section>
 
