@@ -63,6 +63,6 @@
 .auth-logo{filter:drop-shadow(0 9px 16px #0008)}
 
 /* r10: elimina visivamente il margine chiaro incorporato senza alterare il PNG MR. */
-.auth-logo-frame{width:min(100%,360px);height:auto;aspect-ratio:1792/960;margin:0 auto 12px;overflow:hidden;border-radius:18px;background:#172832;box-shadow:0 10px 18px #0008}
-.auth-logo{display:block;width:100%;height:100%;max-height:none;margin:0;object-fit:contain;clip-path:none;transform:none;background:transparent;box-shadow:none;filter:none}
+.auth-logo-frame{width:min(460px,calc(100vw - 20px));height:auto;margin:0 0 12px calc((100% - min(460px,calc(100vw - 20px)))/2);overflow:hidden;border-radius:18px;background:#172832;box-shadow:0 10px 18px #0008}
+.auth-logo{display:block;width:100%;height:auto;max-height:none;margin:0;object-fit:contain;clip-path:none;transform:none;background:transparent;box-shadow:none;filter:none}
 .auth-credit{color:#aebdc5!important;font-size:12px;letter-spacing:.015em}

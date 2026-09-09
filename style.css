@@ -147,6 +147,10 @@ input,textarea,select{min-height:48px;border:1px solid #b9cdd0;border-radius:14p
 #home .dashboard-intro{border-top:0}
 @media(max-width:520px){header.app-header img.main-logo{height:112px!important;max-height:112px!important;transform:scale(1.04)}.app-header{padding:max(4px,env(safe-area-inset-top)) 7px 6px}.app-header h1{margin-top:1px;font-size:1.17rem}.app-header>div{font-size:.76rem}#home .dashboard-intro{padding-top:3px}}
 
+/* Branding orizzontale: proporzioni naturali e margine laterale mobile di 10 px. */
+header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max-width:460px!important;height:auto!important;max-height:none!important;object-fit:contain!important;transform:none!important}
+@media(max-width:520px){header.app-header img.main-logo{width:calc(100% - 6px)!important;max-width:370px!important}}
+
 /* Pagine interne premium r9. La Home r8h è esclusa intenzionalmente. */
 :root{--premium-bg:#0c141b;--premium-bg-soft:#111c24;--premium-card:#17232c;--premium-card-2:#1c2a34;--premium-line:#334652;--premium-text:#f2f5f6;--premium-muted:#aebdc5;--premium-blue:#1687e8;--premium-blue-2:#29a6ef;--premium-red:#d63c49;--premium-gold:#d7aa35}
 #appShell main>.view:not(#home){min-height:calc(100vh - 160px);margin:-11px;padding:16px 11px 26px;background:radial-gradient(circle at 90% 0,#183245 0,transparent 28%),linear-gradient(180deg,var(--premium-bg-soft),var(--premium-bg) 72%);color:var(--premium-text)}
