@@ -23,6 +23,8 @@
   const SAFETY_KEY="beforeRestore";
   const STAGING_DB="agenda_istruttori_full_backup_staging";
   const STAGING_DOCUMENT_STORE="documents";
+  const STAGING_CHUNK_STORE="documentChunks";
+  const INTERRUPTED_RESTORE_KEY="agenda_istruttori_full_restore_reading";
   const PENDING_RESTORE_KEY="agenda_istruttori_full_restore_pending";
   const RESTORE_RESULT_KEY="agenda_istruttori_full_restore_result";
   const byId=id=>document.getElementById(id);
@@ -135,10 +137,53 @@
 
   function openStagingDatabase(){
     return new Promise((resolve,reject)=>{
-      const request=indexedDB.open(STAGING_DB,1);
-      request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(STAGING_DOCUMENT_STORE))request.result.createObjectStore(STAGING_DOCUMENT_STORE,{keyPath:"id"})};
+      const request=indexedDB.open(STAGING_DB,2);
+      request.onupgradeneeded=()=>{
+        if(!request.result.objectStoreNames.contains(STAGING_DOCUMENT_STORE))request.result.createObjectStore(STAGING_DOCUMENT_STORE,{keyPath:"id"});
+        if(!request.result.objectStoreNames.contains(STAGING_CHUNK_STORE)){
+          const chunks=request.result.createObjectStore(STAGING_CHUNK_STORE,{keyPath:"key"});
+          chunks.createIndex("documentId","documentId");
+        }
+      };
       request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);request.onblocked=()=>reject(new Error("Area temporanea del ripristino bloccata."));
     });
+  }
+  async function clearStaging(){
+    const db=await openStagingDatabase();
+    await new Promise((resolve,reject)=>{
+      const transaction=db.transaction([STAGING_DOCUMENT_STORE,STAGING_CHUNK_STORE],"readwrite");
+      transaction.objectStore(STAGING_DOCUMENT_STORE).clear();
+      transaction.objectStore(STAGING_CHUNK_STORE).clear();
+      transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error);
+    });
+    db.close();
+  }
+  async function putStagingChunk(documentId,index,bytes){
+    const db=await openStagingDatabase();
+    await new Promise((resolve,reject)=>{
+      const transaction=db.transaction(STAGING_CHUNK_STORE,"readwrite");
+      transaction.objectStore(STAGING_CHUNK_STORE).put({key:`${documentId}:${String(index).padStart(8,"0")}`,documentId,index,blob:new Blob([bytes])});
+      transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error);
+    });
+    db.close();
+  }
+  async function finishStagingDocument(metadata){
+    const db=await openStagingDatabase();
+    const chunks=await new Promise((resolve,reject)=>{
+      const transaction=db.transaction(STAGING_CHUNK_STORE,"readonly"),request=transaction.objectStore(STAGING_CHUNK_STORE).index("documentId").getAll(metadata.id);
+      request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);transaction.onabort=()=>reject(transaction.error||request.error);
+    });
+    chunks.sort((a,b)=>a.index-b.index);
+    const blob=new Blob(chunks.map(item=>item.blob),{type:metadata.mimeType});
+    if(blob.size!==metadata.size){db.close();throw new Error(`Dimensione temporanea non valida per ${metadata.originalName}.`)}
+    await new Promise((resolve,reject)=>{
+      const transaction=db.transaction([STAGING_DOCUMENT_STORE,STAGING_CHUNK_STORE],"readwrite"),chunkStore=transaction.objectStore(STAGING_CHUNK_STORE);
+      transaction.objectStore(STAGING_DOCUMENT_STORE).put({...metadata,blob});
+      const range=IDBKeyRange.only(metadata.id),request=chunkStore.index("documentId").openKeyCursor(range);
+      request.onsuccess=()=>{const cursor=request.result;if(cursor){chunkStore.delete(cursor.primaryKey);cursor.continue()}};
+      transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error);
+    });
+    db.close();
   }
   async function clearStore(openDatabase,storeName){const db=await openDatabase();await new Promise((resolve,reject)=>{const transaction=db.transaction(storeName,"readwrite");transaction.objectStore(storeName).clear();transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)});db.close()}
   async function putStoreRecord(openDatabase,storeName,record){const db=await openDatabase();await new Promise((resolve,reject)=>{const transaction=db.transaction(storeName,"readwrite");transaction.objectStore(storeName).put(record);transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)});db.close()}
@@ -280,6 +325,19 @@
     return sha256Fallback(buffer);
   }
 
+  async function sha256Blob(blob){
+    if(!(blob instanceof Blob))throw new Error("Documento non leggibile.");
+    const hasher=window.AgendaFullBackupStream?.createSha256?.();
+    if(!hasher)throw new Error("Modulo checksum progressivo non disponibile.");
+    const block=1024*1024;
+    for(let offset=0;offset<blob.size;offset+=block){
+      const bytes=new Uint8Array(await blob.slice(offset,Math.min(blob.size,offset+block)).arrayBuffer());
+      hasher.update(bytes);
+      await idlePause();
+    }
+    return hasher.hex();
+  }
+
   async function selfTestDocument(originalBuffer,dataBase64,originalHash,fileName){
     const originalBytes=new Uint8Array(originalBuffer);
     const reconstructedBytes=base64ToBytes(dataBase64);
@@ -363,6 +421,16 @@
       createdAt:serialized.createdAt,
       section:typeof serialized.section==="string"&&serialized.section?serialized.section:"common",
       blob:new Blob([bytes],{type:serialized.mimeType})
+    };
+  }
+
+  function validateDocumentMetadata(metadata){
+    if(!metadata||typeof metadata!=="object"||typeof metadata.id!=="string"||!metadata.id||typeof metadata.originalName!=="string"||typeof metadata.title!=="string")throw new Error("Metadati documento non validi.");
+    if(typeof metadata.mimeType!=="string"||!Number.isFinite(metadata.size)||metadata.size<0||!Number.isFinite(metadata.createdAt))throw new Error("Metadati documento non validi.");
+    if(typeof metadata.sha256!=="string"||!/^[a-f0-9]{64}$/i.test(metadata.sha256))throw new Error(`Checksum mancante o non valido per ${metadata.originalName}.`);
+    return {
+      id:metadata.id,originalName:metadata.originalName,title:metadata.title,mimeType:metadata.mimeType,size:metadata.size,
+      createdAt:metadata.createdAt,section:typeof metadata.section==="string"&&metadata.section?metadata.section:"common",sha256:metadata.sha256.toLowerCase()
     };
   }
 
@@ -542,19 +610,21 @@
     for(const key of currentKeys){const record=await readDocumentByKey(key);currentBytes+=Number(record?.size||record?.blob?.size||0)}
     const capacity=await window.AgendaFullBackupStream.estimateCapacity(file.size,currentBytes,navigator.storage);
     if(capacity.supported&&!capacity.sufficient)throw new Error(`Spazio fisico insufficiente sul dispositivo: servono circa ${formatBytes(capacity.requiredBytes)}, sono disponibili ${formatBytes(capacity.availableBytes)}.`);
-    await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);
+    await clearStaging();
     const ids=new Set(),documentManifest=[];
-    let payload=null;
+    let payload=null,currentDocument=null,currentChunk=0;
     try{
       const parsed=await window.AgendaFullBackupStream.parseLegacyBackup(file,{
         signal:restoreAbortController?.signal,
         onHeader:header=>{validateBackupHeader(header);payload=header;showProgress("Lettura e validazione",0,file.size)},
         onProgress:progress=>showProgress(progress.phase==="reading"?"Lettura file":"Validazione documenti",progress.loaded,progress.total),
-        onDocument:async item=>{const record=await deserializeDocument(item);if(ids.has(record.id))throw new Error("Il backup contiene documenti duplicati.");ids.add(record.id);documentManifest.push({id:record.id,originalName:record.originalName,mimeType:record.mimeType,size:record.size,sha256:item.sha256});await putStoreRecord(openStagingDatabase,STAGING_DOCUMENT_STORE,record)}
+        onDocumentStart:async item=>{currentDocument=validateDocumentMetadata(item);currentChunk=0;if(ids.has(currentDocument.id))throw new Error("Il backup contiene documenti duplicati.");ids.add(currentDocument.id)},
+        onDocumentChunk:async(item,bytes)=>{if(!currentDocument||item.id!==currentDocument.id)throw new Error("Sequenza documento non valida.");await putStagingChunk(currentDocument.id,currentChunk++,bytes)},
+        onDocumentEnd:async(item,result)=>{if(!currentDocument||item.id!==currentDocument.id||result.sha256!==currentDocument.sha256)throw new Error("Checksum documento non coerente.");await finishStagingDocument(currentDocument);documentManifest.push({id:currentDocument.id,originalName:currentDocument.originalName,mimeType:currentDocument.mimeType,size:currentDocument.size,sha256:currentDocument.sha256});currentDocument=null}
       });
       if(!payload||parsed.count!==payload.metadata.documents)throw new Error(`Conteggio documenti non coerente: attesi ${payload?.metadata?.documents??0}, trovati ${parsed.count}.`);
       return{payload,documentManifest,students:payload.appData.students.length,documents:parsed.count,fileSize:file.size,capacity};
-    }catch(error){await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);if(error?.name==="AbortError")throw error;if(error?.name==="QuotaExceededError")throw new Error("Spazio fisico insufficiente durante lo staging. I dati esistenti sono rimasti invariati.");throw error}
+    }catch(error){await clearStaging();if(error?.name==="AbortError")throw error;if(error?.name==="QuotaExceededError")throw new Error("Spazio fisico insufficiente durante lo staging. I dati esistenti sono rimasti invariati.");throw error}
   }
 
   function writeAppData(appData){
@@ -635,8 +705,7 @@
       const actual=await readDocumentByKey(expected.id);
       if(!actual)throw new Error(`Documento mancante dopo il riavvio: ${expected.originalName}.`);
       if(actual.size!==expected.size||actual.mimeType!==expected.mimeType||actual.blob.size!==expected.size||actual.blob.type!==expected.mimeType)throw new Error(`Dimensione o MIME non valido dopo il riavvio: ${expected.originalName}.`);
-      const buffer=await actual.blob.arrayBuffer();
-      if(await sha256(buffer)!==expected.sha256)throw new Error(`SHA-256 non valido dopo il riavvio: ${expected.originalName}.`);
+      if(await sha256Blob(actual.blob)!==expected.sha256)throw new Error(`SHA-256 non valido dopo il riavvio: ${expected.originalName}.`);
     }
   }
 
@@ -652,8 +721,7 @@
     for(const expected of validated.documentManifest){
       const actual=await readDocumentByKey(expected.id);
       if(!actual||actual.size!==expected.size||actual.mimeType!==expected.mimeType)throw new Error("Verifica dei documenti non riuscita.");
-      const actualBuffer=await actual.blob.arrayBuffer();
-      if(await sha256(actualBuffer)!==expected.sha256)throw new Error(`Verifica del documento ${expected.originalName} non riuscita.`);
+      if(await sha256Blob(actual.blob)!==expected.sha256)throw new Error(`Verifica del documento ${expected.originalName} non riuscita.`);
       await idlePause();
     }
   }
@@ -669,15 +737,15 @@
       await verifyRestoredData(validated);
       const manifest=await createRestoreManifest(validated);
       localStorage.setItem(PENDING_RESTORE_KEY,JSON.stringify(manifest));
-      await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);
+      await clearStaging();
     }catch(error){
       try{
         await restoreSafetySnapshot(safetySnapshot);
       }catch(rollbackError){
-        await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);
+        await clearStaging();
         throw new Error("Ripristino fallito e rollback non completato. La copia preventiva resta nell'archivio di sicurezza locale.");
       }
-      await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);
+      await clearStaging();
       throw new Error(`Ripristino annullato: ${error&&error.message?error.message:"errore imprevisto"}. I dati precedenti sono stati ripristinati.`);
     }
   }
@@ -690,24 +758,27 @@
     hideProgress();
     byId("restoreFullBackup").disabled=true;
     byId("cancelFullBackupRestore").classList.remove("hidden");
+    localStorage.setItem(INTERRUPTED_RESTORE_KEY,JSON.stringify({startedAt:Date.now(),size:file.size}));
     try{
       const validated=await readBackupFile(file);
+      localStorage.removeItem(INTERRUPTED_RESTORE_KEY);
       const preview=await modalChoice("Backup completo Agenda Istruttori",restorePreview(validated),[
         {label:"Annulla",value:"cancel",className:"secondary"},
         {label:"Continua",value:"continue"}
       ]);
-      if(preview!=="continue"){await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);return}
+      if(preview!=="continue"){await clearStaging();return}
       const confirmation=await modalChoice("ATTENZIONE","Il ripristino completo sostituirà i dati di Agenda Istruttori presenti su questo dispositivo. Prima dell'operazione verrà creata una copia di sicurezza. Continuare?",[
         {label:"ANNULLA",value:"cancel",className:"secondary"},
         {label:"RIPRISTINA",value:"restore",className:"danger"}
       ]);
-      if(confirmation!=="restore"){await clearStore(openStagingDatabase,STAGING_DOCUMENT_STORE);return}
+      if(confirmation!=="restore"){await clearStaging();return}
       byId("cancelFullBackupRestore").classList.add("hidden");
       showMessage("Creazione copia di sicurezza e ripristino in corso…");
       await applyValidatedBackup(validated);
       restoreReloadScheduled=true;
       location.replace(location.href);
     }catch(error){
+      localStorage.removeItem(INTERRUPTED_RESTORE_KEY);
       showMessage(error?.name==="AbortError"?"Ripristino annullato. I dati esistenti non sono stati modificati.":error&&error.message?error.message:"Non è stato possibile ripristinare il backup completo.",true);
     }finally{
       restoreAbortController=null;
@@ -734,6 +805,12 @@
   }
 
   async function completePendingRestore(){
+    const interruptedRead=localStorage.getItem(INTERRUPTED_RESTORE_KEY);
+    if(interruptedRead){
+      localStorage.removeItem(INTERRUPTED_RESTORE_KEY);
+      try{await clearStaging()}catch{}
+      displayRestoreResult("La lettura del backup è stata interrotta dal browser prima dell’anteprima. I dati esistenti non sono stati modificati.",true);
+    }
     const storedResult=localStorage.getItem(RESTORE_RESULT_KEY);
     if(storedResult){
       localStorage.removeItem(RESTORE_RESULT_KEY);

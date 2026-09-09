@@ -2,69 +2,36 @@
 "use strict";
 const DEFAULT_CHUNK_BYTES=1024*1024;
 function abortError(){const error=new Error("Ripristino annullato dall’utente.");error.name="AbortError";return error}
-function checkAbort(signal){if(signal&&signal.aborted)throw abortError()}
-async function readSlice(file,start,end){return file.slice(start,end).text()}
-function documentBoundary(state,text,start){
-  let depth=state.depth,inString=state.inString,escaped=state.escaped;
-  for(let index=start;index<text.length;index++){
-    const char=text[index];
-    if(inString){if(escaped)escaped=false;else if(char==="\\")escaped=true;else if(char==='"')inString=false;continue}
-    if(char==='"'){inString=true;continue}
-    if(char==="{")depth++;
-    else if(char==="}"&&--depth===0)return{end:index+1,next:index+1,state:{depth:0,inString:false,escaped:false}};
-  }
-  return{end:-1,next:text.length,state:{depth,inString,escaped}};
+function checkAbort(signal){if(signal?.aborted)throw abortError()}
+class Sha256{
+ constructor(){this.h=new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);this.b=new Uint8Array(64);this.n=0;this.total=0;this.done=false}
+ update(value){if(this.done)throw Error("SHA-256 già completato");const bytes=value instanceof Uint8Array?value:new Uint8Array(value);let p=0;this.total+=bytes.length;if(this.n){const take=Math.min(64-this.n,bytes.length);this.b.set(bytes.subarray(0,take),this.n);this.n+=take;p=take;if(this.n===64){this.compress(this.b);this.n=0}}while(p+64<=bytes.length){this.compress(bytes.subarray(p,p+64));p+=64}if(p<bytes.length){this.b.set(bytes.subarray(p));this.n=bytes.length-p}return this}
+ compress(c){const w=new Uint32Array(64),r=(x,n)=>(x>>>n)|(x<<(32-n));for(let i=0;i<16;i++){const p=i*4;w[i]=((c[p]<<24)|(c[p+1]<<16)|(c[p+2]<<8)|c[p+3])>>>0}for(let i=16;i<64;i++){const x=w[i-15],y=w[i-2];w[i]=(w[i-16]+(r(x,7)^r(x,18)^(x>>>3))+w[i-7]+(r(y,17)^r(y,19)^(y>>>10)))>>>0}let[a,b,d,e,f,g,h,j]=this.h;for(let i=0;i<64;i++){const t1=(j+(r(f,6)^r(f,11)^r(f,25))+((f&g)^(~f&h))+K[i]+w[i])>>>0,t2=((r(a,2)^r(a,13)^r(a,22))+((a&b)^(a&d)^(b&d)))>>>0;j=h;h=g;g=f;f=(e+t1)>>>0;e=d;d=b;b=a;a=(t1+t2)>>>0}const v=[a,b,d,e,f,g,h,j];for(let i=0;i<8;i++)this.h[i]=(this.h[i]+v[i])>>>0}
+ hex(){if(!this.done){const bits=this.total*8,hi=Math.floor(bits/0x100000000),lo=bits>>>0;this.b[this.n++]=128;if(this.n>56){this.b.fill(0,this.n);this.compress(this.b);this.n=0}this.b.fill(0,this.n,56);for(let i=0;i<4;i++){this.b[56+i]=(hi>>>(24-i*8))&255;this.b[60+i]=(lo>>>(24-i*8))&255}this.compress(this.b);this.done=true}return Array.from(this.h,x=>x.toString(16).padStart(8,"0")).join("")}
+}
+const K=new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+function decode64(text,final){if(!text)return new Uint8Array;if(text.length%4||!/^[A-Za-z0-9+/]*={0,2}$/.test(text)||(!final&&text.includes("=")))throw Error("Contenuto Base64 non valido.");let raw;try{raw=atob(text)}catch{throw Error("Contenuto Base64 non valido.")}const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out}
+class Reader{
+ constructor(file,chunk,signal,progress){this.file=file;this.chunk=chunk;this.signal=signal;this.progress=progress;this.offset=0;this.buffer="";this.max=0}
+ async more(){checkAbort(this.signal);if(this.offset>=this.file.size)return false;const end=Math.min(this.file.size,this.offset+this.chunk),text=await this.file.slice(this.offset,end).text();if(typeof text!=="string")throw Error("Blocco del backup non leggibile.");this.buffer+=text;this.offset=end;this.max=Math.max(this.max,this.buffer.length);this.progress?.({phase:"reading",loaded:end,total:this.file.size});return true}
+ take(n){const v=this.buffer.slice(0,n);this.buffer=this.buffer.slice(n);return v}
+ async ensure(){while(!this.buffer.length&&await this.more());return!!this.buffer.length}
+ async until(token,limit=8*1024*1024){for(;;){const i=this.buffer.indexOf(token);if(i>=0){const v=this.take(i);this.take(token.length);return v}if(this.buffer.length>limit)throw Error("Metadati del backup troppo grandi o non validi.");if(!await this.more())throw Error("File troncato o formato JSON non compatibile.")}}
+ async ws(){while(await this.ensure()){const m=this.buffer.match(/^\s+/);if(!m)return;this.take(m[0].length)}}
 }
 async function parseLegacyBackup(file,options={}){
-  if(!file||!Number.isFinite(file.size)||file.size<=0)throw new Error("File backup vuoto o non leggibile.");
-  const chunkBytes=Math.max(64*1024,Number(options.chunkBytes)||DEFAULT_CHUNK_BYTES),marker='"documents":[',signal=options.signal;
-  let offset=0,buffer="",header=null,count=0,scanState=null,documentStart=-1,scanIndex=0,arrayEnded=false,maxBufferedChars=0;
-  while(offset<file.size||buffer.length){
-    checkAbort(signal);
-    if(offset<file.size){const end=Math.min(file.size,offset+chunkBytes);buffer+=await readSlice(file,offset,end);maxBufferedChars=Math.max(maxBufferedChars,buffer.length);offset=end;options.onProgress?.({phase:"reading",loaded:offset,total:file.size});}
-    if(!header){
-      const markerIndex=buffer.indexOf(marker);
-      if(markerIndex<0){if(offset>=file.size)throw new Error("File non leggibile o formato JSON non compatibile.");continue}
-      try{header=JSON.parse(buffer.slice(0,markerIndex)+marker+']}' )}catch(error){throw new Error("Intestazione del backup non leggibile o JSON corrotto.")}
-      buffer=buffer.slice(markerIndex+marker.length);options.onHeader?.(header);continue;
-    }
-    if(arrayEnded){if(offset>=file.size){if(buffer.trim()!=="}")throw new Error("Dati inattesi dopo la sezione documenti.");return{header,count,maxBufferedChars}}continue}
-    let consumed=0;
-    while(consumed<buffer.length){
-      checkAbort(signal);
-      if(documentStart<0){
-        while(consumed<buffer.length&&/[\s,]/.test(buffer[consumed]))consumed++;
-        if(consumed>=buffer.length)break;
-        if(buffer[consumed]==="]"){
-          buffer=buffer.slice(consumed+1);arrayEnded=true;consumed=0;break;
-        }
-        if(buffer[consumed]!=="{")throw new Error("Documento del backup non valido.");
-        documentStart=consumed;scanIndex=consumed;scanState={depth:0,inString:false,escaped:false};
-      }
-      const boundary=documentBoundary(scanState,buffer,scanIndex);
-      scanState=boundary.state;scanIndex=boundary.next;
-      if(boundary.end<0)break;
-      let serialized;
-      try{serialized=JSON.parse(buffer.slice(documentStart,boundary.end))}catch(error){throw new Error("Documento del backup non leggibile o JSON corrotto.")}
-      await options.onDocument?.(serialized,count);
-      count++;options.onProgress?.({phase:"documents",loaded:count,total:Number(header?.metadata?.documents)||0});
-      consumed=boundary.end;documentStart=-1;scanState=null;scanIndex=consumed;
-    }
-    if(arrayEnded)continue;
-    if(documentStart>=0){
-      if(documentStart>0){buffer=buffer.slice(documentStart);scanIndex-=documentStart;documentStart=0}
-      if(offset>=file.size)throw new Error("File troncato durante la lettura di un documento.");
-    }else if(consumed>0)buffer=buffer.slice(consumed);
-    if(offset>=file.size&&buffer.length===0)break;
-    await new Promise(resolve=>setTimeout(resolve,0));
-  }
-  throw new Error("File troncato: chiusura del backup mancante.");
+ if(!file||!Number.isFinite(file.size)||file.size<=0)throw Error("File backup vuoto o non leggibile.");
+ const signal=options.signal,reader=new Reader(file,Math.max(64*1024,Number(options.chunkBytes)||DEFAULT_CHUNK_BYTES),signal,options.onProgress),marker='"documents":[';
+ const prefix=await reader.until(marker);let header;try{header=JSON.parse(prefix+marker+"]}")}catch{throw Error("Intestazione del backup non leggibile o JSON corrotto.")}options.onHeader?.(header);let count=0;
+ for(;;){checkAbort(signal);await reader.ws();if(!await reader.ensure())throw Error("File troncato: sezione documenti incompleta.");if(reader.buffer[0]==="]"){reader.take(1);break}if(count){if(reader.buffer[0]!==",")throw Error("Separatore documenti non valido.");reader.take(1);await reader.ws()}if(!await reader.ensure()||reader.buffer[0]!=="{")throw Error("Documento del backup non valido.");
+  const metaText=await reader.until(',"dataBase64":"');let meta;try{meta=JSON.parse(metaText+"}")}catch{throw Error("Metadati documento non leggibili o JSON corrotti.")}await options.onDocumentStart?.(meta,count);
+  const hash=new Sha256;let size=0,carry="";
+  for(;;){checkAbort(signal);if(!await reader.ensure())throw Error("File troncato durante il contenuto Base64.");const quote=reader.buffer.indexOf('"');if(quote>=0){const bytes=decode64(carry+reader.take(quote),true);reader.take(1);if(bytes.length){hash.update(bytes);size+=bytes.length;await options.onDocumentChunk?.(meta,bytes,count)}break}const text=carry+reader.take(reader.buffer.length),usable=text.length-text.length%4;if(usable){const bytes=decode64(text.slice(0,usable),false);hash.update(bytes);size+=bytes.length;await options.onDocumentChunk?.(meta,bytes,count)}carry=text.slice(usable);await new Promise(resolve=>setTimeout(resolve,0))}
+  await reader.ws();if(!await reader.ensure()||reader.buffer[0]!=="}")throw Error("Chiusura documento non valida.");reader.take(1);const digest=hash.hex();if(Number(meta.size)!==size)throw Error(`Dimensione non valida per ${meta.originalName||"documento"}.`);if(typeof meta.sha256!=="string"||!/^[a-f0-9]{64}$/i.test(meta.sha256)||digest!==meta.sha256.toLowerCase())throw Error(`Controllo integrità fallito per ${meta.originalName||"documento"}.`);await options.onDocumentEnd?.(meta,{size,sha256:digest},count);count++;options.onProgress?.({phase:"documents",loaded:count,total:Number(header?.metadata?.documents)||0});
+ }
+ await reader.ws();if(!await reader.ensure()||reader.buffer[0]!=="}")throw Error("Chiusura del backup mancante.");reader.take(1);await reader.ws();while(await reader.more())await reader.ws();if(reader.buffer.length)throw Error("Dati inattesi dopo la sezione documenti.");return{header,count,maxBufferedChars:reader.max}
 }
-function estimateBinaryBytes(fileBytes){return Math.ceil(Math.max(0,Number(fileBytes)||0)*0.75)}
-async function estimateCapacity(fileBytes,currentBytes=0,storage=typeof navigator!=="undefined"?navigator.storage:null){
-  const estimatedNew=estimateBinaryBytes(fileBytes),required=estimatedNew+Math.max(0,Number(currentBytes)||0),result={requiredBytes:required,availableBytes:null,quota:null,usage:null,supported:false,sufficient:null};
-  if(!storage||typeof storage.estimate!=="function")return result;
-  try{const estimate=await storage.estimate();result.quota=Number(estimate.quota)||0;result.usage=Number(estimate.usage)||0;result.availableBytes=Math.max(0,result.quota-result.usage);result.supported=true;result.sufficient=result.availableBytes>=required;return result}catch{return result}
-}
-return Object.freeze({DEFAULT_CHUNK_BYTES,parseLegacyBackup,estimateBinaryBytes,estimateCapacity});
+function estimateBinaryBytes(fileBytes){return Math.ceil(Math.max(0,Number(fileBytes)||0)*.75)}
+async function estimateCapacity(fileBytes,currentBytes=0,storage=typeof navigator!=="undefined"?navigator.storage:null){const required=estimateBinaryBytes(fileBytes)+Math.max(0,Number(currentBytes)||0),result={requiredBytes:required,availableBytes:null,quota:null,usage:null,supported:false,sufficient:null};if(!storage?.estimate)return result;try{const estimate=await storage.estimate();result.quota=Number(estimate.quota)||0;result.usage=Number(estimate.usage)||0;result.availableBytes=Math.max(0,result.quota-result.usage);result.supported=true;result.sufficient=result.availableBytes>=required}catch{}return result}
+return Object.freeze({DEFAULT_CHUNK_BYTES,parseLegacyBackup,estimateBinaryBytes,estimateCapacity,createSha256:()=>new Sha256});
 });

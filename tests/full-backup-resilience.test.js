@@ -44,6 +44,17 @@ test("staging, spazio reale, avanzamento e annullamento sono espliciti",()=>{
   assert.match(source,/fullBackupProgress/);
   assert.match(source,/AbortController/);
   assert.match(source,/QuotaExceededError/);
+  assert.match(source,/STAGING_CHUNK_STORE/);
+  assert.match(source,/putStagingChunk/);
+  assert.match(source,/finishStagingDocument/);
+  assert.match(source,/sha256Blob/);
+});
+
+test("lettura interrotta viene rilevata al riavvio senza applicare dati",()=>{
+  assert.match(source,/INTERRUPTED_RESTORE_KEY/);
+  assert.match(source,/La lettura del backup è stata interrotta dal browser prima dell.anteprima/);
+  assert.ok(source.indexOf("localStorage.setItem(INTERRUPTED_RESTORE_KEY")<source.indexOf("await readBackupFile(file)"));
+  assert.ok(source.indexOf("await readBackupFile(file)")<source.indexOf("await applyValidatedBackup(validated)"));
 });
 
 test("backup vecchi restano supportati e il Registro economico resta separato",()=>{

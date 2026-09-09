@@ -7,6 +7,7 @@ const APP_VERSION="1.21.0";
 const DRIVING_ERRORS=window.DrivingErrors;
 const drivingErrorDrafts=DRIVING_ERRORS.createDraftStore(localStorage);
 const drivingErrorCatalogs=DRIVING_ERRORS.createCatalogStore(localStorage);
+const archiveReadErrors=new Map();
 const LABELS={auto:"Auto","guida-accompagnata":"Guida Accompagnata",moto:"Moto","quad-leggero":"Quadriciclo leggero AM","quad-pesante":"Quadriciclo pesante B1","corso-moto":"Corso moto ad accesso graduale A2 e A",perfezionamento:"Perfezionamento","esame-revisione":"Revisioni","esame-esperimento":"Esperimenti","da-classificare":"Da classificare"};
 const UNCLASSIFIED_CATEGORY="da-classificare";
 const DEFAULT_LISTS={
@@ -28,14 +29,18 @@ let state={students:load(),examiners:loadExaminers(),studentId:null,lessonId:nul
 const studentMultiImportModuleReady=window.StudentMultiImport?Promise.resolve(window.StudentMultiImport):new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="student-multi-import.js?v=1.21-student-import-v1";script.onload=()=>resolve(window.StudentMultiImport);script.onerror=()=>reject(new Error("Modulo importazione multipla non disponibile."));document.head.appendChild(script)});
 let pendingStudentMultiImport=null,studentMultiImportRunning=false;
 function typeOf(c){return c==="perfezionamento"?"auto":(LISTS[c]?c:"auto")}
-function loadExaminers(){try{const a=JSON.parse(localStorage.getItem(EXAMINERS_KEY)||"[]");return Array.isArray(a)?a.map(x=>({id:String(x.id||uid()),firstName:String(x.firstName||""),lastName:String(x.lastName||""),notes:String(x.notes||""),habits:Array.isArray(x.habits)?x.habits.map(String):[]})):[]}catch{return []}}
-function saveExaminers(){localStorage.setItem(EXAMINERS_KEY,JSON.stringify(state.examiners))}
+function readArchiveArray(key,label){try{const raw=localStorage.getItem(key);if(raw===null)return[];const value=JSON.parse(raw);if(!Array.isArray(value))throw new Error("formato non valido");return value}catch(error){archiveReadErrors.set(key,`Archivio ${label} non leggibile. Nessun dato verrà sovrascritto.`);return[]}}
+function normalizeArchive(key,label,normalizer){const values=readArchiveArray(key,label);if(archiveReadErrors.has(key))return[];try{return values.map(normalizer)}catch(error){archiveReadErrors.set(key,`Archivio ${label} non leggibile. Nessun dato verrà sovrascritto.`);return[]}}
+function requireWritableArchive(key){if(archiveReadErrors.has(key)){showArchiveRecoveryError();throw new Error(archiveReadErrors.get(key))}}
+function loadExaminers(){return normalizeArchive(EXAMINERS_KEY,"esaminatori",x=>({id:String(x.id||uid()),firstName:String(x.firstName||""),lastName:String(x.lastName||""),notes:String(x.notes||""),habits:Array.isArray(x.habits)?x.habits.map(String):[]}))}
+function saveExaminers(){requireWritableArchive(EXAMINERS_KEY);localStorage.setItem(EXAMINERS_KEY,JSON.stringify(state.examiners))}
 function oldStatus(x){if(x?.status&&STATES.includes(x.status))return x.status;return x?.done?"good":"none"}
 function normalizeItems(items,type){const byLabel=new Map((items||[]).map(x=>[x.label,oldStatus(x)]));return LISTS[type].map(label=>({id:uid(),label,status:byLabel.get(label)||"none"}))}
 function normalizeStudent(s){const c=LABELS[s.category]?s.category:UNCLASSIFIED_CATEGORY,t=typeOf(c),normalized={id:String(s.id||uid()),category:c,firstName:String(s.firstName||""),lastName:String(s.lastName||""),phone:String(s.phone||""),license:String(s.license||""),pinkSlipIssueDate:String(s.pinkSlipIssueDate||""),notes:String(s.notes||s.studentNotes||""),archived:s.archived===true,checklist:normalizeItems(s.checklist,t),lessons:Array.isArray(s.lessons)?s.lessons.map(l=>normalizeLesson(l,t)):[]};if(typeof s.photo==="string"&&/^data:image\/(?:jpeg|png|webp);base64,/i.test(s.photo))normalized.photo=s.photo;return normalized}
 function normalizeLesson(l,t){const normalized={id:String(l.id||uid()),createdAt:Number(l.createdAt||Date.now()),notes:String(l.notes||""),route:Array.isArray(l.route)?l.route.filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng)).map(p=>({...p,breakBefore:!!p.breakBefore})):[],checklist:normalizeItems(l.checklist,t),errors:DRIVING_ERRORS.normalizeErrors(l.errors)};if(typeof l.duration==="string"&&l.duration.trim())normalized.duration=l.duration.trim();return normalized}
-function load(){try{const a=JSON.parse(localStorage.getItem(KEY)||"[]");return Array.isArray(a)?a.map(normalizeStudent):[]}catch{return []}}
-function save(){state.students=state.students.map(normalizeStudent);localStorage.setItem(KEY,JSON.stringify(state.students))}
+function load(){return normalizeArchive(KEY,"allievi",normalizeStudent)}
+function save(){requireWritableArchive(KEY);state.students=state.students.map(normalizeStudent);localStorage.setItem(KEY,JSON.stringify(state.students))}
+function showArchiveRecoveryError(){if(!archiveReadErrors.size)return;let box=$("archiveRecoveryError");if(!box){box=document.createElement("div");box.id="archiveRecoveryError";box.className="auth-error card";box.setAttribute("role","alert");$("home")?.prepend(box)}box.textContent=[...archiveReadErrors.values()].join(" ")}
 function setNeutralHome(){state.filter=null;state.studentListMode="hidden";document.querySelectorAll(".categories button[data-f]").forEach(button=>button.classList.remove("active"))}
 const CATEGORY_CONTEXT_VIEWS=["studentForm","student","lesson","savedMapView"];
 const NAV_SECTION_LABELS={auto:"Auto",moto:"Moto","guida-accompagnata":"Guida accompagnata","quad-leggero":"Quadriciclo leggero AM","quad-pesante":"Quadriciclo pesante B1","corso-moto":"Corso Moto A2/A",perfezionamento:"Guide di perfezionamento","esame-revisione":"Esami di revisione","esame-esperimento":"Esperimento di guida","da-classificare":"Da classificare"};
@@ -46,7 +51,7 @@ function updatePageTitle(id){const view=$(id),title=view&&view.querySelector(":s
 function installPageTitles(){CATEGORY_CONTEXT_VIEWS.forEach(id=>{const view=$(id);if(!view||view.querySelector(":scope > .page-context-title"))return;const title=document.createElement("div");title.className="page-context-title";title.setAttribute("aria-label","Posizione corrente");view.prepend(title);updatePageTitle(id)})}
 function show(id){const previous=document.querySelector(".view.active")?.id;if(previous==="registerView"&&id!=="registerView")window.RegisterUI?.leave?.();document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));updatePageTitle(id);$(id).classList.add("active");if(id==="home")setNeutralHome();scrollTo(0,0)}
 function showLogin(){stopGps();$("appShell").classList.add("hidden");$("loginScreen").classList.remove("hidden");$("loginForm").reset();$("loginError").classList.add("hidden");setTimeout(()=>$("loginPassword").focus(),0)}
-function showApp(){$("loginScreen").classList.add("hidden");$("appShell").classList.remove("hidden");renderStudents();show("home")}
+function showApp(){$("loginScreen").classList.add("hidden");$("appShell").classList.remove("hidden");renderStudents();show("home");showArchiveRecoveryError()}
 function login(event){return window.AgendaAuth.login(event,showApp)}
 function logout(){return window.AgendaAuth.logout(showLogin)}
 function student(){return state.students.find(s=>s.id===state.studentId)}function lesson(){return student()?.lessons.find(l=>l.id===state.lessonId)}
@@ -357,7 +362,7 @@ $("backArchive").onclick=()=>{renderStudents();show("home")};
 $("archiveStudent").onclick=archiveStudent;
 $("restoreStudent").onclick=restoreStudent;
 $("toggleLessons").onclick=()=>{state.lessonsExpanded=!state.lessonsExpanded;renderLessons()};
-saveLists();save();if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));window.AgendaAuth.applicationReady(showApp,showLogin);
+saveLists();if(!archiveReadErrors.has(KEY))save();if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));window.AgendaAuth.applicationReady(showApp,showLogin);
 
 $("voiceExaminer")&&($("voiceExaminer").onclick=()=>{$("examinerNotes").focus();toggleVoice()});
 $("manageDrivingErrorCatalog").onclick=toggleDrivingErrorCatalog;
