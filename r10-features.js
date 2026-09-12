@@ -10,6 +10,7 @@
   let wakeLock=null;
   let wakeLockGeneration=0;
   let wakeRetryTimer=null;
+  let pendingStudentPdfUrl=null;
 
   const wakeStatus=message=>{
     const element=$("wakeLockStatus");
@@ -297,20 +298,36 @@
     return report;
   }
 
+  function clearStudentPdfFallback(){
+    if(pendingStudentPdfUrl)URL.revokeObjectURL(pendingStudentPdfUrl);
+    pendingStudentPdfUrl=null;
+    const link=$("openStudentPdfFallback"),message=$("studentPdfFallbackMessage");
+    link?.classList.add("hidden");link?.removeAttribute("href");message?.classList.add("hidden");
+  }
+
+  function showStudentPdfFallback(url){
+    clearStudentPdfFallback();pendingStudentPdfUrl=url;
+    const link=$("openStudentPdfFallback"),message=$("studentPdfFallbackMessage");
+    link.href=url;link.classList.remove("hidden");message.classList.remove("hidden");
+  }
+
   function exportStudentPdf(){
     const current=student();
     if(!current)return;
-    const reportWindow=window.open("","_blank");
-    if(!reportWindow){alert("Consenti l’apertura della finestra del report PDF e riprova.");return}
-    reportWindow.document.open();
-    reportWindow.document.write(studentReportHtml(JSON.parse(JSON.stringify(current))));
-    reportWindow.document.close();
+    clearStudentPdfFallback();
+    const html=studentReportHtml(JSON.parse(JSON.stringify(current))),url=URL.createObjectURL(new Blob([html],{type:"text/html;charset=utf-8"}));
+    let reportWindow=null;
+    try{reportWindow=window.open(url,"_blank")}catch{}
+    if(!reportWindow){showStudentPdfFallback(url);return}
+    setTimeout(()=>URL.revokeObjectURL(url),300000);
   }
 
   $("generateRoadReport").addEventListener("click",generateRoadReport);
   $("toggleRoadReport").addEventListener("click",toggleRoadReport);
   $("openSavedRoute").addEventListener("click",resetRoadReport);
   $("exportStudentPdf").addEventListener("click",exportStudentPdf);
+  $("openStudentPdfFallback").addEventListener("click",()=>{const url=pendingStudentPdfUrl;if(url)setTimeout(()=>{if(pendingStudentPdfUrl===url)clearStudentPdfFallback()},300000)});
+  window.clearStudentPdfFallback=clearStudentPdfFallback;
   resetRoadReport();
 
   window.__agendaR10Test={sampleRoute,routeDistance,routeDuration,roadNameFromResponse,studentReportHtml};

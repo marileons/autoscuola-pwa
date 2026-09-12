@@ -32,6 +32,16 @@ test("ricerca mobile compatta la schermata senza perdere focus o introdurre relo
   assert.match(app,/visualViewport\?\.addEventListener\("resize"/);assert.match(css,/#categoryHub\.student-search-focused/);const focusFunction=app.match(/function setStudentSearchFocused\([^\n]+/)[0];assert.doesNotMatch(focusFunction,/location\./);
 });
 
+test("un risultato resta selezionabile con tastiera mobile attiva e conserva la ricerca al ritorno",()=>{
+  const render=app.match(/function renderStudents\(\)[\s\S]*?\nfunction renderArchivedStudents/)?.[0]||"";
+  assert.match(render,/studentResultPointerActive=true/);
+  assert.match(render,/pointerup/);assert.match(render,/event\.pointerType==="touch"/);assert.match(render,/event\.preventDefault\(\);activate\(\)/);
+  assert.match(render,/openStudent\(s\.id,studentListOrigin\("categoryHub"\)\)/);
+  assert.match(app,/if\(!focused&&state\.studentResultPointerActive\)return/);
+  assert.match(app,/\$\("search"\)\.value=origin\.query\|\|""/);
+  assert.match(app,/state\.studentListMode=origin\.mode/);
+});
+
 test("Altre funzioni usa simbolo locale e condivisione usa righe checkbox coerenti",()=>{
   assert.match(html,/id="openOtherFunctions"[\s\S]*?<svg class="other-functions-symbol"[^>]*aria-hidden="true"/);assert.doesNotMatch(html.match(/id="openOtherFunctions"[^\n]*/)[0],/https?:\/\//);
   const share=app.match(/function openStudentMultiShare\(\)[\s\S]*?\n}/)[0];assert.match(share,/controlId=`share-student-/);assert.match(share,/label\.className="detail-row multi-student-option"/);assert.match(share,/label\.htmlFor=controlId/);assert.match(share,/input\.id=controlId/);
@@ -39,4 +49,23 @@ test("Altre funzioni usa simbolo locale e condivisione usa righe checkbox coeren
 
 test("report PDF continua a leggere checklist salvate senza raggruppamenti UI",()=>{
   const report=fs.readFileSync("r10-features.js","utf8");assert.match(report,/Storico guide/);assert.doesNotMatch(report,/ACTIVITY_GROUPS|activityGroupIndex/);
+});
+
+test("report PDF apre direttamente un documento locale senza document.write su about:blank",()=>{
+  const report=fs.readFileSync("r10-features.js","utf8"),fn=report.match(/function exportStudentPdf\(\)[\s\S]*?\n  }/)?.[0]||"";
+  assert.match(fn,/new Blob\(\[html\],\{type:"text\/html;charset=utf-8"\}\)/);
+  assert.match(fn,/window\.open\(url,"_blank"\)/);assert.match(fn,/URL\.revokeObjectURL/);
+  assert.doesNotMatch(fn,/document\.write|window\.open\("","_blank"\)|await\s/);
+});
+
+test("popup PDF bloccato espone un nuovo gesto diretto senza revoca anticipata",()=>{
+  const report=fs.readFileSync("r10-features.js","utf8"),html=fs.readFileSync("index.html","utf8");
+  assert.match(html,/id="openStudentPdfFallback"[^>]*target="_blank"[^>]*>APRI PDF<\/a>/);
+  assert.match(html,/id="studentPdfFallbackMessage"[^>]*role="status"/);
+  assert.match(report,/try\{reportWindow=window\.open\(url,"_blank"\)\}catch\{\}/);
+  assert.match(report,/if\(!reportWindow\)\{showStudentPdfFallback\(url\);return\}/);
+  assert.match(report,/link\.href=url;link\.classList\.remove\("hidden"\)/);
+  assert.doesNotMatch(report,/if\(!reportWindow\)\{URL\.revokeObjectURL\(url\)/);
+  assert.match(report,/openStudentPdfFallback"\)\.addEventListener\("click"/);
+  assert.match(report,/300000/);
 });
