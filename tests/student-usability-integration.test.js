@@ -1,0 +1,42 @@
+const test=require("node:test");
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const app=fs.readFileSync("app.js","utf8"),html=fs.readFileSync("index.html","utf8"),css=fs.readFileSync("style.css","utf8");
+
+test("scheda allievo e guida conservano la provenienza senza ricaricare la pagina",()=>{
+  assert.match(html,/id="backStudent"[^>]*>Indietro</);assert.match(app,/function studentListOrigin\(view\)/);
+  assert.match(app,/openStudent\(s\.id,studentListOrigin\("categoryHub"\)\)/);assert.match(app,/openStudent\(s\.id,studentListOrigin\("studentArchive"\)\)/);
+  assert.match(app,/function backFromStudent\(\)/);assert.match(app,/state\.lessonReturn=\{lessonsExpanded:state\.lessonsExpanded,scrollY:window\.scrollY\}/);
+  assert.match(app,/openStudent\(state\.studentId,null,\{preserveLessons:true\}\)/);assert.doesNotMatch(app,/function backFromStudent[\s\S]*?location\.(?:reload|replace)/);
+});
+
+test("attività didattiche sono raggruppate senza cambiare persistenza o ordine completo",()=>{
+  for(const title of ["Parte iniziale: controlli, preparazione e comandi","Autostrada","Manovre in via delle Genziane","Manovre in via Bobbio","Circolazione, sopraelevata ed extraurbana","Altre attività"])assert.ok(app.includes(title),title);
+  assert.match(app,/items\.forEach\(\(item,index\)=>\{const groupIndex=activityGroupIndex/);assert.match(app,/sort\(\(a,b\)=>a\[1\]\.first-b\[1\]\.first\)/);
+  assert.match(app,/if\(expanded\)\{renderActivityRows\(items\.map\(\(item,index\)=>\(\{item,index\}\)\),root\);return\}/);assert.match(app,/all\[index\]\.status=next/);
+  assert.match(app,/dataset\.items=JSON\.stringify\(all\)/);assert.match(html,/VISUALIZZA TUTTA L’ATTIVITÀ DIDATTICA/);assert.match(css,/\.activity-section/);
+});
+
+test("solo i nuovi allievi vengono salvati in maiuscolo preservando gli altri campi",()=>{
+  assert.match(app,/first=state\.editingStudent\?enteredFirst:enteredFirst\.toLocaleUpperCase\("it-IT"\)/);assert.match(app,/last=state\.editingStudent\?enteredLast:enteredLast\.toLocaleUpperCase\("it-IT"\)/);
+  assert.doesNotMatch(app,/studentNotes[^\n]*toLocaleUpperCase/);assert.equal("èlia d'angelo-rossi".toLocaleUpperCase("it-IT"),"ÈLIA D'ANGELO-ROSSI");
+});
+
+test("ordine comandi mantiene Nuova guida e colloca archivio e PDF prima di Elimina",()=>{
+  const student=html.match(/<section id="student"[\s\S]*?<\/section>/)[0],positions=["newLesson","archiveStudent","exportStudentPdf","deleteStudent"].map(id=>student.indexOf(`id="${id}"`));
+  assert.ok(positions.every(value=>value>=0));assert.ok(positions[0]<positions[1]&&positions[1]<positions[2]&&positions[2]<positions[3]);
+});
+
+test("ricerca mobile compatta la schermata senza perdere focus o introdurre reload",()=>{
+  assert.match(app,/addEventListener\("focus",\(\)=>setStudentSearchFocused\(true\)\)/);assert.match(app,/addEventListener\("blur",\(\)=>setStudentSearchFocused\(false\)\)/);
+  assert.match(app,/visualViewport\?\.addEventListener\("resize"/);assert.match(css,/#categoryHub\.student-search-focused/);const focusFunction=app.match(/function setStudentSearchFocused\([^\n]+/)[0];assert.doesNotMatch(focusFunction,/location\./);
+});
+
+test("Altre funzioni usa simbolo locale e condivisione usa righe checkbox coerenti",()=>{
+  assert.match(html,/id="openOtherFunctions"[\s\S]*?<svg class="other-functions-symbol"[^>]*aria-hidden="true"/);assert.doesNotMatch(html.match(/id="openOtherFunctions"[^\n]*/)[0],/https?:\/\//);
+  const share=app.match(/function openStudentMultiShare\(\)[\s\S]*?\n}/)[0];assert.match(share,/controlId=`share-student-/);assert.match(share,/label\.className="detail-row multi-student-option"/);assert.match(share,/label\.htmlFor=controlId/);assert.match(share,/input\.id=controlId/);
+});
+
+test("report PDF continua a leggere checklist salvate senza raggruppamenti UI",()=>{
+  const report=fs.readFileSync("r10-features.js","utf8");assert.match(report,/Storico guide/);assert.doesNotMatch(report,/ACTIVITY_GROUPS|activityGroupIndex/);
+});

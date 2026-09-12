@@ -24,12 +24,12 @@ test("il flusso applicativo salva errori, bozze, marcatori e non interrompe il G
 });
 
 test("gli asset sono caricati nell'ordine corretto e con versione dedicata",()=>{
-  const source=read("auth-client.js"),moduleIndex=source.indexOf('driving-errors.js?v=1.21-driving-errors-v2'),appIndex=source.indexOf('app.js?v=1.21-storage-resilience-v1');
+  const source=read("auth-client.js"),moduleIndex=source.indexOf('driving-errors.js?v=1.21-driving-errors-v2'),appIndex=source.indexOf('app.js?v=1.21-exams-v1');
   assert.ok(moduleIndex>=0&&appIndex>moduleIndex);
   assert.match(source,/full-backup-stream\.js\?v=1\.21-full-backup-stream-v2/);
-  assert.match(source,/full-backup\.js\?v=1\.21-full-backup-v4/);
+  assert.match(source,/full-backup\.js\?v=1\.21-exams-v1/);
   assert.ok(source.indexOf("full-backup-stream.js")<source.indexOf("full-backup.js"));
-  assert.match(source,/r10-features\.js\?v=1\.21-driving-errors-v2/);
+  assert.match(source,/r10-features\.js\?v=1\.21-exams-v1/);
 });
 
 test("backup corrente include gli errori e mantiene l'importazione dei formati precedenti",()=>{

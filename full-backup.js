@@ -12,7 +12,9 @@
   const DATA_KEYS={
     students:"autoscuola_v3_completa",
     checklists:"autoscuola_v3_checklists_v2",
-    examiners:"autoscuola_v3_examiners"
+    examiners:"autoscuola_v3_examiners",
+    exams:"autoscuola_v3_exam_sessions",
+    examLocations:"autoscuola_v3_exam_locations"
   };
   const DOCUMENT_DB="agenda_istruttori_documents";
   const DOCUMENT_DB_VERSION=1;
@@ -69,6 +71,8 @@
     if(!Array.isArray(appData.students))throw new Error("Archivio allievi non valido.");
     if(!appData.checklists||typeof appData.checklists!=="object"||Array.isArray(appData.checklists))throw new Error("Checklist non valide.");
     if(!Array.isArray(appData.examiners))throw new Error("Archivio esaminatori non valido.");
+    if(appData.exams!==undefined)window.AgendaExams.normalizeExams(appData.exams,{strict:true});
+    if(appData.examLocations!==undefined&&!Array.isArray(appData.examLocations))throw new Error("Località esami non valide.");
     const studentIds=new Set();
     for(const student of appData.students){
       if(!student||typeof student!=="object"||typeof student.id!=="string"||!student.id||studentIds.has(student.id))throw new Error("Il backup contiene allievi duplicati o non validi.");
@@ -234,7 +238,7 @@
   }
 
   async function createSafetySnapshot(){
-    const appData={students:parsedStorageValue(DATA_KEYS.students,[]),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[])};
+    const appData={students:parsedStorageValue(DATA_KEYS.students,[]),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[]),exams:parsedStorageValue(DATA_KEYS.exams,[]),examLocations:parsedStorageValue(DATA_KEYS.examLocations,[])};
     validateAppData(appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     return{version:1,appData,examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId)};
@@ -439,6 +443,7 @@
       students:parsedStorageValue(DATA_KEYS.students,[]),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
+      ,exams:parsedStorageValue(DATA_KEYS.exams,[]),examLocations:parsedStorageValue(DATA_KEYS.examLocations,[])
     };
     validateAppData(appData);
     const documentKeys=await readDocumentKeys();
@@ -631,6 +636,8 @@
     localStorage.setItem(DATA_KEYS.students,JSON.stringify(appData.students));
     localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(appData.checklists));
     localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(appData.examiners));
+    localStorage.setItem(DATA_KEYS.exams,JSON.stringify(appData.exams||[]));
+    localStorage.setItem(DATA_KEYS.examLocations,JSON.stringify(appData.examLocations||[]));
   }
 
   function canonicalAppData(appData,checklistKeys=null){
@@ -656,7 +663,9 @@
     const includedChecklistKeys=Array.isArray(checklistKeys)?checklistKeys:Object.keys(checklistSource);
     includedChecklistKeys.sort().forEach(key=>{checklists[key]=Array.isArray(checklistSource[key])?checklistSource[key].map(String):[]});
     const examiners=(Array.isArray(appData.examiners)?appData.examiners:[]).map(examiner=>({id:String(examiner&&examiner.id||""),firstName:String(examiner&&examiner.firstName||""),lastName:String(examiner&&examiner.lastName||""),notes:String(examiner&&examiner.notes||""),habits:Array.isArray(examiner&&examiner.habits)?examiner.habits.map(String):[]}));
-    return {students,checklists,examiners};
+    const exams=window.AgendaExams.normalizeExams(appData.exams||[],{strict:true});
+    const examLocations=window.AgendaExams.normalizeLocations(appData.examLocations||[]);
+    return {students,checklists,examiners,exams,examLocations};
   }
 
   async function textSha256(value){
@@ -689,6 +698,7 @@
       students:parsedStorageValue(DATA_KEYS.students,[]),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
+      ,exams:parsedStorageValue(DATA_KEYS.exams,[]),examLocations:parsedStorageValue(DATA_KEYS.examLocations,[])
     };
     validateAppData(appData);
     const canonical=canonicalAppData(appData,manifest.checklistKeys);
@@ -712,8 +722,8 @@
   async function verifyRestoredData(validated){
     const currentStudents=parsedStorageValue(DATA_KEYS.students,[]);
     const currentChecklists=parsedStorageValue(DATA_KEYS.checklists,{});
-    const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]);
-    if(JSON.stringify(currentStudents)!==JSON.stringify(validated.payload.appData.students)||JSON.stringify(currentChecklists)!==JSON.stringify(validated.payload.appData.checklists)||JSON.stringify(currentExaminers)!==JSON.stringify(validated.payload.appData.examiners))throw new Error("Verifica dei dati applicativi non riuscita.");
+    const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),currentExams=parsedStorageValue(DATA_KEYS.exams,[]),currentExamLocations=parsedStorageValue(DATA_KEYS.examLocations,[]);
+    if(JSON.stringify(currentStudents)!==JSON.stringify(validated.payload.appData.students)||JSON.stringify(currentChecklists)!==JSON.stringify(validated.payload.appData.checklists)||JSON.stringify(currentExaminers)!==JSON.stringify(validated.payload.appData.examiners)||JSON.stringify(currentExams)!==JSON.stringify(validated.payload.appData.exams||[])||JSON.stringify(currentExamLocations)!==JSON.stringify(validated.payload.appData.examLocations||[]))throw new Error("Verifica dei dati applicativi non riuscita.");
     if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}
     if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected=window.DrivingErrors.normalizeCatalog(validated.payload.drivingErrorCatalog,{strict:true}),actual=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica delle classificazioni errori non riuscita.")}
     const documentKeys=await readDocumentKeys();
