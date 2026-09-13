@@ -413,14 +413,14 @@
 <section id="exams" class="view exams-view">
   <div class="other-functions-subnav"><button id="examsHome" type="button" class="home-command">HOME</button><button id="examsBack" type="button" class="secondary">INDIETRO</button></div>
   <div class="top"><button id="newExam" type="button">NUOVO ESAME</button><button id="manageExamLocations" type="button" class="secondary">GESTISCI LOCALITÀ</button></div>
-  <div class="card"><h2>Esami</h2><div id="examList"></div><p id="emptyExams" class="empty hidden">Nessun esame salvato.</p></div>
+  <div class="card"><h2>Esami</h2><div id="examList"></div><p id="emptyExams" class="empty hidden">Nessun esame salvato. Premi NUOVO ESAME per crearne uno.</p><button id="toggleExams" type="button" class="secondary full hidden" aria-expanded="false">VISUALIZZA TUTTI GLI ESAMI</button></div>
 </section>
 
 <section id="examForm" class="view exam-form-view">
   <div class="other-functions-subnav"><button id="examFormHome" type="button" class="home-command">HOME</button><button id="backExamForm" type="button" class="secondary">INDIETRO</button></div>
   <div class="card form"><h2 id="examFormTitle">Nuovo esame</h2>
     <label>Data<input id="examDate" type="date" required></label>
-    <div class="exam-time-grid"><label>Ora di inizio<input id="examStartTime" type="time" required></label><label>Ora di fine<input id="examEndTime" type="time" required></label></div>
+    <div class="exam-time-grid"><label>Ora di inizio<input id="examStartTime" type="text" inputmode="decimal" autocomplete="off" placeholder="es. 13 oppure 13.30" aria-describedby="examTimeHelp" required></label><label>Ora di fine (facoltativa)<input id="examEndTime" type="text" inputmode="decimal" autocomplete="off" placeholder="es. 15 oppure 15:00" aria-describedby="examTimeHelp"></label></div><p id="examTimeHelp" class="muted">Puoi scrivere 13, 13.30 oppure 14:30. L’ora finale può essere aggiunta dopo l’esame.</p>
     <label>Località<select id="examLocation" required></select></label>
     <button id="addExamStudents" type="button" class="secondary full">AGGIUNGI ALLIEVI</button>
     <div id="examParticipants" class="exam-participants"></div><p id="emptyExamParticipants" class="empty">Nessun allievo aggiunto.</p>
@@ -588,5 +588,5 @@
     </div>
   </form>
 </div>
-<script src="auth-client.js?v=4"></script>
+<script src="auth-client.js?v=5"></script>
 </body></html>

@@ -238,7 +238,8 @@
   }
 
   async function createSafetySnapshot(){
-    const appData={students:parsedStorageValue(DATA_KEYS.students,[]),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[]),exams:parsedStorageValue(DATA_KEYS.exams,[]),examLocations:parsedStorageValue(DATA_KEYS.examLocations,[])};
+    const examData=await window.AgendaExamStore.snapshot();
+    const appData={students:parsedStorageValue(DATA_KEYS.students,[]),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[]),exams:examData.exams,examLocations:examData.locations};
     validateAppData(appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     return{version:1,appData,examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId)};
@@ -247,7 +248,7 @@
     if(!snapshot||snapshot.version!==1)throw new Error("Copia di sicurezza locale non valida.");
     validateAppData(snapshot.appData);
     await replaceDocumentsFromStore(openSafetyDatabase,SAFETY_DOCUMENT_STORE,(done,total)=>showProgress("Rollback documenti",done,total));
-    writeAppData(snapshot.appData);
+    await writeAppData(snapshot.appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     if(snapshot.examinerRoutes)window.ExaminerRoutesUI.restore(accountId,{...snapshot.examinerRoutes,accountId});
     window.DrivingErrors.createCatalogStore(localStorage).restore(accountId,snapshot.drivingErrorCatalog||window.DrivingErrors.defaultCatalog());
@@ -443,8 +444,9 @@
       students:parsedStorageValue(DATA_KEYS.students,[]),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
-      ,exams:parsedStorageValue(DATA_KEYS.exams,[]),examLocations:parsedStorageValue(DATA_KEYS.examLocations,[])
     };
+    const examData=await window.AgendaExamStore.snapshot();
+    appData.exams=examData.exams;appData.examLocations=examData.locations;
     validateAppData(appData);
     const documentKeys=await readDocumentKeys();
     const documents=[];
@@ -632,12 +634,13 @@
     }catch(error){await clearStaging();if(error?.name==="AbortError")throw error;if(error?.name==="QuotaExceededError")throw new Error("Spazio fisico insufficiente durante lo staging. I dati esistenti sono rimasti invariati.");throw error}
   }
 
-  function writeAppData(appData){
+  async function writeAppData(appData){
+    const exams=window.AgendaExams.normalizeExams(appData.exams||[],{strict:true});
+    const examLocations=window.AgendaExams.normalizeLocations(appData.examLocations||[]);
+    await window.AgendaExamStore.replaceAll(exams,examLocations);
     localStorage.setItem(DATA_KEYS.students,JSON.stringify(appData.students));
     localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(appData.checklists));
     localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(appData.examiners));
-    localStorage.setItem(DATA_KEYS.exams,JSON.stringify(appData.exams||[]));
-    localStorage.setItem(DATA_KEYS.examLocations,JSON.stringify(appData.examLocations||[]));
   }
 
   function canonicalAppData(appData,checklistKeys=null){
@@ -698,8 +701,8 @@
       students:parsedStorageValue(DATA_KEYS.students,[]),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
-      ,exams:parsedStorageValue(DATA_KEYS.exams,[]),examLocations:parsedStorageValue(DATA_KEYS.examLocations,[])
     };
+    const examData=await window.AgendaExamStore.snapshot();appData.exams=examData.exams;appData.examLocations=examData.locations;
     validateAppData(appData);
     const canonical=canonicalAppData(appData,manifest.checklistKeys);
     if(canonical.students.length!==manifest.students)throw new Error(`Verifica post-riavvio allievi fallita: attesi ${manifest.students}, trovati ${canonical.students.length}.`);
@@ -722,7 +725,7 @@
   async function verifyRestoredData(validated){
     const currentStudents=parsedStorageValue(DATA_KEYS.students,[]);
     const currentChecklists=parsedStorageValue(DATA_KEYS.checklists,{});
-    const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),currentExams=parsedStorageValue(DATA_KEYS.exams,[]),currentExamLocations=parsedStorageValue(DATA_KEYS.examLocations,[]);
+    const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),examData=await window.AgendaExamStore.snapshot(),currentExams=examData.exams,currentExamLocations=examData.locations;
     if(JSON.stringify(currentStudents)!==JSON.stringify(validated.payload.appData.students)||JSON.stringify(currentChecklists)!==JSON.stringify(validated.payload.appData.checklists)||JSON.stringify(currentExaminers)!==JSON.stringify(validated.payload.appData.examiners)||JSON.stringify(currentExams)!==JSON.stringify(validated.payload.appData.exams||[])||JSON.stringify(currentExamLocations)!==JSON.stringify(validated.payload.appData.examLocations||[]))throw new Error("Verifica dei dati applicativi non riuscita.");
     if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}
     if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected=window.DrivingErrors.normalizeCatalog(validated.payload.drivingErrorCatalog,{strict:true}),actual=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica delle classificazioni errori non riuscita.")}
@@ -741,7 +744,7 @@
     await writeSafetyCopy(safetySnapshot);
     try{
       await replaceDocumentsFromStore(openStagingDatabase,STAGING_DOCUMENT_STORE,(done,total)=>showProgress("Applicazione documenti",done,total));
-      writeAppData(validated.payload.appData);
+      await writeAppData(validated.payload.appData);
       if(validated.payload.formatVersion>=3){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.ExaminerRoutesUI.restore(currentAccount,{...validated.payload.examinerRoutes,accountId:currentAccount})}
       if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.DrivingErrors.createCatalogStore(localStorage).restore(currentAccount,validated.payload.drivingErrorCatalog)}
       await verifyRestoredData(validated);
