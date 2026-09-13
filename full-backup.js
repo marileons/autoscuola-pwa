@@ -635,8 +635,7 @@
   }
 
   async function writeAppData(appData){
-    const exams=window.AgendaExams.normalizeExams(appData.exams||[],{strict:true});
-    const examLocations=window.AgendaExams.normalizeLocations(appData.examLocations||[]);
+    const examArchive=window.AgendaExams.canonicalArchive(appData.exams||[],appData.examLocations||[],{strict:true}),exams=examArchive.exams,examLocations=examArchive.locations;
     await window.AgendaExamStore.replaceAll(exams,examLocations);
     localStorage.setItem(DATA_KEYS.students,JSON.stringify(appData.students));
     localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(appData.checklists));
@@ -666,8 +665,7 @@
     const includedChecklistKeys=Array.isArray(checklistKeys)?checklistKeys:Object.keys(checklistSource);
     includedChecklistKeys.sort().forEach(key=>{checklists[key]=Array.isArray(checklistSource[key])?checklistSource[key].map(String):[]});
     const examiners=(Array.isArray(appData.examiners)?appData.examiners:[]).map(examiner=>({id:String(examiner&&examiner.id||""),firstName:String(examiner&&examiner.firstName||""),lastName:String(examiner&&examiner.lastName||""),notes:String(examiner&&examiner.notes||""),habits:Array.isArray(examiner&&examiner.habits)?examiner.habits.map(String):[]}));
-    const exams=window.AgendaExams.normalizeExams(appData.exams||[],{strict:true});
-    const examLocations=window.AgendaExams.normalizeLocations(appData.examLocations||[]);
+    const examArchive=window.AgendaExams.canonicalArchive(appData.exams||[],appData.examLocations||[],{strict:true}),exams=examArchive.exams,examLocations=examArchive.locations;
     return {students,checklists,examiners,exams,examLocations};
   }
 
@@ -726,7 +724,7 @@
     const currentStudents=parsedStorageValue(DATA_KEYS.students,[]);
     const currentChecklists=parsedStorageValue(DATA_KEYS.checklists,{});
     const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),examData=await window.AgendaExamStore.snapshot(),currentExams=examData.exams,currentExamLocations=examData.locations;
-    if(JSON.stringify(currentStudents)!==JSON.stringify(validated.payload.appData.students)||JSON.stringify(currentChecklists)!==JSON.stringify(validated.payload.appData.checklists)||JSON.stringify(currentExaminers)!==JSON.stringify(validated.payload.appData.examiners)||JSON.stringify(currentExams)!==JSON.stringify(validated.payload.appData.exams||[])||JSON.stringify(currentExamLocations)!==JSON.stringify(validated.payload.appData.examLocations||[]))throw new Error("Verifica dei dati applicativi non riuscita.");
+    if(JSON.stringify(currentStudents)!==JSON.stringify(validated.payload.appData.students)||JSON.stringify(currentChecklists)!==JSON.stringify(validated.payload.appData.checklists)||JSON.stringify(currentExaminers)!==JSON.stringify(validated.payload.appData.examiners)||!window.AgendaExams.archivesEqual(currentExams,currentExamLocations,validated.payload.appData.exams||[],validated.payload.appData.examLocations||[],{strict:true}))throw new Error("Verifica dei dati applicativi non riuscita.");
     if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}
     if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected=window.DrivingErrors.normalizeCatalog(validated.payload.drivingErrorCatalog,{strict:true}),actual=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica delle classificazioni errori non riuscita.")}
     const documentKeys=await readDocumentKeys();

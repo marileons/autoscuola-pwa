@@ -63,3 +63,12 @@ test("backup vecchi restano supportati e il Registro economico resta separato",(
   assert.match(source,/examinerRoutes/);
   assert.match(source,/drivingErrorCatalog/);
 });
+
+test("verifica backup usa lo stesso archivio ESAMI canonico indipendente dall'ordine",()=>{
+  assert.match(source,/AgendaExams\.canonicalArchive/);
+  assert.match(source,/AgendaExams\.archivesEqual/);
+  assert.doesNotMatch(source,/JSON\.stringify\(currentExams\)!==JSON\.stringify/);
+  assert.match(source,/SUPPORTED_FORMAT_VERSIONS=new Set\(\[1,2,3,4\]\)/);
+  assert.match(source,/createSafetySnapshot[\s\S]*?examData\.exams[\s\S]*?examData\.locations/);
+  assert.match(source,/restoreSafetySnapshot/);
+});
