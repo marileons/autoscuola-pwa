@@ -1,0 +1,7 @@
+(function(root,factory){const api=factory();if(typeof module==="object"&&module.exports)module.exports=api;if(root)root.StudentLicense=api})(typeof globalThis!=="undefined"?globalThis:this,function(){
+"use strict";
+function validDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;const[y,m,d]=value.split("-").map(Number),date=new Date(Date.UTC(y,m-1,d));return date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===d}
+function normalize(raw,{strict=false}={}){if(raw===undefined||raw===null)return null;if(!raw||typeof raw!=="object"||Array.isArray(raw)){if(strict)throw Error("Dati patente conseguita non validi.");return null}const number=String(raw.number||"").trim().toLocaleUpperCase("it-IT"),issueDate=String(raw.issueDate||""),expiryDate=String(raw.expiryDate||"");if(!number&&!issueDate&&!expiryDate){if(strict)throw Error("Completa numero, data di rilascio e data di scadenza della patente.");return null}if(!number||!validDate(issueDate)||!validDate(expiryDate))throw Error("Completa numero, data di rilascio e data di scadenza della patente.");if(expiryDate<=issueDate)throw Error("La data di scadenza deve essere successiva alla data di rilascio.");return{number,issueDate,expiryDate}}
+function imported(existing,raw){return Object.prototype.hasOwnProperty.call(raw||{},"drivingLicense")?normalize(raw.drivingLicense,{strict:true}):normalize(existing,{strict:true})}
+return Object.freeze({normalize,imported,validDate});
+});

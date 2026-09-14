@@ -284,11 +284,12 @@
 
   function studentReportHtml(current){
     const base=studentReportHtmlBase(current);
+    const drivingLicense=window.StudentLicense.normalize(current.drivingLicense),licenseHtml=drivingLicense?`<section class="lesson license-report"><h2>PATENTE CONSEGUITA</h2><dl><div><dt>Categoria/percorso</dt><dd>${esc(sectionLabel(current.category))}</dd></div><div><dt>Numero patente</dt><dd>${esc(drivingLicense.number)}</dd></div><div><dt>Data di rilascio</dt><dd>${formatStoredDate(drivingLicense.issueDate)}</dd></div><div><dt>Data di scadenza</dt><dd>${formatStoredDate(drivingLicense.expiryDate)}</dd></div></dl></section>`:"";
     const notes=base.match(/<h2>Note<\/h2><p>[\s\S]*?<\/p>/)?.[0]||"";
     let report=base
       .replace(notes,"")
       .replace(/<h2>Percorso didattico<\/h2><table>[\s\S]*?<\/table>/,"")
-      .replace("<h2>Storico guide (","<h2>STORICO GUIDE (")
+      .replace("<h2>Storico guide (",`${licenseHtml}<h2>STORICO GUIDE (`)
       .replace('<footer class="footer">',`${notes}<footer class="footer">`);
     if(typeof current.photo==="string"&&/^data:image\/(?:jpeg|png|webp);base64,/i.test(current.photo)){
       report=report

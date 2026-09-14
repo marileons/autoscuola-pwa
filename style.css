@@ -201,6 +201,7 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 #appShell main>.view:not(#home)>.card:first-child,#home #studentSection{border-left:4px solid #d94249}
 #appShell main>.view:not(#home) .student-card,#appShell main>.view:not(#home) .lesson-card,#home #studentSection .student-card{background:linear-gradient(145deg,#263a46,#1c2d37)}
 .student-report-action{background:linear-gradient(135deg,#7d2631,#d4424f)!important;border:1px solid #e25d68!important;color:#fff!important}
+.student-license-card{border-left:4px solid #d94249!important}.student-license-card h2{margin-top:0}.student-license-card .form{margin-top:12px}.student-license-card input{width:100%;min-height:48px;font-size:16px}.student-license-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.student-license-actions .danger{grid-column:1/-1}.student-license-recommendation{padding:10px;border:1px solid #6b7540;border-radius:10px;background:#34351f;color:#f0df87}@media(max-width:520px){.student-license-actions{grid-template-columns:1fr}.student-license-actions .danger{grid-column:auto}}
 .wake-lock-status{margin:8px 0 12px;padding:8px 10px;border:1px solid #3d5360;border-radius:11px;background:#13242e}
 .saved-route-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0}
 .road-report-status{min-height:1.4em;margin:8px 2px}.road-report-panel{border-left:4px solid #d94249!important}

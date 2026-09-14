@@ -77,6 +77,7 @@
     for(const student of appData.students){
       if(!student||typeof student!=="object"||typeof student.id!=="string"||!student.id||studentIds.has(student.id))throw new Error("Il backup contiene allievi duplicati o non validi.");
       if(!Array.isArray(student.lessons)||!Array.isArray(student.checklist))throw new Error("Scheda allievo incompleta nel backup.");
+      if(Object.hasOwn(student,"drivingLicense"))window.StudentLicense.normalize(student.drivingLicense,{strict:true});
       const lessonIds=new Set();
       for(const lesson of student.lessons){if(!lesson||typeof lesson!=="object"||typeof lesson.id!=="string"||!lesson.id||lessonIds.has(lesson.id)||!Array.isArray(lesson.route)||!Array.isArray(lesson.checklist)||!Array.isArray(lesson.errors||[]))throw new Error("Guida duplicata o non valida nel backup.");lessonIds.add(lesson.id)}
       studentIds.add(student.id);
@@ -658,6 +659,7 @@
         })
       };
       if(typeof student?.photo==="string"&&/^data:image\/(?:jpeg|png|webp);base64,/i.test(student.photo))canonicalStudent.photo=student.photo;
+      const drivingLicense=Object.hasOwn(student||{},"drivingLicense")?window.StudentLicense.normalize(student.drivingLicense,{strict:true}):null;if(drivingLicense)canonicalStudent.drivingLicense=drivingLicense;
       return canonicalStudent;
     });
     const checklistSource=appData.checklists&&typeof appData.checklists==="object"&&!Array.isArray(appData.checklists)?appData.checklists:{};

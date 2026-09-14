@@ -1,6 +1,7 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 const source=fs.readFileSync(path.join(__dirname,"..","full-backup.js"),"utf8");
+test("il backup completo valida e canonizza la patente conseguita",()=>{assert.match(source,/drivingLicense/);assert.match(source,/StudentLicense/)});
 
 test("il ripristino valida interamente prima di scrivere",()=>{
   const restore=source.match(/async function restoreSelectedBackup\(file\)\{[\s\S]*?\n  \}/)?.[0]||"";

@@ -1,0 +1,9 @@
+"use strict";
+const test=require("node:test"),assert=require("node:assert/strict"),license=require("../student-license.js");
+test("normalizza numero e conserva le date valide",()=>{assert.deepEqual(license.normalize({number:" ab 123 cd ",issueDate:"2026-09-14",expiryDate:"2036-09-14"}),{number:"AB 123 CD",issueDate:"2026-09-14",expiryDate:"2036-09-14"})});
+test("dati patente assenti restano compatibili con gli allievi storici",()=>{assert.equal(license.normalize(undefined),null);assert.equal(license.normalize({number:"",issueDate:"",expiryDate:""}),null)});
+test("richiede tutti i campi e scadenza successiva",()=>{assert.throws(()=>license.normalize({number:"AA1",issueDate:"2026-09-14",expiryDate:""}),/Completa/);assert.throws(()=>license.normalize({number:"AA1",issueDate:"2026-09-14",expiryDate:"2026-09-14"}),/successiva/);assert.throws(()=>license.normalize({number:"AA1",issueDate:"2026-02-30",expiryDate:"2036-02-28"}),/Completa/)});
+test("salvataggio esplicito con tutti i campi vuoti viene rifiutato",()=>{assert.throws(()=>license.normalize({number:"",issueDate:"",expiryDate:""},{strict:true}),/Completa/)});
+test("import storico preserva la patente già presente",()=>{const current={number:"OLD",issueDate:"2020-01-01",expiryDate:"2030-01-01"};assert.deepEqual(license.imported(current,{id:"student-1"}),current)});
+test("import nuovo sostituisce dati validati e consente rimozione esplicita",()=>{const current={number:"OLD",issueDate:"2020-01-01",expiryDate:"2030-01-01"};assert.deepEqual(license.imported(current,{drivingLicense:{number:"new",issueDate:"2026-01-01",expiryDate:"2036-01-01"}}),{number:"NEW",issueDate:"2026-01-01",expiryDate:"2036-01-01"});assert.equal(license.imported(current,{drivingLicense:null}),null)});
+test("import malformato viene rifiutato senza degradare a dato vuoto",()=>{assert.throws(()=>license.imported(null,{drivingLicense:{number:"AA1"}}),/Completa/)});
