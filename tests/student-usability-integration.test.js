@@ -40,6 +40,25 @@ test("un risultato resta selezionabile con tastiera mobile attiva e conserva la 
   assert.match(app,/if\(!focused&&state\.studentResultPointerActive\)return/);
   assert.match(app,/\$\("search"\)\.value=origin\.query\|\|""/);
   assert.match(app,/state\.studentListMode=origin\.mode/);
+  assert.match(app,/searchFocused:view==="categoryHub"/);
+  assert.match(app,/focus\(\{preventScroll:true\}\)/);
+  assert.match(app,/scrollTo\(0,origin\.scrollY\|\|0\)/);
+});
+
+test("CERCA ALLIEVO include gli archiviati della categoria con badge non interattivo",()=>{
+  const render=app.match(/function renderStudents\(\)[\s\S]*?\nfunction renderArchivedStudents/)?.[0]||"";
+  assert.match(render,/includeArchived=state\.studentListMode==="search"/);
+  assert.match(render,/studentsForCategorySearch\(state\.students,state\.filter,includeArchived\)/);
+  assert.match(render,/student-archive-badge/);assert.match(render,/>ARCHIVIATO</);
+  assert.match(css,/\.student-archive-badge\{[^}]*pointer-events:none/);
+});
+
+test("campo ricerca mantiene margine moderato e stabile nella modalità tastiera",()=>{
+  assert.match(css,/\.category-hub #studentSearchPanel\{margin-top:10px\}/);
+  assert.match(css,/#categoryHub\.student-search-focused #studentSearchPanel\{margin-top:10px;scroll-margin-top:/);
+  assert.match(css,/#categoryHub\.student-search-focused #studentResults\{margin-top:8px\}/);
+  assert.match(css,/@media\(max-width:520px\)/);
+  assert.match(css,/\.category-hub #search\{font-size:16px\}/);
 });
 
 test("Altre funzioni usa simbolo locale e condivisione usa righe checkbox coerenti",()=>{
