@@ -67,7 +67,7 @@ test("backup vecchi restano supportati e il Registro economico resta separato",(
 
 test("verifica backup usa lo stesso archivio ESAMI canonico indipendente dall'ordine",()=>{
   assert.match(source,/AgendaExams\.canonicalArchive/);
-  assert.match(source,/AgendaExams\.archivesEqual/);
+  assert.match(source,/currentCanonical=canonicalAppData/);
   assert.doesNotMatch(source,/JSON\.stringify\(currentExams\)!==JSON\.stringify/);
   assert.match(source,/SUPPORTED_FORMAT_VERSIONS=new Set\(\[1,2,3,4\]\)/);
   assert.match(source,/createSafetySnapshot[\s\S]*?examData\.exams[\s\S]*?examData\.locations/);
@@ -81,4 +81,19 @@ test("backup completo conserva i nuovi campi ESAMI senza cambiare formato",()=>{
   const model=fs.readFileSync(path.join(__dirname,"..","exams.js"),"utf8");
   assert.match(model,/examinerId:clean\(raw\?\.examinerId\)/);
   assert.match(model,/examinerName:clean\(raw\?\.examinerName\)/);
+});
+
+test("patenti separate vengono reidratate e verificate canonicalmente nel backup",()=>{
+  assert.match(source,/students:await storedStudentsWithDrivingLicenses\(\)/);
+  assert.match(source,/studentsWithoutDrivingLicenses\(appData\.students\)/);
+  assert.match(source,/AgendaStudentLicenseStore\.replaceAll\(drivingLicenseRecords\(appData\.students\)\)/);
+  assert.match(source,/currentCanonical=canonicalAppData/);
+  assert.match(source,/expectedCanonical=canonicalAppData/);
+});
+
+test("un errore durante il ripristino compensa anche patenti ed esami",()=>{
+  assert.match(source,/previousLicenses=.*AgendaStudentLicenseStore/);
+  assert.match(source,/previousExamArchive=await window\.AgendaExamStore\.snapshot\(\)/);
+  assert.match(source,/AgendaStudentLicenseStore\)await window\.AgendaStudentLicenseStore\.replaceAll\(previousLicenses\)/);
+  assert.match(source,/AgendaExamStore\.replaceAll\(previousExamArchive\.exams,previousExamArchive\.locations\)/);
 });

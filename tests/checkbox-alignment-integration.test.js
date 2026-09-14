@@ -13,7 +13,7 @@ test("ogni errore specifico associa label e checkbox con ID univoco",()=>{
 });
 
 test("ogni allievo associa il nome soltanto alla propria checkbox stabile",()=>{
-  const render=app.match(/function openStudentMultiAction[\s\S]*?\nfunction executeStudentMultiAction/)?.[0]||"";
+  const render=app.match(/function openStudentMultiAction[\s\S]*?\nasync function executeStudentMultiAction/)?.[0]||"";
   assert.match(render,/controlId=`multi-student-\$\{encodeURIComponent\(item\.id\)\}`/);
   assert.match(render,/label\.htmlFor=controlId/);
   assert.match(render,/input\.id=controlId/);
