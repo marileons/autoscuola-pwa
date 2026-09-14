@@ -422,11 +422,17 @@
     <label>Data<input id="examDate" type="date" required></label>
     <div class="exam-time-grid"><label>Ora di inizio<input id="examStartTime" type="text" inputmode="decimal" autocomplete="off" placeholder="es. 13 oppure 13.30" aria-describedby="examTimeHelp" required></label><label>Ora di fine (facoltativa)<input id="examEndTime" type="text" inputmode="decimal" autocomplete="off" placeholder="es. 15 oppure 15:00" aria-describedby="examTimeHelp"></label></div><p id="examTimeHelp" class="muted">Puoi scrivere 13, 13.30 oppure 14:30. L’ora finale può essere aggiunta dopo l’esame.</p>
     <label>Località<select id="examLocation" required></select></label>
+    <div class="exam-examiner-selection"><p id="selectedExaminerName">Esaminatore: non inserito</p><div><button id="selectExamExaminer" type="button" class="secondary">SELEZIONA ESAMINATORE</button><button id="removeExamExaminer" type="button" class="danger hidden">RIMUOVI SELEZIONE</button></div></div>
     <button id="addExamStudents" type="button" class="secondary full">AGGIUNGI ALLIEVI</button>
     <div id="examParticipants" class="exam-participants"></div><p id="emptyExamParticipants" class="empty">Nessun allievo aggiunto.</p>
     <button id="saveExam" type="button" class="full">SALVA ESAME</button>
   </div>
   <button id="deleteExam" type="button" class="danger full hidden">ELIMINA ESAME</button>
+</section>
+
+<section id="examExaminerPicker" class="view exam-examiner-picker-view">
+  <div class="other-functions-subnav"><button id="examExaminerPickerHome" type="button" class="home-command">HOME</button><button id="backExamExaminerPicker" type="button" class="secondary">INDIETRO</button></div>
+  <div class="card"><h2>Seleziona esaminatore</h2><p>Scegli un solo esaminatore già registrato.</p><div id="examExaminerPickerList"></div><p id="emptyExamExaminerPicker" class="empty hidden">Nessun esaminatore disponibile. Creane prima uno nella sezione ESAMINATORI.</p><button id="confirmExamExaminer" type="button" class="full">CONFERMA ESAMINATORE</button></div>
 </section>
 
 <section id="examStudentPicker" class="view exam-student-picker-view">

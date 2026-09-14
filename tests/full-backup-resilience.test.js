@@ -72,3 +72,12 @@ test("verifica backup usa lo stesso archivio ESAMI canonico indipendente dall'or
   assert.match(source,/createSafetySnapshot[\s\S]*?examData\.exams[\s\S]*?examData\.locations/);
   assert.match(source,/restoreSafetySnapshot/);
 });
+
+test("backup completo conserva i nuovi campi ESAMI senza cambiare formato",()=>{
+  assert.match(source,/AgendaExamStore\.snapshot/);
+  assert.match(source,/AgendaExams\.canonicalArchive/);
+  assert.match(source,/SUPPORTED_FORMAT_VERSIONS=new Set\(\[1,2,3,4\]\)/);
+  const model=fs.readFileSync(path.join(__dirname,"..","exams.js"),"utf8");
+  assert.match(model,/examinerId:clean\(raw\?\.examinerId\)/);
+  assert.match(model,/examinerName:clean\(raw\?\.examinerName\)/);
+});
