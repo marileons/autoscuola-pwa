@@ -113,7 +113,7 @@ test("sessione e cronologia espongono soltanto metadati account consentiti", asy
     scheduled_employment_type: "FULL_TIME", scheduled_employment_effective_from: "2026-09-07"
   });
   assert.deepEqual(Object.keys(user).sort(), [
-    "active", "createdAt", "employmentEffectiveFrom", "employmentType", "id", "name", "role",
+    "active", "capabilities", "createdAt", "employmentEffectiveFrom", "employmentType", "id", "mustChangePassword", "name", "role",
     "scheduledEmploymentEffectiveFrom", "scheduledEmploymentType", "updatedAt", "username"
   ]);
   assert.deepEqual(publicEmploymentPeriods([

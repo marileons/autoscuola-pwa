@@ -493,21 +493,28 @@
   <div class="card form">
     <h2>Gestione utenti</h2>
     <p class="muted">Crea, blocca, riattiva o revoca gli accessi degli istruttori.</p>
+    <p id="managerOnlyNotice" class="manager-only-notice hidden">Modalità Gestore utenti: sono disponibili esclusivamente gli account degli istruttori e le operazioni autorizzate.</p>
     <form id="createUserForm" class="form">
       <label>Nome e cognome<input id="newUserName" maxlength="100" required></label>
       <label>Nome utente<input id="newUsername" minlength="3" maxlength="40" autocapitalize="none" spellcheck="false" required></label>
-      <label>Password iniziale<input id="newUserPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label>
-      <label>Ruolo<select id="newUserRole"><option value="ISTRUTTORE">Istruttore</option><option value="ADMIN">Amministratore</option></select></label>
+      <label id="newUserPasswordLabel">Password iniziale<input id="newUserPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></label>
+      <label id="newUserRoleLabel">Ruolo<select id="newUserRole"><option value="ISTRUTTORE">Istruttore</option><option value="ADMIN">Amministratore</option><option value="USER_MANAGER">Gestore utenti</option></select></label>
+      <label id="newUserOperatorPasswordLabel" class="hidden">Conferma la tua password<input id="newUserOperatorPassword" type="password" minlength="10" maxlength="128" autocomplete="current-password"></label>
       <label>Tipo lavorativo<select id="newUserEmploymentType" required><option value="PART_TIME">PART TIME</option><option value="FULL_TIME">FULL TIME</option></select></label>
       <label>Decorrenza prevista<input id="newUserEmploymentEffectiveFrom" type="date" required></label>
       <p class="muted">La decorrenza viene applicata dal lunedì della settimana selezionata.</p>
       <button type="submit">Crea utente</button>
     </form>
     <p id="userManagementMessage" class="muted hidden" role="status"></p>
+    <button id="managerLogout" type="button" class="danger hidden">ESCI</button>
   </div>
   <div class="card"><h2>Utenti</h2><div id="userList"></div></div>
+  <div id="userManagementAudit" class="card hidden"><h2>Audit gestione utenti</h2><p class="muted">Eventi essenziali degli ultimi 180 giorni. Password e segreti non vengono registrati.</p><button id="refreshUserAudit" type="button" class="secondary">AGGIORNA AUDIT</button><div id="userAuditList"></div></div>
   <div class="other-functions-subnav"><button id="backUserManagement" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
 </section>
+<div id="temporaryPasswordModal" class="choice-modal hidden" role="dialog" aria-modal="true" aria-labelledby="temporaryPasswordTitle">
+  <div class="choice-modal-card"><h2 id="temporaryPasswordTitle">Password provvisoria</h2><p>Comunicala all’utente tramite un canale sicuro. Non sarà più mostrata.</p><output id="temporaryPasswordValue" class="temporary-password-value"></output><p id="temporaryPasswordExpiry" class="muted"></p><button id="closeTemporaryPassword" type="button">HO SALVATO LA PASSWORD</button></div>
+</div>
 
 <section id="documentsView" class="view">
   <div class="other-functions-subnav"><button id="backDocuments" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
