@@ -88,8 +88,9 @@ function effectiveRole(row) {
   if (assigned === "USER_MANAGER") return legacy === "ISTRUTTORE" ? assigned : null;
   return assigned === legacy ? assigned : null;
 }
+function primaryAdminFlag(row) { return row?.is_primary_admin === 1 || row?.is_primary_admin === "1"; }
 function capabilitiesFor(row) {
-  const role = effectiveRole(row), primary = Boolean(row?.is_primary_admin);
+  const role = effectiveRole(row), primary = primaryAdminFlag(row);
   return { useApplication: role === "ADMIN" || role === "ISTRUTTORE", manageUsers: role === "ADMIN" || role === "USER_MANAGER", managePrivilegedUsers: role === "ADMIN" && primary, viewAudit: role === "ADMIN" && primary };
 }
 function publicUser(row, purpose = "NORMAL") {
@@ -261,9 +262,9 @@ async function changeOwnPassword(request, env, session) {
 }
 function requireAdmin(user) { return effectiveRole(user) === "ADMIN" ? null : json({ error: "Funzione riservata all’amministratore." }, 403); }
 function requireUserManager(user) { return ["ADMIN", "USER_MANAGER"].includes(effectiveRole(user)) ? null : json({ error: "Funzione riservata alla gestione utenti." }, 403); }
-function isPrimaryAdmin(user) { return effectiveRole(user) === "ADMIN" && Boolean(user?.is_primary_admin); }
-function normalTarget(user) { return effectiveRole(user) === "ISTRUTTORE" && !user?.is_primary_admin; }
-function manageableTarget(actor, target) { return normalTarget(target) || (isPrimaryAdmin(actor) && target?.id !== actor.id && !target?.is_primary_admin); }
+function isPrimaryAdmin(user) { return effectiveRole(user) === "ADMIN" && primaryAdminFlag(user); }
+function normalTarget(user) { return effectiveRole(user) === "ISTRUTTORE" && !primaryAdminFlag(user); }
+function manageableTarget(actor, target) { return normalTarget(target) || (isPrimaryAdmin(actor) && target?.id !== actor.id && !primaryAdminFlag(target)); }
 async function ownEmploymentHistory(env, user) {
   const result = await env.DB.prepare(`SELECT employment_type,effective_from
     FROM user_employment_periods WHERE user_id=? ORDER BY effective_from ASC`).bind(user.id).all();
@@ -460,6 +461,7 @@ export {
   requireAdmin,
   requireUserManager,
   effectiveRole,
+  primaryAdminFlag,
   capabilitiesFor,
   strictBody,
   normalTarget,

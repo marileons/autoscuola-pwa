@@ -1,5 +1,5 @@
 "use strict";
-const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
+const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto"),http=require("node:http"),os=require("node:os"),{spawn}=require("node:child_process");
 const {DatabaseSync}=require("node:sqlite"),root=path.resolve(__dirname,"..");
 async function worker(){const source=fs.readFileSync(path.join(root,"worker.js"),"utf8");return import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`)}
 function password(password,salt="c2FsdC1maXR0aXppbyE="){return crypto.pbkdf2Sync(password,Buffer.from(salt,"base64"),100000,32,"sha256").toString("base64")}
@@ -21,6 +21,7 @@ test("migrazione additiva preserva integralmente record ID relazioni e autentica
 });
 test("ruoli e capacità applicano il minimo privilegio",async()=>{const {effectiveRole,capabilitiesFor,requireUserManager,manageableTarget}=await worker();const primary={id:"p",role:"ADMIN",is_primary_admin:1},admin={id:"a",role:"ADMIN"},manager={id:"m",role:"ISTRUTTORE",authorization_role:"USER_MANAGER"},normal={id:"u",role:"ISTRUTTORE"};assert.equal(effectiveRole(manager),"USER_MANAGER");assert.equal(capabilitiesFor(manager).useApplication,false);assert.equal(requireUserManager(manager),null);assert.equal(manageableTarget(manager,normal),true);assert.equal(manageableTarget(manager,admin),false);assert.equal(manageableTarget(primary,admin),true);assert.equal(manageableTarget(primary,primary),false)});
 test("combinazioni incoerenti dei ruoli falliscono in modo chiuso",async()=>{const {effectiveRole,capabilitiesFor,requireUserManager}=await worker();for(const row of [{role:"ADMIN",authorization_role:"ISTRUTTORE"},{role:"ISTRUTTORE",authorization_role:"ADMIN"},{role:"ADMIN",authorization_role:"USER_MANAGER"},{role:"ADMIN",authorization_role:"ROOT"},{role:"ROOT",authorization_role:null}]){assert.equal(effectiveRole(row),null);assert.deepEqual(capabilitiesFor(row),{useApplication:false,manageUsers:false,managePrivilegedUsers:false,viewAudit:false});assert.notEqual(requireUserManager(row),null)}assert.equal(effectiveRole({role:"ADMIN",authorization_role:null}),"ADMIN");assert.equal(effectiveRole({role:"ISTRUTTORE",authorization_role:null}),"ISTRUTTORE")});
+test("il flag del principale accetta soltanto uno numerico o serializzato",async()=>{const {primaryAdminFlag,capabilitiesFor}=await worker();for(const value of [0,"0",false,true,null,undefined,"",2,"1x"," 1"]){assert.equal(primaryAdminFlag({is_primary_admin:value}),false);assert.equal(capabilitiesFor({role:"ADMIN",authorization_role:"ADMIN",is_primary_admin:value}).viewAudit,false)}assert.equal(primaryAdminFlag({is_primary_admin:1}),true);assert.equal(primaryAdminFlag({is_primary_admin:"1"}),true)});
 test("principale, privilegiati e ultimo ADMIN sono protetti lato server",()=>{const source=fs.readFileSync(path.join(root,"worker.js"),"utf8");assert.match(source,/target\.is_primary_admin/);assert.match(source,/ultimo amministratore abilitato/);assert.match(source,/manageableTarget\(actor, target\)/);assert.match(source,/Configura e utilizza l’amministratore principale/);assert.match(source,/Funzione riservata all’amministratore principale/);assert.match(source,/LIMIT \?/)});
 test("whitelist rigida blocca ruolo contraffatto e mass assignment",async()=>{const {strictBody}=await worker();const allowed=["name","username","employmentType","employmentEffectiveFrom","operatorPassword"];assert.equal(strictBody({name:"Mario",role:"ADMIN"},allowed),false);assert.equal(strictBody({name:"Mario",session_version:99},allowed),false);assert.equal(strictBody({name:"Mario",is_primary_admin:true},allowed),false);assert.equal(strictBody({name:"Mario"},allowed),true)});
 test("password provvisoria è robusta e non coincide con un PIN",async()=>{const {randomTemporaryPassword}=await worker();const values=new Set(Array.from({length:20},()=>randomTemporaryPassword()));assert.equal(values.size,20);for(const value of values){assert.equal(value.length,20);assert.doesNotMatch(value,/^\d{4}$/)}});
@@ -29,7 +30,45 @@ test("rotte ristrette, consumo atomico e sessione limitata sono presenti",()=>{c
 test("audit e throttling non contengono segreti",()=>{const sql=fs.readFileSync(path.join(root,"migrations","0003_user_manager_and_temporary_passwords.sql"),"utf8");const audit=sql.slice(sql.indexOf("CREATE TABLE user_management_audit"),sql.indexOf("CREATE INDEX user_management_audit"));assert.doesNotMatch(audit,/password|token|cookie|pin|recovery|salt|hash/i);assert.match(sql,/CREATE TABLE security_throttles/);assert.match(sql,/key_hash/)});
 test("reset generale permanente è rifiutato a favore della password provvisoria",()=>{const source=fs.readFileSync(path.join(root,"worker.js"),"utf8");assert.match(source,/Usa la funzione Password provvisoria/);assert.doesNotMatch(source,/updates\.push\("password_hash=\?"/);assert.match(source,/\/api\/user-management\/audit/)});
 test("USER_MANAGER usa solo shell gestionale e non carica i moduli operativi",()=>{const client=fs.readFileSync(path.join(root,"auth-client.js"),"utf8");assert.match(client,/if \(currentUser\?\.role === "USER_MANAGER"\) return showManagerShell\(\)/);assert.match(client,/routeAfterAuthentication/);assert.match(client,/\/api\/user-management\/users/);assert.match(client,/document\.querySelectorAll\("#appShell \.view"\)/);assert.match(client,/managerLogout/);assert.match(client,/capabilities\?\.viewAudit/);assert.match(client,/temporaryPasswordValue.*textContent = ""/)});
+test("il markup iniziale non contiene il pannello audit",()=>{assert.doesNotMatch(fs.readFileSync(path.join(root,"index.html"),"utf8"),/id="userManagementAudit"|id="refreshUserAudit"|id="userAuditList"/)});
 test("la migrazione non usa DDL o DML distruttivo e non rimappa record",()=>{const sql=fs.readFileSync(path.join(root,"migrations","0003_user_manager_and_temporary_passwords.sql"),"utf8").replace(/^--.*$/gm,"").replace(/ON DELETE SET NULL/gi,"");assert.doesNotMatch(sql,/\b(?:DROP|UPDATE|INSERT|SELECT|DELETE)\b/i);assert.match(sql,/ALTER TABLE users ADD COLUMN/);assert.match(sql,/ALTER TABLE sessions ADD COLUMN/)});
+
+const edgePath="C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+function runEdge(url,profile){
+ return new Promise((resolve,reject)=>{
+   const child=spawn(edgePath,["--headless=new","--disable-gpu","--disable-software-rasterizer","--use-gl=disabled","--disable-features=VizDisplayCompositor","--disable-background-networking","--disable-component-update","--no-first-run","--no-default-browser-check",`--user-data-dir=${profile}`,"--dump-dom","--virtual-time-budget=1400",url],{windowsHide:true});
+  let stdout="",stderr="";child.stdout.on("data",chunk=>stdout+=chunk);child.stderr.on("data",chunk=>stderr+=chunk);
+   const timer=setTimeout(()=>{child.kill();reject(new Error("Timeout del browser reale locale."))},35000);
+  child.on("error",reject);child.on("close",code=>{clearTimeout(timer);code===0?resolve(stdout):reject(new Error(`Edge headless ${code}: ${stderr}`))});
+ });
+}
+async function removeBrowserProfile(profile){let lastError;for(let attempt=0;attempt<20;attempt++){try{fs.rmSync(profile,{recursive:true,force:true,maxRetries:2,retryDelay:100});return}catch(error){lastError=error;await new Promise(resolve=>setTimeout(resolve,150))}}throw lastError}
+test("browser reale: Audit esiste solo per il principale e nessun altro account lo richiede",{timeout:180000},async t=>{
+ if(!fs.existsSync(edgePath)){t.skip("Microsoft Edge non disponibile");return}
+ const sourceIndex=fs.readFileSync(path.join(root,"index.html"),"utf8"),sourceClient=fs.readFileSync(path.join(root,"auth-client.js"),"utf8");
+ const injection=`<output id="browserAuditRequestCount">0</output><script>
+  (()=>{const kind=new URLSearchParams(location.search).get("identity");const identities={
+   primary:{id:"p",name:"PRINCIPALE",username:"primary",role:"ADMIN",capabilities:{useApplication:true,manageUsers:true,managePrivilegedUsers:true,viewAudit:true}},
+   admin:{id:"a",name:"ADMIN SECONDARIO",username:"admin",role:"ADMIN",capabilities:{useApplication:true,manageUsers:true,managePrivilegedUsers:false,viewAudit:false}},
+   manager:{id:"m",name:"GESTORE",username:"manager",role:"USER_MANAGER",capabilities:{useApplication:false,manageUsers:true,managePrivilegedUsers:false,viewAudit:false}},
+   instructor:{id:"i",name:"ISTRUTTORE",username:"instructor",role:"ISTRUTTORE",capabilities:{useApplication:true,manageUsers:false,managePrivilegedUsers:false,viewAudit:false}}
+  };window.__auditRequests=0;const nativeFetch=window.fetch.bind(window);
+  window.fetch=async(input,options)=>{const target=new URL(typeof input==="string"?input:input.url,location.href);
+   if(target.pathname==="/api/auth/me")return new Response(JSON.stringify({user:identities[kind]}),{status:200,headers:{"content-type":"application/json"}});
+   if(target.pathname==="/api/user-management/users"||target.pathname==="/api/users")return new Response(JSON.stringify({users:[]}),{status:200,headers:{"content-type":"application/json"}});
+   if(target.pathname==="/api/user-management/audit"){window.__auditRequests++;document.getElementById("browserAuditRequestCount").textContent=String(window.__auditRequests);return new Response(JSON.stringify({events:[]}),{status:200,headers:{"content-type":"application/json"}})}
+   return nativeFetch(input,options);
+  };
+  addEventListener("DOMContentLoaded",()=>setTimeout(()=>{if(kind==="primary")document.getElementById("refreshUserAudit")?.click()},350));
+  })();
+ </script>`;
+ const fixture=sourceIndex.replace('<script src="auth-client.js?v=5"></script>',injection+'<script src="/auth-client.js"></script>');
+ const server=http.createServer((request,response)=>{const pathname=new URL(request.url,"http://local").pathname;if(pathname==="/"){response.setHeader("content-type","text/html; charset=utf-8");response.end(fixture)}else if(pathname==="/auth-client.js"){response.setHeader("content-type","text/javascript");response.end(sourceClient)}else if(pathname.endsWith(".js")){response.setHeader("content-type","text/javascript");response.end("window.AgendaAppReady=Promise.resolve();")}else{response.statusCode=204;response.end()}});
+ await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));const port=server.address().port;
+ try{
+  for(const identity of ["primary","admin","manager","instructor"]){const profile=fs.mkdtempSync(path.join(os.tmpdir(),`agenda-audit-${identity}-`));try{const dom=await runEdge(`http://127.0.0.1:${port}/?identity=${identity}`,profile);const authorized=identity==="primary";assert.equal(/id="userManagementAudit"/.test(dom),authorized,`${identity}: presenza pannello`);assert.equal(/id="refreshUserAudit"/.test(dom),authorized,`${identity}: presenza comando`);assert.match(dom,new RegExp(`id="browserAuditRequestCount">${authorized?1:0}<`),`${identity}: richieste audit`)}finally{await removeBrowserProfile(profile)}}
+ }finally{await new Promise(resolve=>server.close(resolve))}
+});
 
 class LocalD1 {
  constructor(db){this.db=db}
@@ -70,6 +109,7 @@ test("flusso HTTP locale USER_MANAGER, password provvisoria e attacchi restano c
  assert.equal((await call("/api/auth/me",{cookie:passwordCookie})).status,200);assert.equal((await call("/app.js",{cookie:passwordCookie})).status,403);assert.equal((await call("/api/account/employment",{cookie:passwordCookie})).status,403);
  assert.equal((await call("/api/auth/password",{method:"POST",cookie:passwordCookie,body:{currentPassword:"",newPassword:"PasswordPersonaleNuova!",confirmPassword:"PasswordPersonaleNuova!"}})).status,200);
  assert.equal((await call("/api/auth/login",{method:"POST",body:{username:"active",password:issued.body.temporaryPassword}})).status,401);const normalAgain=await responseJson(await call("/api/auth/login",{method:"POST",body:{username:"active",password:"PasswordPersonaleNuova!"}}));assert.equal(normalAgain.status,200);
+ assert.equal((await call("/api/user-management/audit",{cookie:normalAgain.cookie})).status,403);
  db.prepare("UPDATE users SET session_version=session_version+1 WHERE id='active'").run();assert.equal((await call("/api/auth/me",{cookie:normalAgain.cookie})).status,401);
  const expired=await responseJson(await call("/api/user-management/users/active/temporary-password",{method:"POST",cookie:managerCookie,body:{operatorPassword:"PasswordFittizia!"}}));assert.equal(expired.status,200);db.prepare("UPDATE users SET temporary_password_expires_at='2020-01-01T00:00:00Z' WHERE id='active'").run();assert.equal((await call("/api/auth/login",{method:"POST",body:{username:"active",password:expired.body.temporaryPassword}})).status,401);
  assert.equal((await call("/api/user-management/users",{method:"POST",cookie:managerCookie,origin:null,body:{}})).status,403);assert.equal((await call("/api/user-management/users",{method:"POST",cookie:managerCookie,origin:"https://evil.test",body:{}})).status,403);
@@ -79,6 +119,7 @@ test("flusso HTTP locale USER_MANAGER, password provvisoria e attacchi restano c
  assert.equal((await call("/api/user-management/users/active/temporary-password",{method:"POST",cookie:managerCookie,body:{operatorPassword:"errata"}})).status,429);
  const auditRows=db.prepare("SELECT * FROM user_management_audit").all();assert.ok(auditRows.length>0);assert.doesNotMatch(JSON.stringify(auditRows),/PasswordFittizia|PasswordPersonaleNuova|agenda_session|password_hash|password_salt/);
  assert.equal((await call("/api/user-management/audit",{cookie:managerCookie})).status,403);
+ const adminLogin=await responseJson(await call("/api/auth/login",{method:"POST",body:{username:"admin2",password:"PasswordFittizia!"}}));assert.equal((await call("/api/user-management/audit",{cookie:adminLogin.cookie})).status,403);
  const primaryLogin=await responseJson(await call("/api/auth/login",{method:"POST",body:{username:"primary",password:"PasswordFittizia!"}}));assert.equal((await call("/api/user-management/audit",{cookie:primaryLogin.cookie})).status,200);
  assert.equal((await call("/api/auth/logout",{method:"POST",cookie:managerCookie,body:{}})).status,200);assert.equal((await call("/api/auth/me",{cookie:managerCookie})).status,401);
  db.close();

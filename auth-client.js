@@ -42,6 +42,7 @@
       window.ExaminerRoutesUI?.stopAll?.();
     }
     currentUser = user;
+    syncAuditPanel();
     const adminButton = document.getElementById("openUserManagement");
     if (adminButton) adminButton.classList.toggle("hidden", !user?.capabilities?.manageUsers);
     updateHomeUser();
@@ -110,6 +111,7 @@
     await loadApplication();
   }
   function showManagerShell() {
+    syncAuditPanel();
     document.getElementById("loginScreen")?.classList.add("hidden");
     document.getElementById("appShell")?.classList.remove("hidden");
     document.querySelectorAll("#appShell .view").forEach(view => view.classList.remove("active"));
@@ -204,7 +206,7 @@
     if (!currentUser?.capabilities?.manageUsers) return;
     window.show("userManagement");
     await refreshUsers();
-    if (currentUser?.capabilities?.viewAudit) await refreshAudit();
+    if (currentUser?.capabilities?.viewAudit === true) await refreshAudit();
   }
 
   async function refreshUsers() {
@@ -219,10 +221,29 @@
       list.textContent = error.message;
     }
   }
+  function removeAuditPanel() {
+    document.getElementById("userManagementAudit")?.remove();
+  }
+  function createAuditPanel() {
+    const section = document.getElementById("userManagement");
+    if (!section || currentUser?.capabilities?.viewAudit !== true) return null;
+    const panel = document.createElement("div"); panel.id = "userManagementAudit"; panel.className = "card";
+    const title = document.createElement("h2"); title.textContent = "Audit gestione utenti";
+    const description = document.createElement("p"); description.className = "muted"; description.textContent = "Eventi essenziali degli ultimi 180 giorni. Password e segreti non vengono registrati.";
+    const refresh = document.createElement("button"); refresh.id = "refreshUserAudit"; refresh.type = "button"; refresh.className = "secondary"; refresh.textContent = "AGGIORNA AUDIT"; refresh.onclick = refreshAudit;
+    const list = document.createElement("div"); list.id = "userAuditList";
+    panel.append(title, description, refresh, list);
+    section.insertBefore(panel, section.querySelector(".other-functions-subnav"));
+    return panel;
+  }
+  function syncAuditPanel() {
+    removeAuditPanel();
+    if (currentUser?.capabilities?.viewAudit === true) createAuditPanel();
+  }
   async function refreshAudit() {
-    const panel = document.getElementById("userManagementAudit");
-    panel.classList.toggle("hidden", !currentUser?.capabilities?.viewAudit);
-    if (!currentUser?.capabilities?.viewAudit) return;
+    if (currentUser?.capabilities?.viewAudit !== true) { removeAuditPanel(); return; }
+    const panel = document.getElementById("userManagementAudit") || createAuditPanel();
+    if (!panel) return;
     const list = document.getElementById("userAuditList"); list.textContent = "Caricamento…";
     try {
       const data = await api("/api/user-management/audit?limit=50", { method: "GET" });
@@ -357,7 +378,6 @@
     document.getElementById("ownPasswordForm").onsubmit = changeOwnPassword;
     document.getElementById("closeTemporaryPassword").onclick = () => { document.getElementById("temporaryPasswordValue").textContent = ""; document.getElementById("temporaryPasswordModal").classList.add("hidden"); };
     document.getElementById("managerLogout").onclick = () => logout(showPublicLogin);
-    document.getElementById("refreshUserAudit").onclick = refreshAudit;
     document.getElementById("newUserEmploymentEffectiveFrom").value = mondayIso();
   }
 
