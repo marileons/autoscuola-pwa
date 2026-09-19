@@ -51,7 +51,7 @@ export default {
       if (url.pathname === "/api/users" && request.method === "POST") return createUser(request, env, session.user);
       const match = url.pathname.match(/^\/api\/users\/([^/]+)$/);
       if (match && request.method === "PATCH") return updateUser(request, env, session.user, decodeURIComponent(match[1]));
-      if (match && request.method === "DELETE") return revokeUser(env, session.user, decodeURIComponent(match[1]));
+      if (match && request.method === "DELETE") return revokeUser(request, env, session.user, decodeURIComponent(match[1]));
       if (url.pathname === "/api/user-management/users" && request.method === "GET") return managerListUsers(env, session.user);
       if (url.pathname === "/api/user-management/users" && request.method === "POST") return managerCreateUser(request, env, session.user);
       if (url.pathname === "/api/user-management/audit" && request.method === "GET") return principalAudit(url, env, session.user);
@@ -171,12 +171,27 @@ async function throttleFailure(env, scope, keyHash) {
     .bind(scope, keyHash, failures, now.toISOString(), blockedUntil, now.toISOString()).run();
 }
 async function throttleClear(env, scope, keyHash) { await env.DB.prepare("DELETE FROM security_throttles WHERE scope=? AND key_hash=?").bind(scope, keyHash).run(); }
-async function audit(env, request, actorId, targetId, action, outcome, reasonCode) {
+function auditIdentity(value) {
+  if (!value) return { id: null, username: null, name: null };
+  if (typeof value === "string") return { id: value, username: null, name: null };
+  return { id: value.id || null, username: value.username || null, name: value.name || null };
+}
+function auditStatements(env, request, actor, target, action, outcome, reasonCode) {
   const now = new Date(), cutoff = new Date(now.getTime() - AUDIT_RETENTION_MS).toISOString();
-  await env.DB.batch([
-    env.DB.prepare("INSERT INTO user_management_audit(id,occurred_at,actor_user_id,target_user_id,action,outcome,reason_code,request_id) VALUES(?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(), now.toISOString(), actorId || null, targetId || null, action, outcome, reasonCode, requestId(request)),
+  const actorIdentity = auditIdentity(actor), targetIdentity = auditIdentity(target);
+  return [
+    env.DB.prepare(`INSERT INTO user_management_audit(
+      id,occurred_at,actor_user_id,target_user_id,action,outcome,reason_code,request_id,
+      actor_user_ref,actor_username,actor_name,target_user_ref,target_username,target_name
+    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
+      crypto.randomUUID(), now.toISOString(), actorIdentity.id, targetIdentity.id, action, outcome, reasonCode, requestId(request),
+      actorIdentity.id, actorIdentity.username, actorIdentity.name, targetIdentity.id, targetIdentity.username, targetIdentity.name
+    ),
     env.DB.prepare("DELETE FROM user_management_audit WHERE occurred_at<?").bind(cutoff)
-  ]);
+  ];
+}
+async function audit(env, request, actor, target, action, outcome, reasonCode) {
+  await env.DB.batch(auditStatements(env, request, actor, target, action, outcome, reasonCode));
 }
 function randomTemporaryPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
@@ -298,7 +313,8 @@ async function createUser(request, env, admin) {
       env.DB.prepare("INSERT INTO users (id,username,name,role,authorization_role,password_hash,password_salt,password_iterations,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
         .bind(id, username, name, role === "USER_MANAGER" ? "ISTRUTTORE" : role, role, secret.hash, secret.salt, secret.iterations, 1, now, now),
       env.DB.prepare("INSERT INTO user_employment_periods (id,user_id,employment_type,effective_from,created_at,created_by) VALUES (?,?,?,?,?,?)")
-        .bind(crypto.randomUUID(), id, employmentType, employmentEffectiveFrom, now, admin.id)
+        .bind(crypto.randomUUID(), id, employmentType, employmentEffectiveFrom, now, admin.id),
+      ...auditStatements(env, request, admin, { id, username, name }, role === "USER_MANAGER" ? "CREATE_USER_MANAGER" : "CREATE_USER", "SUCCESS", "CREATED_BY_ADMIN")
     ]);
   } catch (error) {
     if (String(error).toLowerCase().includes("unique")) return json({ error: "Questo username è già utilizzato." }, 409);
@@ -347,21 +363,28 @@ async function updateUser(request, env, admin, id) {
         created_by=excluded.created_by`)
       .bind(crypto.randomUUID(), id, employmentChange.employmentType, employmentChange.effectiveFrom, now, admin.id));
   }
+  if (body.active === false) statements.push(env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(id));
+  const updatedTarget = { ...target, ...(Object.hasOwn(body, "name") ? { name: String(body.name).trim() } : {}) };
+  const auditAction = Object.hasOwn(body, "active") ? (body.active ? "ENABLE_USER" : "BLOCK_USER") : "UPDATE_USER";
+  statements.push(...auditStatements(env, request, admin, updatedTarget, auditAction, "SUCCESS", "UPDATED_BY_ADMIN"));
   try {
-    if (statements.length === 1) await statements[0].run(); else await env.DB.batch(statements);
+    await env.DB.batch(statements);
   } catch (error) { throw error; }
-  if (body.active === false) await env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(id).run();
   const row = await env.DB.prepare(userSelect("WHERE u.id=?")).bind(id).first();
   return json({ user: publicUser(row) });
 }
-async function revokeUser(env, admin, id) {
+async function revokeUser(request, env, admin, id) {
   const denied = requireAdmin(admin); if (denied) return denied;
   if (id === admin.id) return json({ error: "Non puoi revocare il tuo stesso account." }, 400);
   const found = await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(id).first();
   if (!found) return json({ error: "Utente non trovato." }, 404);
   if (!normalTarget(found) && !isPrimaryAdmin(admin)) return json({ error: "Solo l’amministratore principale può revocare utenti privilegiati." }, 403);
   if (found.is_primary_admin) return json({ error: "L’amministratore principale non può essere revocato." }, 400);
-  await env.DB.batch([env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(id), env.DB.prepare("DELETE FROM users WHERE id=?").bind(id)]);
+  await env.DB.batch([
+    ...auditStatements(env, request, admin, found, "DELETE_USER", "SUCCESS", "DELETED_BY_ADMIN"),
+    env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(id),
+    env.DB.prepare("DELETE FROM users WHERE id=?").bind(id)
+  ]);
   return json({ ok: true });
 }
 async function managerListUsers(env, actor) {
@@ -374,7 +397,8 @@ async function principalAudit(url, env, actor) {
   if (!isPrimaryAdmin(actor)) return json({ error: "Funzione riservata all’amministratore principale." }, 403);
   const requestedLimit = Number(url.searchParams.get("limit") || 50);
   const limit = Number.isInteger(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 50;
-  const result = await env.DB.prepare(`SELECT occurred_at,actor_user_id,target_user_id,action,outcome,reason_code,request_id
+  const result = await env.DB.prepare(`SELECT occurred_at,actor_user_id,target_user_id,action,outcome,reason_code,request_id,
+      actor_user_ref,actor_username,actor_name,target_user_ref,target_username,target_name
     FROM user_management_audit ORDER BY occurred_at DESC LIMIT ?`).bind(limit).all();
   return json({ events: result.results });
 }
@@ -384,7 +408,7 @@ async function managerCreateUser(request, env, actor) {
   if (!strictBody(body, allowed)) return json({ error: "La richiesta contiene campi non consentiti." }, 400);
   const operatorPassword = String(body.operatorPassword || ""), rate = await throttleStatus(env, "OPERATOR_CONFIRM", actor.id);
   if (rate.blocked) return json({ error: "Troppi tentativi. Attendi alcuni minuti e riprova." }, 429);
-  if (!(await verifyPassword(operatorPassword, actor))) { await throttleFailure(env, "OPERATOR_CONFIRM", rate.keyHash); await audit(env, request, actor.id, null, "CREATE_USER", "DENIED", "OPERATOR_PASSWORD_INVALID"); return json({ error: "Conferma dell’operatore non valida." }, 403); }
+  if (!(await verifyPassword(operatorPassword, actor))) { await throttleFailure(env, "OPERATOR_CONFIRM", rate.keyHash); await audit(env, request, actor, null, "CREATE_USER", "DENIED", "OPERATOR_PASSWORD_INVALID"); return json({ error: "Conferma dell’operatore non valida." }, 403); }
   await throttleClear(env, "OPERATOR_CONFIRM", rate.keyHash);
   const username = normalizeUsername(body.username), name = String(body.name || "").trim(), employmentType = normalizeEmploymentType(body.employmentType), requested = normalizeDate(body.employmentEffectiveFrom), effectiveFrom = mondayOf(requested);
   if (!validUsername(username) || !name || name.length > 100 || !employmentType || !requested || effectiveFrom < mondayOf(today())) return json({ error: "Dati del nuovo utente non validi." }, 400);
@@ -394,7 +418,7 @@ async function managerCreateUser(request, env, actor) {
       env.DB.prepare("INSERT INTO users(id,username,name,role,authorization_role,password_hash,password_salt,password_iterations,active,created_at,updated_at,must_change_password,temporary_password_expires_at,password_reset_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(id,username,name,"ISTRUTTORE","ISTRUTTORE",secret.hash,secret.salt,secret.iterations,1,now.toISOString(),now.toISOString(),1,expires,now.toISOString()),
       env.DB.prepare("INSERT INTO user_employment_periods(id,user_id,employment_type,effective_from,created_at,created_by) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),id,employmentType,effectiveFrom,now.toISOString(),actor.id)
     ]);
-    await audit(env, request, actor.id, id, "CREATE_USER", "SUCCESS", "CREATED_WITH_TEMPORARY_PASSWORD");
+    await audit(env, request, actor, { id, username, name }, "CREATE_USER", "SUCCESS", "CREATED_WITH_TEMPORARY_PASSWORD");
   } catch (error) { if (String(error).toLowerCase().includes("unique")) return json({ error: "Questo username è già utilizzato." }, 409); throw error; }
   return json({ user: publicUser(await env.DB.prepare(userSelect("WHERE u.id=?")).bind(id).first()), temporaryPassword, temporaryPasswordExpiresAt: expires }, 201);
 }
@@ -402,31 +426,31 @@ async function managerSetStatus(request, env, actor, id) {
   const denied = requireUserManager(actor); if (denied) return denied;
   const body = await request.json(); if (!strictBody(body, ["active"]) || typeof body.active !== "boolean") return json({ error: "La richiesta contiene campi non consentiti." }, 400);
   const target = await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(id).first();
-  if (!target || !manageableTarget(actor, target)) { await audit(env, request, actor.id, target?.id || null, "SET_STATUS", "DENIED", "TARGET_NOT_MANAGEABLE"); return json({ error: "Utente non disponibile per questa operazione." }, 404); }
+  if (!target || !manageableTarget(actor, target)) { await audit(env, request, actor, target, "SET_STATUS", "DENIED", "TARGET_NOT_MANAGEABLE"); return json({ error: "Utente non disponibile per questa operazione." }, 404); }
   if (!body.active && effectiveRole(target) === "ADMIN") {
     const count = await env.DB.prepare("SELECT COUNT(*) AS total FROM users WHERE active=1 AND COALESCE(authorization_role,role)='ADMIN'").first();
     if (Number(count?.total || 0) <= 1) return json({ error: "Non è possibile bloccare l’ultimo amministratore abilitato." }, 400);
   }
   const now = new Date().toISOString(), statements = [env.DB.prepare("UPDATE users SET active=?,session_version=session_version+1,updated_at=? WHERE id=?").bind(body.active?1:0,now,id)];
   if (!body.active) statements.push(env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(id));
-  await env.DB.batch(statements); await audit(env, request, actor.id, id, body.active?"ENABLE_USER":"BLOCK_USER", "SUCCESS", "STATUS_CHANGED");
+  await env.DB.batch(statements); await audit(env, request, actor, target, body.active?"ENABLE_USER":"BLOCK_USER", "SUCCESS", "STATUS_CHANGED");
   return json({ ok: true });
 }
 async function managerTemporaryPassword(request, env, actor, id) {
   const denied = requireUserManager(actor); if (denied) return denied;
   const body = await request.json(); if (!strictBody(body, ["operatorPassword"])) return json({ error: "La richiesta contiene campi non consentiti." }, 400);
   const target = await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(id).first();
-  if (!target || !manageableTarget(actor, target)) { await audit(env, request, actor.id, target?.id || null, "TEMPORARY_PASSWORD", "DENIED", "TARGET_NOT_MANAGEABLE"); return json({ error: "Utente non disponibile per questa operazione." }, 404); }
+  if (!target || !manageableTarget(actor, target)) { await audit(env, request, actor, target, "TEMPORARY_PASSWORD", "DENIED", "TARGET_NOT_MANAGEABLE"); return json({ error: "Utente non disponibile per questa operazione." }, 404); }
   const rate = await throttleStatus(env, "PASSWORD_RESET", `${actor.id}:${id}`);
   if (rate.blocked) return json({ error: "Troppi tentativi. Attendi alcuni minuti e riprova." }, 429);
-  if (!(await verifyPassword(String(body.operatorPassword || ""), actor))) { await throttleFailure(env, "PASSWORD_RESET", rate.keyHash); await audit(env, request, actor.id, id, "TEMPORARY_PASSWORD", "DENIED", "OPERATOR_PASSWORD_INVALID"); return json({ error: "Conferma dell’operatore non valida." }, 403); }
+  if (!(await verifyPassword(String(body.operatorPassword || ""), actor))) { await throttleFailure(env, "PASSWORD_RESET", rate.keyHash); await audit(env, request, actor, target, "TEMPORARY_PASSWORD", "DENIED", "OPERATOR_PASSWORD_INVALID"); return json({ error: "Conferma dell’operatore non valida." }, 403); }
   await throttleClear(env, "PASSWORD_RESET", rate.keyHash);
   const temporaryPassword = randomTemporaryPassword(), secret = await makePassword(temporaryPassword), now = new Date(), expires = new Date(now.getTime() + TEMPORARY_PASSWORD_MS).toISOString();
   await env.DB.batch([
     env.DB.prepare("UPDATE users SET password_hash=?,password_salt=?,password_iterations=?,must_change_password=1,temporary_password_expires_at=?,temporary_password_used_at=NULL,password_reset_at=?,session_version=session_version+1,updated_at=? WHERE id=?").bind(secret.hash,secret.salt,secret.iterations,expires,now.toISOString(),now.toISOString(),id),
     env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(id)
   ]);
-  await audit(env, request, actor.id, id, "TEMPORARY_PASSWORD", "SUCCESS", "TEMPORARY_PASSWORD_ISSUED");
+  await audit(env, request, actor, target, "TEMPORARY_PASSWORD", "SUCCESS", "TEMPORARY_PASSWORD_ISSUED");
   return json({ temporaryPassword, temporaryPasswordExpiresAt: expires });
 }
 async function setup(request, env) {

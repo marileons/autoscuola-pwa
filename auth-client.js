@@ -249,11 +249,12 @@
       const data = await api("/api/user-management/audit?limit=50", { method: "GET" });
       list.replaceChildren(...data.events.map(event => {
         const row = document.createElement("p"); row.className = "user-audit-row";
-        row.textContent = `${new Date(event.occurred_at).toLocaleString("it-IT")} · ${event.action} · ${event.outcome} · ${event.reason_code}`;
+        const target = event.target_name || event.target_username || event.target_user_ref || "destinatario non disponibile";
+        row.textContent = `${new Date(event.occurred_at).toLocaleString("it-IT")} · ${event.action} · ${event.outcome} · ${target} · ${event.reason_code}`;
         return row;
       }));
       if (!data.events.length) list.textContent = "Nessun evento registrato.";
-    } catch (error) { list.textContent = error.message; }
+    } catch (error) { list.textContent = `Impossibile leggere lo storico Audit: ${error.message}`; }
   }
 
   function action(label, handler, className = "secondary") {
