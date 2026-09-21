@@ -75,11 +75,12 @@
   }
 
   async function storedStudentsWithDrivingLicenses(){
-    const students=parsedStorageValue(DATA_KEYS.students,[]);
+    const students=await window.AgendaStudentArchiveStore.snapshot();
     return window.AgendaStudentLicenseStore?window.AgendaStudentLicenseStore.attachStudents(students):students;
   }
 
   function validateAppData(appData){
+    if(Object.hasOwn(appData||{},"studentSites"))window.StudentArchiveStore.normalizeSites(appData.studentSites);
     if(!appData||typeof appData!=="object")throw new Error("Dati applicativi mancanti.");
     if(!Array.isArray(appData.students))throw new Error("Archivio allievi non valido.");
     if(!appData.checklists||typeof appData.checklists!=="object"||Array.isArray(appData.checklists))throw new Error("Checklist non valide.");
@@ -253,7 +254,7 @@
 
   async function createSafetySnapshot(){
     const examData=await window.AgendaExamStore.snapshot();
-    const appData={students:await storedStudentsWithDrivingLicenses(),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[]),exams:examData.exams,examLocations:examData.locations};
+    const appData={studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[]),exams:examData.exams,examLocations:examData.locations};
     validateAppData(appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     return{version:1,appData,examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId)};
@@ -455,7 +456,7 @@
 
   async function createBackupPayload(){
     const appData={
-      students:await storedStudentsWithDrivingLicenses(),
+      studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
     };
@@ -650,15 +651,15 @@
 
   async function writeAppData(appData){
     const examArchive=window.AgendaExams.canonicalArchive(appData.exams||[],appData.examLocations||[],{strict:true}),exams=examArchive.exams,examLocations=examArchive.locations;
-    const previousStudents=parsedStorageValue(DATA_KEYS.students,[]),previousChecklists=parsedStorageValue(DATA_KEYS.checklists,{}),previousExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),previousLicenses=window.AgendaStudentLicenseStore?await window.AgendaStudentLicenseStore.snapshot():[],previousExamArchive=await window.AgendaExamStore.snapshot();
+    const previousSites=await window.AgendaStudentArchiveStore.snapshotSites();const previousStudents=await window.AgendaStudentArchiveStore.snapshot(),previousChecklists=parsedStorageValue(DATA_KEYS.checklists,{}),previousExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),previousLicenses=window.AgendaStudentLicenseStore?await window.AgendaStudentLicenseStore.snapshot():[],previousExamArchive=await window.AgendaExamStore.snapshot();
     await window.AgendaExamStore.replaceAll(exams,examLocations);
     try{
-      localStorage.setItem(DATA_KEYS.students,JSON.stringify(studentsWithoutDrivingLicenses(appData.students)));
+      await window.AgendaStudentArchiveStore.replaceAll(studentsWithoutDrivingLicenses(appData.students));if(appData.studentSites)await window.AgendaStudentArchiveStore.replaceSites(appData.studentSites);
       localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(appData.checklists));
       localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(appData.examiners));
       if(window.AgendaStudentLicenseStore)await window.AgendaStudentLicenseStore.replaceAll(drivingLicenseRecords(appData.students));
     }catch(error){
-      try{localStorage.setItem(DATA_KEYS.students,JSON.stringify(previousStudents));localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(previousChecklists));localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(previousExaminers));if(window.AgendaStudentLicenseStore)await window.AgendaStudentLicenseStore.replaceAll(previousLicenses);await window.AgendaExamStore.replaceAll(previousExamArchive.exams,previousExamArchive.locations)}catch{}
+      try{await window.AgendaStudentArchiveStore.replaceSites(previousSites);await window.AgendaStudentArchiveStore.replaceAll(previousStudents);localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(previousChecklists));localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(previousExaminers));if(window.AgendaStudentLicenseStore)await window.AgendaStudentLicenseStore.replaceAll(previousLicenses);await window.AgendaExamStore.replaceAll(previousExamArchive.exams,previousExamArchive.locations)}catch{}
       throw error;
     }
   }
@@ -678,7 +679,7 @@
           return canonicalLesson;
         })
       };
-      if(typeof student?.photo==="string"&&/^data:image\/(?:jpeg|png|webp);base64,/i.test(student.photo))canonicalStudent.photo=student.photo;
+      if(student.siteId||student.siteName){canonicalStudent.siteId=String(student.siteId||"");canonicalStudent.siteName=String(student.siteName||"")};      if(typeof student?.photo==="string"&&/^data:image\/(?:jpeg|png|webp);base64,/i.test(student.photo))canonicalStudent.photo=student.photo;
       const drivingLicense=Object.hasOwn(student||{},"drivingLicense")?window.StudentLicense.normalize(student.drivingLicense,{strict:true}):null;if(drivingLicense)canonicalStudent.drivingLicense=drivingLicense;
       return canonicalStudent;
     });
@@ -709,6 +710,7 @@
       examiners:canonical.examiners.length,
       checklistKeys,
       appDataSha256:await textSha256(JSON.stringify(canonical)),
+      studentSitesSha256:Object.hasOwn(validated.payload.appData,"studentSites")?await textSha256(JSON.stringify(window.StudentArchiveStore.normalizeSites(validated.payload.appData.studentSites))):null,
       examinerRoutesSha256:examinerRoutes?await textSha256(JSON.stringify(examinerRoutes)):null,
       drivingErrorCatalogSha256:await textSha256(JSON.stringify(drivingErrorCatalog)),
       documents:validated.documentManifest.map(documentRecord=>({...documentRecord}))
@@ -718,7 +720,7 @@
   async function verifyRestoreManifest(manifest){
     if(!manifest||![1,2].includes(manifest.version)||!Array.isArray(manifest.documents)||!Array.isArray(manifest.checklistKeys))throw new Error("Manifest di verifica non valido.");
     const appData={
-      students:await storedStudentsWithDrivingLicenses(),
+      studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
     };
@@ -730,6 +732,7 @@
     if(lessons!==manifest.lessons)throw new Error(`Verifica post-riavvio guide fallita: attese ${manifest.lessons}, trovate ${lessons}.`);
     if(canonical.examiners.length!==manifest.examiners)throw new Error(`Verifica post-riavvio esaminatori fallita: attesi ${manifest.examiners}, trovati ${canonical.examiners.length}.`);
     if(await textSha256(JSON.stringify(canonical))!==manifest.appDataSha256)throw new Error("Verifica post-riavvio dei dati applicativi fallita.");
+    if(manifest.studentSitesSha256&&await textSha256(JSON.stringify(appData.studentSites))!==manifest.studentSitesSha256)throw new Error("Verifica post-riavvio del catalogo sedi fallita.");
     if(manifest.examinerRoutesSha256){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),examinerRoutes=window.ExaminerRoutesUI.snapshot(currentAccount);if(await textSha256(JSON.stringify(examinerRoutes))!==manifest.examinerRoutesSha256)throw new Error("Verifica post-riavvio dei percorsi esaminatori fallita.")}
     if(manifest.drivingErrorCatalogSha256){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),catalog=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(await textSha256(JSON.stringify(catalog))!==manifest.drivingErrorCatalogSha256)throw new Error("Verifica post-riavvio delle classificazioni errori fallita.")}
     const documentKeys=await readDocumentKeys();
@@ -748,6 +751,7 @@
     const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),examData=await window.AgendaExamStore.snapshot(),currentExams=examData.exams,currentExamLocations=examData.locations;
     const currentCanonical=canonicalAppData({students:currentStudents,checklists:currentChecklists,examiners:currentExaminers,exams:currentExams,examLocations:currentExamLocations}),expectedCanonical=canonicalAppData(validated.payload.appData);
     if(JSON.stringify(currentCanonical)!==JSON.stringify(expectedCanonical))throw new Error("Verifica dei dati applicativi non riuscita.");
+    if(Object.hasOwn(validated.payload.appData,"studentSites")&&JSON.stringify(await window.AgendaStudentArchiveStore.snapshotSites())!==JSON.stringify(window.StudentArchiveStore.normalizeSites(validated.payload.appData.studentSites)))throw new Error("Verifica del catalogo sedi non riuscita.");
     if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}
     if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected=window.DrivingErrors.normalizeCatalog(validated.payload.drivingErrorCatalog,{strict:true}),actual=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica delle classificazioni errori non riuscita.")}
     const documentKeys=await readDocumentKeys();
@@ -824,7 +828,7 @@
   async function refreshFullBackupSummary(){
     const summary=byId("fullBackupSummary");
     try{
-      const students=parsedStorageValue(DATA_KEYS.students,[]);
+      const students=await window.AgendaStudentArchiveStore.snapshot();
       const documentKeys=await readDocumentKeys();
       summary.textContent=`Dati attuali: ${Array.isArray(students)?students.length:0} allievi, ${documentKeys.length} documenti.`;
     }catch(error){

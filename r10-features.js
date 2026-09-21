@@ -11,6 +11,20 @@
   let wakeLockGeneration=0;
   let wakeRetryTimer=null;
   let pendingStudentPdfUrl=null;
+  const studentReportUrls=new Map();
+
+  function releaseUnusedStudentReports(){
+    for(const [url,entry] of studentReportUrls){
+      if(url===pendingStudentPdfUrl||entry.untracked)continue;
+      if(entry.windows.some(win=>!win.closed))continue;
+      URL.revokeObjectURL(url);studentReportUrls.delete(url);
+    }
+  }
+  window.addEventListener("pagehide",event=>{
+    if(event.persisted)return;
+    for(const url of studentReportUrls.keys())URL.revokeObjectURL(url);
+    studentReportUrls.clear();
+  });
 
   const wakeStatus=message=>{
     const element=$("wakeLockStatus");
@@ -268,7 +282,7 @@
   function studentExamsReportHtml(current){
     const exams=(Array.isArray(state.exams)?state.exams:[]).filter(exam=>exam.participants.some(item=>item.studentId===current.id)).sort((a,b)=>`${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
     if(!exams.length)return'<h2>ESAMI (0)</h2><p class="empty-report">Nessun esame collegato.</p>';
-    const cards=exams.map((exam,index)=>{const participant=exam.participants.find(item=>item.studentId===current.id),outcome=window.AgendaExams.outcomeLabel(participant?.outcome),examiner=String(exam.examinerName||"").trim()||"non inserito",reason=participant?.outcome==="R"?`<p><strong>Motivazione:</strong> ${esc(participant.rejectionNote||"Non indicata")}</p>`:"";return`<section class="lesson exam-report"><h3>Esame ${index+1}</h3><p><strong>${new Date(`${exam.date}T12:00:00`).toLocaleDateString("it-IT")}</strong><br>${exam.endTime?`${esc(exam.startTime)}–${esc(exam.endTime)}`:`Inizio ${esc(exam.startTime)} · Ora fine non inserita`}</p><dl><div><dt>Località</dt><dd>${esc(exam.location)}</dd></div><div><dt>Esito</dt><dd>${esc(outcome)}</dd></div><div><dt>Esaminatore</dt><dd>${esc(examiner)}</dd></div></dl>${reason}</section>`}).join("");
+    const cards=exams.map((exam,index)=>{const participant=exam.participants.find(item=>item.studentId===current.id),outcome=window.AgendaExams.outcomeLabel(participant?.outcome),examiner=String(exam.examinerName||"").trim()||"non inserito",reason=participant?.outcome==="R"?`<p><strong>Motivazione:</strong> ${esc(participant.rejectionNote||"Non indicata")}</p>`:"";return`<section class="lesson exam-report"><h3>Esame ${index+1}</h3><p><strong>${new Date(`${exam.date}T12:00:00`).toLocaleDateString("it-IT")}</strong><br>${exam.endTime?`${esc(exam.startTime)}–${esc(exam.endTime)}`:`Inizio ${esc(exam.startTime)} · Ora fine non inserita`}</p><dl><div><dt>Località</dt><dd>${esc(exam.location)}</dd></div><div><dt>Esito</dt><dd>${esc(outcome)}</dd></div><div><dt>Esaminatore</dt><dd>${esc(examiner)}</dd></div><div><dt>Istruttore</dt><dd>${esc(exam.instructorName||"non inserito")}</dd></div></dl>${reason}</section>`}).join("");
     return`<h2>ESAMI (${exams.length})</h2>${cards}`;
   }
 
@@ -284,9 +298,9 @@
 
   function studentReportHtml(current){
     const base=studentReportHtmlBase(current);
-    const drivingLicense=window.StudentLicense.normalize(current.drivingLicense),licenseHtml=drivingLicense?`<section class="lesson license-report"><h2>PATENTE CONSEGUITA</h2><dl><div><dt>Categoria/percorso</dt><dd>${esc(sectionLabel(current.category))}</dd></div><div><dt>Numero patente</dt><dd>${esc(drivingLicense.number)}</dd></div><div><dt>Data di rilascio</dt><dd>${formatStoredDate(drivingLicense.issueDate)}</dd></div><div><dt>Data di scadenza</dt><dd>${formatStoredDate(drivingLicense.expiryDate)}</dd></div></dl></section>`:"";
+    const drivingLicense=window.StudentLicense.normalize(current.drivingLicense),licenseHtml=drivingLicense?`<section class="lesson license-report"><h2>PATENTE CONSEGUITA</h2><dl><div><dt>Categoria patente</dt><dd>${esc(drivingLicense.category||"Non inserita (dato storico)")}</dd></div><div><dt>Numero patente</dt><dd>${esc(drivingLicense.number)}</dd></div><div><dt>Data di rilascio</dt><dd>${formatStoredDate(drivingLicense.issueDate)}</dd></div><div><dt>Data di scadenza</dt><dd>${formatStoredDate(drivingLicense.expiryDate)}</dd></div></dl></section>`:"";
     const notes=base.match(/<h2>Note<\/h2><p>[\s\S]*?<\/p>/)?.[0]||"";
-    let report=base
+    let report=base.replace('<h2>Note</h2>',`<p><strong>Sede:</strong> ${esc(current.siteName||"Non inserita")}</p><h2>Note</h2>`)
       .replace(notes,"")
       .replace(/<h2>Percorso didattico<\/h2><table>[\s\S]*?<\/table>/,"")
       .replace("<h2>Storico guide (",`${licenseHtml}<h2>STORICO GUIDE (`)
@@ -296,12 +310,21 @@
         .replace("</head>",'<style>.report-identity{display:grid;grid-template-columns:minmax(0,1fr) 105px;gap:16px;align-items:center}.report-photo{width:100px;height:120px;border-radius:12px;object-fit:cover;border:1px solid #ccd7dc}@media(max-width:650px){.report-identity{grid-template-columns:minmax(0,1fr) 82px}.report-photo{width:78px;height:96px}}</style></head>')
         .replace(/<h2 class="title">([\s\S]*?)<\/h2><div class="data-grid">/,`<div class="report-identity"><h2 class="title">$1</h2><img class="report-photo" src="${current.photo}" alt="Foto allievo"></div><div class="data-grid">`);
     }
+    const printScript=window.StudentReportPrint?.documentScript?.();
+    if(!printScript)throw new Error("Controlli di stampa non disponibili.");
+    report=report
+      .replace("</head>",`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><style>[hidden]{display:none!important}.print-status{flex-basis:100%;margin:0;color:#d6e3e8}.print-status.error{color:#ffb5bb}.print-alternatives{display:flex;flex-wrap:wrap;gap:8px}.toolbar a{border:0;border-radius:10px;padding:10px 14px;background:#344955;color:#fff;font-weight:800;text-decoration:none}@media(max-width:650px){.toolbar button,.toolbar a{min-height:44px}}</style></head>`)
+      .replace('<button onclick="window.print()">STAMPA / SALVA PDF</button><button class="secondary" onclick="window.close()">CHIUDI</button>',`<button id="studentReportPrint" type="button">STAMPA / SALVA PDF</button><button id="studentReportClose" type="button" class="secondary">CHIUDI</button><p id="studentReportPrintStatus" class="print-status" role="status" aria-live="polite"></p><div id="studentReportPrintAlternatives" class="print-alternatives" hidden><a id="studentReportOpenAgain" target="_blank" rel="noopener">APRI REPORT</a><a id="studentReportDownloadHtml" download="report-allievo-stampabile.html">SCARICA REPORT STAMPABILE</a></div>`)
+      .replace("</body>",`<script>${printScript}<\/script></body>`)
+      .replace("</head>",'<style>.toolbar{flex-wrap:wrap;position:relative}.toolbar button,.toolbar a{font-size:16px;min-height:44px}.sheet{overflow-wrap:anywhere}@media print{.sheet>h2{break-after:avoid}}.print-alternatives{flex-basis:100%}</style></head>')
+      .replace('class="print-alternatives" hidden','class="print-alternatives"')
+      .replace('aria-live="polite"></p>','aria-live="polite">HTML stampabile. Se il pannello non appare: su iPhone/iPad usa Condividi → Stampa; su Android il menu del browser → Condividi o Stampa; su desktop Ctrl+P (Mac: ⌘P). Nessun PDF è ancora stato salvato.</p>');
     return report;
   }
 
   function clearStudentPdfFallback(){
-    if(pendingStudentPdfUrl)URL.revokeObjectURL(pendingStudentPdfUrl);
     pendingStudentPdfUrl=null;
+    releaseUnusedStudentReports();
     const link=$("openStudentPdfFallback"),message=$("studentPdfFallbackMessage");
     link?.classList.add("hidden");link?.removeAttribute("href");message?.classList.add("hidden");
   }
@@ -316,18 +339,31 @@
     const current=student();
     if(!current)return;
     clearStudentPdfFallback();
-    const html=studentReportHtml(JSON.parse(JSON.stringify(current))),url=URL.createObjectURL(new Blob([html],{type:"text/html;charset=utf-8"}));
+    let html,url;
+    try{
+      html=studentReportHtml(JSON.parse(JSON.stringify(current)));
+      url=URL.createObjectURL(new Blob([html],{type:"text/html;charset=utf-8"}));
+    }catch{
+      const message=$("studentPdfFallbackMessage");
+      message.textContent="Impossibile preparare il report. La scheda resta disponibile: riprova.";
+      message.classList.remove("hidden");return;
+    }
+    studentReportUrls.set(url,{windows:[],untracked:false});
     let reportWindow=null;
     try{reportWindow=window.open(url,"_blank")}catch{}
-    if(!reportWindow){showStudentPdfFallback(url);return}
-    setTimeout(()=>URL.revokeObjectURL(url),300000);
+    // A null handle may also mean noopener/COOP: retain until the session ends.
+    studentReportUrls.get(url).untracked=!reportWindow;
+    if(reportWindow)studentReportUrls.get(url).windows.push(reportWindow);
+    showStudentPdfFallback(url);
+    const message=$("studentPdfFallbackMessage");
+    message.textContent=reportWindow?"Report HTML stampabile aperto. APRI PDF consente di riaprirlo; il PDF si salva dal pannello di stampa.":"Apertura automatica non disponibile. Tocca APRI PDF per aprire il report HTML stampabile, quindi usa Stampa.";
   }
 
   $("generateRoadReport").addEventListener("click",generateRoadReport);
   $("toggleRoadReport").addEventListener("click",toggleRoadReport);
   $("openSavedRoute").addEventListener("click",resetRoadReport);
   $("exportStudentPdf").addEventListener("click",exportStudentPdf);
-  $("openStudentPdfFallback").addEventListener("click",()=>{const url=pendingStudentPdfUrl;if(url)setTimeout(()=>{if(pendingStudentPdfUrl===url)clearStudentPdfFallback()},300000)});
+  $("openStudentPdfFallback").addEventListener("click",()=>{const entry=studentReportUrls.get(pendingStudentPdfUrl);if(entry)entry.untracked=true});
   window.clearStudentPdfFallback=clearStudentPdfFallback;
   resetRoadReport();
 

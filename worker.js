@@ -42,10 +42,12 @@ export default {
       if (url.pathname === "/api/auth/me" && request.method === "GET") return me(request, env);
       if (url.pathname === "/api/public-config/road-report" && request.method === "GET") return json({roadReport:{enabled:env.ROAD_REPORT_ENABLED!=="false",provider:"OpenStreetMap Nominatim pubblico",endpoint:"https://nominatim.openstreetmap.org/reverse",maxRequests:40,intervalMs:1250},enabled:env.ROAD_REPORT_ENABLED!=="false",provider:"OpenStreetMap Nominatim pubblico",endpoint:"https://nominatim.openstreetmap.org/reverse",maxRequests:40,intervalMs:1250});
       if (url.pathname === "/api/setup" && request.method === "POST") return setup(request, env);
-      const session = await requireSession(request, env);
+      const session = await requireSession(request, env, url.pathname !== "/api/exams/instructors");
       if (session.response) return session.response;
       if (session.purpose === "PASSWORD_CHANGE" && !["/api/auth/password", "/api/auth/logout"].includes(url.pathname)) return json({ error: "Prima di continuare devi scegliere una nuova password personale." }, 403);
       if (url.pathname === "/api/auth/password" && request.method === "POST") return changeOwnPassword(request, env, session);
+      // Sole new network read for the exam instructor picker: no application data.
+      if (url.pathname === "/api/exams/instructors") return examInstructors(request, env, session);
       if (url.pathname === "/api/account/employment" && request.method === "GET") return ownEmploymentHistory(env, session.user);
       if (url.pathname === "/api/users" && request.method === "GET") return listUsers(env, session.user);
       if (url.pathname === "/api/users" && request.method === "POST") return createUser(request, env, session.user);
@@ -89,6 +91,19 @@ function effectiveRole(row) {
   return assigned === legacy ? assigned : null;
 }
 function primaryAdminFlag(row) { return row?.is_primary_admin === 1 || row?.is_primary_admin === "1"; }
+async function examInstructors(request, env, session) {
+  if (session.purpose !== "NORMAL" || !["ADMIN", "ISTRUTTORE"].includes(effectiveRole(session.user))) return json({ error: "Risorsa non autorizzata." }, 403);
+  if (request.method !== "GET") return json({ error: "Operazione non consentita." }, 405, { Allow: "GET" });
+  const url = new URL(request.url), origin = request.headers.get("origin");
+  // Same-origin GET may omit Origin. Reject cross-origin and arbitrary query filters.
+  if ((origin && !sameOrigin(request)) || request.headers.get("sec-fetch-site") === "cross-site") return json({ error: "Richiesta non autorizzata." }, 403);
+  if (url.search) return json({ error: "Parametri non consentiti." }, 400);
+  const { results = [] } = await env.DB.prepare("SELECT id,name,role,authorization_role,is_primary_admin,active FROM users WHERE active=1").all();
+  const instructors = results.filter(row => Number(row.active) === 1 && !primaryAdminFlag(row) && effectiveRole(row) === "ISTRUTTORE")
+    .map(row => ({ id: String(row.id), name: String(row.name) }))
+    .sort((a,b) => a.name < b.name ? -1 : a.name > b.name ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  return json({ instructors });
+}
 function capabilitiesFor(row) {
   const role = effectiveRole(row), primary = primaryAdminFlag(row);
   return { useApplication: role === "ADMIN" || role === "ISTRUTTORE", manageUsers: role === "ADMIN" || role === "USER_MANAGER", managePrivilegedUsers: role === "ADMIN" && primary, viewAudit: role === "ADMIN" && primary };
@@ -210,7 +225,7 @@ function cookieValue(request) {
 function sessionCookie(token, maxAge) {
   return `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
 }
-async function requireSession(request, env) {
+async function requireSession(request, env, revokeInvalid = true) {
   const token = cookieValue(request);
   if (!token) return { response: json({ error: "Accesso richiesto." }, 401) };
   const idHash = await sha256(token);
@@ -219,7 +234,7 @@ async function requireSession(request, env) {
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.id_hash=? AND s.expires_at>?`).bind(idHash, now).first();
   if (!row || !row.active || Number(row.authenticated_session_version) !== Number(row.session_version)) {
-    if (row?.id_hash) await env.DB.prepare("DELETE FROM sessions WHERE id_hash=?").bind(idHash).run();
+    if (revokeInvalid && row?.id_hash) await env.DB.prepare("DELETE FROM sessions WHERE id_hash=?").bind(idHash).run();
     return { response: json({ error: "Sessione scaduta o accesso revocato." }, 401, { "set-cookie": sessionCookie("", 0) }) };
   }
   return { user: row, idHash, purpose: row.purpose || "NORMAL" };

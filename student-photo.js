@@ -49,8 +49,11 @@
     try{pendingPhoto=await compressPhoto(file);updateFormPhoto()}catch(error){alert(error.message||"Non è stato possibile preparare la foto.")}
   });
   $("changeStudentPhoto").addEventListener("click",()=>{editStudent();setTimeout(()=>input.click(),0)});
-  $("removeStudentPhoto").addEventListener("click",()=>{
+  $("removeStudentPhoto").addEventListener("click",async()=>{
+    if(studentSaving)return;
     const current=student();if(!current||!current.photo||!confirm("Rimuovere la foto dell’allievo?"))return;
-    delete current.photo;save();openStudent(current.id);
+    delete current.photo;
+    try{await save()}catch{/* save restores the confirmed archive and displays the error. */}
+    if(state.studentId===current.id)openStudent(current.id);
   });
 })();

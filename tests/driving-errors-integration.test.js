@@ -29,7 +29,7 @@ test("gli asset sono caricati nell'ordine corretto e con versione dedicata",()=>
   assert.match(source,/full-backup-stream\.js\?v=1\.21-full-backup-stream-v2/);
   assert.match(source,/full-backup\.js\?v=1\.21-exams-v2/);
   assert.ok(source.indexOf("full-backup-stream.js")<source.indexOf("full-backup.js"));
-  assert.match(source,/r10-features\.js\?v=1\.21-exams-v2/);
+  assert.match(source,/r10-features\.js\?v=1\.21-student-report-print-v1/);
 });
 
 test("backup corrente include gli errori e mantiene l'importazione dei formati precedenti",()=>{

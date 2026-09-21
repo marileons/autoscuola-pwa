@@ -70,11 +70,13 @@ test("report PDF continua a leggere checklist salvate senza raggruppamenti UI",(
   const report=fs.readFileSync("r10-features.js","utf8");assert.match(report,/Storico guide/);assert.doesNotMatch(report,/ACTIVITY_GROUPS|activityGroupIndex/);
 });
 
-test("report PDF apre direttamente un documento locale senza document.write su about:blank",()=>{
+test("report PDF apre direttamente un documento locale con controlli collegati senza document.write",()=>{
   const report=fs.readFileSync("r10-features.js","utf8"),fn=report.match(/function exportStudentPdf\(\)[\s\S]*?\n  }/)?.[0]||"";
   assert.match(fn,/new Blob\(\[html\],\{type:"text\/html;charset=utf-8"\}\)/);
-  assert.match(fn,/window\.open\(url,"_blank"\)/);assert.match(fn,/URL\.revokeObjectURL/);
+  assert.match(fn,/window\.open\(url,"_blank"\)/);assert.match(report,/URL\.revokeObjectURL/);
   assert.doesNotMatch(fn,/document\.write|window\.open\("","_blank"\)|await\s/);
+  assert.match(report,/id="studentReportPrint"/);assert.match(report,/printScript/);
+  assert.match(report,/StudentReportPrint/);
 });
 
 test("popup PDF bloccato espone un nuovo gesto diretto senza revoca anticipata",()=>{
@@ -82,9 +84,17 @@ test("popup PDF bloccato espone un nuovo gesto diretto senza revoca anticipata",
   assert.match(html,/id="openStudentPdfFallback"[^>]*target="_blank"[^>]*>APRI PDF<\/a>/);
   assert.match(html,/id="studentPdfFallbackMessage"[^>]*role="status"/);
   assert.match(report,/try\{reportWindow=window\.open\(url,"_blank"\)\}catch\{\}/);
-  assert.match(report,/if\(!reportWindow\)\{showStudentPdfFallback\(url\);return\}/);
+  assert.match(report,/showStudentPdfFallback\(url\)/);
   assert.match(report,/link\.href=url;link\.classList\.remove\("hidden"\)/);
   assert.doesNotMatch(report,/if\(!reportWindow\)\{URL\.revokeObjectURL\(url\)/);
   assert.match(report,/openStudentPdfFallback"\)\.addEventListener\("click"/);
-  assert.match(report,/300000/);
+  assert.doesNotMatch(report,/300000/);
+});
+
+test("controller stampa caricato prima del report e fallback descrive correttamente HTML stampabile",()=>{
+  const auth=fs.readFileSync("auth-client.js","utf8"),report=fs.readFileSync("r10-features.js","utf8");
+  assert.ok(auth.indexOf("student-report-print.js")<auth.indexOf("r10-features.js"));
+  assert.match(report,/SCARICA REPORT STAMPABILE/);
+  assert.match(report,/HTML stampabile/);
+  assert.match(report,/Content-Security-Policy/);
 });
