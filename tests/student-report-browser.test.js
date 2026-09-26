@@ -1,6 +1,47 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),os=require("node:os"),http=require("node:http"),vm=require("node:vm"),{spawn}=require("node:child_process");
 const root=path.join(__dirname,".."),printer=require("../student-report-print.js");
+async function localCorrections({evaluate,click,capture,width}){
+ await click("#openOtherFunctions");await click("#openGeneralStudentManagement");
+ assert.equal(await evaluate('document.querySelector(".view.active").id'),"generalStudentManagement");
+ const sizes=await evaluate('[...document.querySelectorAll("#generalStudentManagement .home-pro-action:not([hidden]):not(.hidden)")].map(b=>{const r=b.getBoundingClientRect(),s=b.querySelector("svg").getBoundingClientRect();return {height:r.height,icon:s.width,right:r.right}})');
+ assert.ok(sizes.every(s=>s.height>=44&&s.height<100&&s.icon===28&&s.right<=width),JSON.stringify(sizes));
+ await capture(`gestione-${width}`);
+ // The single import opens the native picker directly; cancelling stays in this view.
+ await evaluate('window.__fileClicks=0;document.getElementById("studentFile").addEventListener("click",e=>{e.preventDefault();window.__fileClicks++},{once:true})');
+ await click("#importStudent");assert.equal(await evaluate('window.__fileClicks'),1);assert.equal(await evaluate('document.querySelector(".view.active").id'),"generalStudentManagement");
+ for(const [op,view,home] of [["archiveStudents","studentMultiAction","backStudentMultiAction"],["deleteStudents","studentMultiAction","backStudentMultiAction"],["shareStudents","studentMultiShare","backStudentMultiShare"]]){
+  await click(`#${op}`);assert.equal(await evaluate('document.querySelector(".view.active").id'),view);
+  await click(`#${view} [data-general-students-back]`);assert.equal(await evaluate('document.querySelector(".view.active").id'),"generalStudentManagement");
+  await click(`#${op}`);await click(`#${home}`);assert.equal(await evaluate('document.querySelector(".view.active").id'),"home");
+  await click("#openOtherFunctions");await click("#openGeneralStudentManagement");
+ }
+ await evaluate('renderStudentMultiImport({students:[],documents:[]})');await click("#cancelStudentMultiImportTop");assert.equal(await evaluate('document.querySelector(".view.active").id'),"generalStudentManagement");
+ await evaluate('renderStudentMultiImport({students:[],documents:[]})');await click("#studentMultiImportHome");assert.equal(await evaluate('document.querySelector(".view.active").id'),"home");
+ await click("#openOtherFunctions");await click("#openGeneralStudentManagement");await click("#generalStudentManagement [data-other-functions-back]");assert.equal(await evaluate('document.querySelector(".view.active").id'),"otherFunctions");
+ // Check every real date control in its own layout, without opening real archives.
+ const dates=await evaluate(`(()=>{const active=document.querySelector('.view.active'),out=[];for(const input of document.querySelectorAll('#appShell input[type="date"]')){const changed=[];for(let p=input;p&&p.id!=='appShell';p=p.parentElement){changed.push([p,p.getAttribute('style'),p.className,p.hidden]);p.hidden=false;p.classList.remove('hidden');if(p.classList.contains('view'))p.classList.add('active');p.style.setProperty('display',p===input?'block':getComputedStyle(p).display==='none'?'block':getComputedStyle(p).display,'important')}const r=input.getBoundingClientRect(),parent=input.parentElement.getBoundingClientRect();out.push({id:input.id,width:r.width,right:r.right,parentRight:parent.right,font:parseFloat(getComputedStyle(input).fontSize)});for(const [p,style,cls,hidden]of changed.reverse()){style===null?p.removeAttribute('style'):p.setAttribute('style',style);p.className=cls;p.hidden=hidden}}return out})()`);
+ assert.ok(dates.length>=9);assert.ok(dates.every(x=>x.width>0&&x.right<=width+1&&x.right<=x.parentRight+1&&x.font>=16),JSON.stringify(dates));
+ // No geolocation or map tiles: only the map adapter is inert, all lesson UI is real.
+ await evaluate('window.L={map:()=>({setView(){return this},invalidateSize(){},removeLayer(){}}),tileLayer:()=>({addTo(){}})};openStudent("student-demo")');
+ await click("#newLesson");
+ for(let i=0;i<100&&!await evaluate('lessonDraftReady||!document.getElementById("choiceModal").classList.contains("hidden")');i++)await new Promise(r=>setTimeout(r,30));
+ if(await evaluate('!document.getElementById("choiceModal").classList.contains("hidden")'))await click("#choiceButtons button:first-child");
+ assert.equal(await evaluate('document.getElementById("lessonStudentIdentity").textContent'),"ALLIEVO: ALLIEVO FITTIZIO CON COGNOME LUNGO");
+ await evaluate('document.getElementById("lessonNotes").value="Nota sintetica ripristinata";persistLessonSession()');
+ await capture(`guida-${width}`);
+ await evaluate('scrollTo(0,document.getElementById("lessonDate").getBoundingClientRect().top+scrollY+200)');
+ assert.ok(Math.abs(await evaluate('document.getElementById("lessonStudentIdentity").getBoundingClientRect().top'))<=1,"nome sticky");
+ assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true);
+ await click("#backLesson");assert.equal(await evaluate('document.querySelector(".view.active").id'),"student");
+ await click("#newLesson");for(let i=0;i<100&&await evaluate('document.getElementById("choiceModal").classList.contains("hidden")');i++)await new Promise(r=>setTimeout(r,30));await click("#choiceButtons button:first-child");
+ assert.equal(await evaluate('document.getElementById("lessonNotes").value'),"Nota sintetica ripristinata");assert.equal(await evaluate('validLessonStudent()'),true);
+ await click("#backLesson");await evaluate('openStudent("student-demo-2");state.students.find(s=>s.id==="student-demo-2").firstName="ALLIEVO";state.students.find(s=>s.id==="student-demo-2").lastName="D’ÀNGELO-TEST ".repeat(10);newLesson()');
+ for(let i=0;i<100&&!await evaluate('lessonDraftReady||!document.getElementById("choiceModal").classList.contains("hidden")');i++)await new Promise(r=>setTimeout(r,30));
+ if(await evaluate('!document.getElementById("choiceModal").classList.contains("hidden")'))await click("#choiceButtons button:first-child");
+ assert.match(await evaluate('document.getElementById("lessonStudentIdentity").textContent'),/D’ÀNGELO-TEST/);assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true);await capture(`guida-lunga-${width}`);
+ await click("#backLesson");await evaluate('show("home")');
+}
 function reportFixture(){
  const elements=new Map(),element=id=>{if(!elements.has(id))elements.set(id,{classList:{add(){},remove(){},contains(){return false}},addEventListener(){},setAttribute(){},removeAttribute(){},replaceChildren(){}});return elements.get(id)};
  const win={StudentReportPrint:printer,StudentLicense:require("../student-license.js"),AgendaExams:require("../exams.js"),addEventListener(){}};
@@ -25,7 +66,7 @@ test("HTML finale collega il controller dopo i controlli e preserva esami e note
  const html=reportFixture();assert.doesNotMatch(html,/\sonclick=/);assert.match(html,/HTML stampabile/);assert.match(html,/ESAMINATORE FITTIZIO/);assert.match(html,/Motivazione dimostrativa/);assert.match(html,/Ora fine non inserita/);assert.ok(html.indexOf('<script>')>html.indexOf('id="studentReportPrint"'));assert.match(html,/@page\{size:A4/);
 });
 
-test("browser locale: documento Blob, click desktop/mobile/tablet e fallback stampa",{timeout:120000},async()=>{
+test("browser locale: documento Blob, navigazione, date, identità guida e stampa responsive",{timeout:180000},async()=>{
  const exe="C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
  assert.ok(fs.existsSync(exe),"Edge necessario al collaudo reale");
  const html=reportFixture(),server=http.createServer((req,res)=>{if(appPreview(req,res))return;res.setHeader("Content-Type","text/html; charset=utf-8");res.end('<!doctype html><button id="open">APRI REPORT FITTIZIO</button><script>document.getElementById("open").addEventListener("click",()=>{location.href=URL.createObjectURL(new Blob(['+JSON.stringify(html).replace(/</g,"\\u003c")+'],{type:"text/html"}));});</script>')});
@@ -51,13 +92,19 @@ test("browser locale: documento Blob, click desktop/mobile/tablet e fallback sta
    await click("#open");
    for(let i=0;i<300&&!await evaluate('document.documentElement.dataset.printControls==="ready"');i++)await new Promise(r=>setTimeout(r,50));
    assert.equal(await evaluate('document.documentElement.dataset.printControls'),"ready",await evaluate('JSON.stringify({url:location.href,scripts:[...document.scripts].map(s=>s.textContent.slice(-250)),body:document.body.textContent.slice(-400)})'));assert.equal(await evaluate('location.protocol'),"blob:");
-   await evaluate('window.printCalls=0;window.print=()=>{window.printCalls++}');
-   await click("#studentReportPrint");await click("#studentReportPrint");
+   await evaluate('window.printCalls=0;window.print=()=>{window.printCalls++;window.queuedPrintClicks=[new MouseEvent("click",{bubbles:true}),new MouseEvent("click",{bubbles:true})]}');
+   await click("#studentReportPrint");
+   assert.equal(await evaluate('window.printCalls'),1,"singolo gesto reale stampa una volta");
+   // Deliver events created during that gesture even if CDP is slow. Explicitly
+   // bypass disabled: the controller itself must reject the queued duplicates.
+   await evaluate('const button=document.getElementById("studentReportPrint");button.disabled=false;window.queuedPrintClicks.forEach(event=>button.dispatchEvent(event))');
    assert.equal(await evaluate('window.printCalls'),1,"doppio gesto genera una sola stampa");
+   await evaluate('new Promise(resolve=>{const poll=()=>document.getElementById("studentReportPrint").disabled?setTimeout(poll,25):resolve();setTimeout(poll,1250)})');
+   await click("#studentReportPrint");assert.equal(await evaluate('window.printCalls'),2,"nuova stampa volontaria successiva consentita");
    assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,`overflow ${width}`);
    await capture(`report-${width}`);
    assert.match(await evaluate('document.getElementById("studentReportPrintStatus").textContent'),/Se il pannello non compare/);
-   await new Promise(r=>setTimeout(r,900));await evaluate('window.print=()=>{throw Error("simulato")}');await click("#studentReportPrint");
+   await evaluate('new Promise(resolve=>{const poll=()=>document.getElementById("studentReportPrint").disabled?setTimeout(poll,25):resolve();poll()})');await evaluate('window.print=()=>{throw Error("simulato")}');await click("#studentReportPrint");
    assert.match(await evaluate('document.getElementById("studentReportPrintStatus").textContent'),/Impossibile aprire la stampa/);
    assert.equal(await evaluate('document.getElementById("studentReportOpenAgain").href.startsWith("blob:")'),true);
    await send("Emulation.setEmulatedMedia",{media:"print"});assert.equal(await evaluate('getComputedStyle(document.querySelector(".toolbar")).display'),"none");await send("Emulation.setEmulatedMedia",{media:"screen"});
@@ -67,6 +114,7 @@ test("browser locale: documento Blob, click desktop/mobile/tablet e fallback sta
    for(let i=0;i<300&&!await evaluate('!window.__testNavigatingAway && typeof state!=="undefined" && !!window.AgendaAuth?.currentUser() && !document.getElementById("appShell").classList.contains("hidden")');i++)await new Promise(r=>setTimeout(r,50));
    assert.equal(await evaluate('document.getElementById("appShell").classList.contains("hidden")'),false,"app reale autenticata fittizia disponibile");
    await evaluate('window.AgendaAppReady');assert.equal(await evaluate('state.students.length'),2);
+   await localCorrections({evaluate,click,capture,width});
    await click("#openOtherFunctions");await click("#openExams");await new Promise(r=>setTimeout(r,100));await click("#newExam");
    await click("#selectExamInstructor");for(let i=0;i<100&&!await evaluate('!!document.querySelector("#examInstructorChoices input")');i++)await new Promise(r=>setTimeout(r,50));
    await click("#examInstructorChoices label");await click("#confirmExamInstructor");assert.equal(await evaluate('state.examDraft.instructorId'),"teacher-demo");

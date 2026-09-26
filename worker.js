@@ -99,7 +99,9 @@ async function examInstructors(request, env, session) {
   if ((origin && !sameOrigin(request)) || request.headers.get("sec-fetch-site") === "cross-site") return json({ error: "Richiesta non autorizzata." }, 403);
   if (url.search) return json({ error: "Parametri non consentiti." }, 400);
   const { results = [] } = await env.DB.prepare("SELECT id,name,role,authorization_role,is_primary_admin,active FROM users WHERE active=1").all();
-  const instructors = results.filter(row => Number(row.active) === 1 && !primaryAdminFlag(row) && effectiveRole(row) === "ISTRUTTORE")
+  const instructors = results.filter(row => Number(row.active) === 1 && ["ADMIN", "ISTRUTTORE"].includes(effectiveRole(row))
+      && (!primaryAdminFlag(row) || effectiveRole(row) === "ADMIN")
+      && typeof row.id === "string" && row.id.trim() && typeof row.name === "string" && row.name.trim())
     .map(row => ({ id: String(row.id), name: String(row.name) }))
     .sort((a,b) => a.name < b.name ? -1 : a.name > b.name ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   return json({ instructors });

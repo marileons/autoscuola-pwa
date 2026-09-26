@@ -316,3 +316,15 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 #examStartTimeOptions,#examEndTimeOptions{width:100%;margin-bottom:8px}
 .license-complete-badge{color:#157447;font-weight:800}
 #examinerRouteZone{font-size:16px;max-width:100%}
+
+/* General management is separate from otherFunctions: constrain its own SVGs. */
+#generalStudentManagement .other-functions-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:9px}
+#generalStudentManagement .home-pro-action{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:10px;min-height:48px;margin:0;padding:10px 12px;text-align:left;overflow-wrap:anywhere}
+#generalStudentManagement .ui-icon,#generalStudentManagement .ui-icon svg{display:block;width:28px;height:28px;max-width:28px}
+/* Native date controls must not impose their intrinsic width on a grid cell. */
+#appShell .form{grid-template-columns:minmax(0,1fr)}
+#appShell .form>label,#appShell .register-form>label{min-width:0;max-width:100%}
+#appShell input[type="date"]{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:16px}
+#appShell input[type="date"]::-webkit-date-and-time-value{min-width:0;text-align:left}
+#appShell input[type="date"]::-webkit-datetime-edit{min-width:0;padding:0}
+#lesson .lesson-student-identity{position:sticky;top:0;z-index:21;margin:0 0 12px;padding:12px;border:1px solid #526671;border-radius:10px;background:#1b2831;color:#f1f4f5;font-weight:700;overflow-wrap:anywhere}

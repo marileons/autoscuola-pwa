@@ -10,7 +10,7 @@ function element() {
     disabled: false, hidden: true, href: "", textContent: "",
     classList: { toggle() {} },
     addEventListener(type, handler) { listeners[type] = handler; },
-    click() { return listeners.click?.(); },
+    click(event) { return listeners.click?.(event); },
     listeners
   };
 }
@@ -18,9 +18,10 @@ function element() {
 function fixture(options = {}) {
   const ids = ["studentReportPrint", "studentReportClose", "studentReportPrintStatus", "studentReportPrintAlternatives", "studentReportOpenAgain", "studentReportDownloadHtml"];
   const elements = Object.fromEntries(ids.map(id => [id, element()]));
-  let printCalls = 0, closeCalls = 0;
+  let printCalls = 0, closeCalls = 0, now = 100;
   const windowListeners = {};
   const win = {
+    performance: { now: () => now, timeOrigin: 1700000000000 },
     location: { href: "blob:https://locale.test/id-opaco" },
     print() { printCalls += 1; if (options.printError) throw new Error("print failed"); },
     close() { closeCalls += 1; },
@@ -28,8 +29,9 @@ function fixture(options = {}) {
     setTimeout(handler) { if (options.runTimers) handler(); }
   };
   const timers = [];
-  const api = installReportControls(win, { getElementById: id => elements[id] }, handler => timers.push(handler));
-  return { elements, win, timers, api, windowListeners, printCalls: () => printCalls, closeCalls: () => closeCalls };
+  const doc = { getElementById: id => elements[id] };
+  const api = installReportControls(win, doc, handler => timers.push(handler));
+  return { elements, win, doc, timers, api, windowListeners, advance: ms => { now += ms; }, printCalls: () => printCalls, closeCalls: () => closeCalls };
 }
 
 test("il click reale invoca una sola stampa e collega il listener al documento", () => {
@@ -46,6 +48,7 @@ test("il doppio tocco non apre due pannelli di stampa", () => {
   f.elements.studentReportPrint.click();
   f.elements.studentReportPrint.click();
   assert.equal(f.printCalls(), 1);
+  f.advance(1200);
   f.timers[0]();
   f.elements.studentReportPrint.click();
   assert.equal(f.printCalls(), 2);
@@ -59,6 +62,31 @@ test("un'eccezione di stampa mostra fallback e messaggio italiano", () => {
   assert.match(f.elements.studentReportPrintStatus.textContent, /Impossibile aprire la stampa/);
   assert.equal(f.elements.studentReportOpenAgain.href, f.win.location.href);
   assert.equal(f.elements.studentReportDownloadHtml.href, f.win.location.href);
+  f.advance(1200);f.timers[0]();f.elements.studentReportPrint.click();
+  assert.equal(f.printCalls(),2,"un errore non blocca definitivamente il comando");
+});
+
+test("eventi accodati, touch/click e timer anticipati non aggirano il blocco",()=>{
+ const f=fixture(),button=f.elements.studentReportPrint;
+ button.click({timeStamp:100});f.advance(900);f.api.releasePrintButton();
+ button.disabled=false;button.click({timeStamp:1000});assert.equal(f.printCalls(),1,"oltre i vecchi 800 ms il blocco è ancora attivo");
+ f.advance(300);f.timers[0]();
+ button.click({timeStamp:1000});button.click({timeStamp:1700000001000});assert.equal(f.printCalls(),1,"eventi vecchi, anche epoch Safari, rifiutati dopo lo sblocco");
+ button.click({timeStamp:1300});assert.equal(f.printCalls(),2,"nuovo gesto volontario ammesso");
+ f.timers[0]();button.click({timeStamp:1301});assert.equal(f.printCalls(),2,"timer precedente non sblocca la nuova stampa");
+});
+
+test("inizializzazione ripetuta e rientro sincrono in print sono idempotenti",()=>{
+ const f=fixture(),button=f.elements.studentReportPrint,handler=button.listeners.click;
+ assert.equal(installReportControls(f.win,f.doc),f.api);assert.equal(button.listeners.click,handler);
+ let calls=0;f.win.print=()=>{calls++;button.click();};button.click();assert.equal(calls,1);
+});
+
+test("il blocco copre anche eventi accodati durante un dialogo nativo lungo",()=>{
+ const f=fixture();let calls=0;f.win.print=()=>{calls++;f.advance(10000)};
+ f.elements.studentReportPrint.click();f.advance(1200);f.timers[0]();
+ f.elements.studentReportPrint.click({timeStamp:5000});assert.equal(calls,1);
+ f.elements.studentReportPrint.click();assert.equal(calls,2);
 });
 
 test("lo script incorporato è locale e non contiene chiamate di rete", () => {

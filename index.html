@@ -292,7 +292,7 @@
 </section>
 
 <section id="studentMultiAction" class="view">
-  <div class="other-functions-subnav"><button id="backStudentMultiAction" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
+  <div class="other-functions-subnav"><button id="backStudentMultiAction" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-general-students-back>INDIETRO</button></div>
   <div class="card form"><h2 id="studentMultiActionTitle"></h2>
     <p id="studentMultiActionPrompt" class="muted"></p>
     <div id="studentMultiActionList"></div>
@@ -343,7 +343,7 @@
 </section>
 
 <section id="studentMultiShare" class="view">
-  <div class="other-functions-subnav"><button id="backStudentMultiShare" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
+  <div class="other-functions-subnav"><button id="backStudentMultiShare" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-general-students-back>INDIETRO</button></div>
   <div class="card form"><h2>Condividi più allievi</h2>
     <p class="muted">Seleziona gli allievi da includere. Guide, checklist e percorsi GPS rimangono associati.</p>
     <div id="studentMultiShareList"></div>
@@ -380,7 +380,9 @@
 </section>
 
 <section id="lesson" class="view">
-  <div class="card form"><h2 id="lessonTitle">Nuova guida</h2>
+  <h2 id="lessonTitle">Nuova guida</h2>
+  <p id="lessonStudentIdentity" class="lesson-student-identity" aria-live="polite"></p>
+  <div class="card form">
     <label>Data<input id="lessonDate" type="date"></label>
 <label>Ora<select id="lessonTime"><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option></select></label>
 <label>Durata<select id="lessonDuration"><option>1 ora</option><option>1 ora e 30 minuti</option><option>2 ore</option><option>3 ore</option></select></label>

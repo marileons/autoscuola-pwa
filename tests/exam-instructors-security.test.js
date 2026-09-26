@@ -16,13 +16,21 @@ test("elenco istruttori: sessioni, ruoli, minimizzazione e sola lettura su DB fi
   const worker=(await import('data:text/javascript;base64,'+Buffer.from(fs.readFileSync(path.join(root,'worker.js'),'utf8')).toString('base64'))).default;
   const call=(id,purpose='NORMAL',options={})=>worker.fetch(new Request('https://agenda.test/api/exams/instructors'+(options.query||''),{method:options.method||'GET',headers:{...(id?{cookie:'agenda_session_v2='+id+purpose}:{}),...(options.origin?{origin:options.origin}:{})}}),{DB:{prepare}});
   assert.equal((await call(null)).status,401);
-  for(const id of ['i1','p','a']){const res=await call(id);assert.equal(res.status,200);assert.equal(res.headers.get('cache-control'),'no-store');const data=await res.json();assert.deepEqual(Object.keys(data),['instructors']);assert.deepEqual(data.instructors,[{id:'i1',name:'ALFA'},{id:'i2',name:'ALFA'},{id:'z',name:'ZETA'}]);}
+  for(const id of ['i1','p','a']){const res=await call(id);assert.equal(res.status,200);assert.equal(res.headers.get('cache-control'),'no-store');const data=await res.json();assert.deepEqual(Object.keys(data),['instructors']);assert.deepEqual(data.instructors,[{id:'a',name:'ADMIN'},{id:'i1',name:'ALFA'},{id:'i2',name:'ALFA'},{id:'p',name:'PRINCIPALE'},{id:'z',name:'ZETA'}]);}
   for(const id of ['m','bad','invalid'])assert.equal((await call(id)).status,403);
   assert.equal((await call('b')).status,401);
   for(const id of ['i1','a','p','m'])assert.equal((await call(id,'PASSWORD_CHANGE')).status,403);
   assert.equal((await call('i1','NORMAL',{origin:'https://other.test'})).status,403);
   assert.equal((await call('i1','NORMAL',{query:'?role=ADMIN'})).status,400);
   assert.equal((await call('i1','NORMAL',{method:'POST',origin:'https://agenda.test'})).status,405);
+  const historical={instructorId:'z',instructorName:'ZETA'};
+  db.prepare('UPDATE users SET active=0 WHERE id=?').run('z');
+  assert.equal((await (await call('i1')).json()).instructors.some(x=>x.id==='z'),false);
+  assert.deepEqual(historical,{instructorId:'z',instructorName:'ZETA'});
+  db.prepare('UPDATE users SET name=? WHERE id=?').run('   ','i2');
+  assert.equal((await (await call('i1')).json()).instructors.some(x=>x.id==='i2'),false);
+  db.prepare('UPDATE users SET active=1,name=? WHERE id=?').run('NUOVO ISTRUTTORE','z');
+  assert.ok((await (await call('i1')).json()).instructors.some(x=>x.id==='z'&&x.name==='NUOVO ISTRUTTORE'));
   assert.deepEqual(statements,[],"anche il controllo di sessione dell’elenco è di sola lettura");
   assert.equal(db.prepare('SELECT count(*) AS n FROM users').get().n,users.length);
  }finally{db.close()}
