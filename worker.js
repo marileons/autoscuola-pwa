@@ -32,7 +32,9 @@ export default {
       if (isPublicAsset(url.pathname)) return env.ASSETS.fetch(request);
       const session = await requireSession(request, env);
       if (session.response) return session.response;
-      if (session.purpose !== "NORMAL" || effectiveRole(session.user) === "USER_MANAGER") return json({ error: "Risorsa non autorizzata." }, 403);
+      const role=effectiveRole(session.user);
+      const secretaryAssets=new Set(["/student-license.js","/student-license-store.js","/student-archive-store.js","/lesson-drafts.js","/student-report-print.js","/driving-errors.js","/student-multi-actions.js","/student-multi-import.js","/exams.js","/app.js","/documents.js","/r10-features.js","/ui-icons.svg"]);
+      if (session.purpose !== "NORMAL" || role === "USER_MANAGER" || (role === "SEGRETERIA" && !secretaryAssets.has(url.pathname))) return json({ error: "Risorsa non autorizzata." }, 403);
       return env.ASSETS.fetch(request);
     }
     try {
@@ -48,7 +50,16 @@ export default {
       if (url.pathname === "/api/auth/password" && request.method === "POST") return changeOwnPassword(request, env, session);
       // Sole new network read for the exam instructor picker: no application data.
       if (url.pathname === "/api/exams/instructors") return examInstructors(request, env, session);
-      if (url.pathname === "/api/account/employment" && request.method === "GET") return ownEmploymentHistory(env, session.user);
+      if (url.pathname === "/api/account/employment" && request.method === "GET") {
+        if (effectiveRole(session.user) === "SEGRETERIA") return json({ error: "Risorsa non autorizzata." }, 403);
+        return ownEmploymentHistory(env, session.user);
+      }
+      if (url.pathname.startsWith("/api/reserved-area/")) return reservedArea(request, env, session);
+      if (url.pathname === "/api/users" || url.pathname.startsWith("/api/users/") || url.pathname.startsWith("/api/user-management/")) {
+        const denied = requireUserManager(session.user); if (denied) return denied;
+        if (!(await reservedAreaUnlocked(env, session))) return json({ error: "Sblocca l’Area riservata con il PIN personale.", reservedAreaLocked: true }, 403);
+      }
+      if (url.pathname === "/api/user-management/secretaries" && request.method === "POST") return createSecretary(request, env, session.user);
       if (url.pathname === "/api/users" && request.method === "GET") return listUsers(env, session.user);
       if (url.pathname === "/api/users" && request.method === "POST") return createUser(request, env, session.user);
       const match = url.pathname.match(/^\/api\/users\/([^/]+)$/);
@@ -72,6 +83,105 @@ function isPublicAsset(pathname) {
   return pathname === "/" || pathname === "/index.html" || pathname === "/auth-client.js" || pathname === "/service-worker.js" || pathname === "/manifest.json" || pathname === "/favicon.ico" || /\.(?:css|png|jpg|jpeg|webp)$/i.test(pathname);
 }
 
+async function reservedAreaUnlocked(env, session) {
+  const row = await env.DB.prepare(`SELECT s.reserved_area_until,s.reserved_area_generation,p.generation
+    FROM sessions s JOIN reserved_area_pins p ON p.user_id=s.user_id WHERE s.id_hash=?`).bind(session.idHash).first();
+  return session.purpose === "NORMAL" && !requireUserManager(session.user) && Boolean(row?.generation)
+    && row.reserved_area_generation === row.generation && row.reserved_area_until > new Date().toISOString();
+}
+
+async function reservedArea(request, env, session) {
+  const denied = requireUserManager(session.user); if (denied) return denied;
+  if (session.purpose !== "NORMAL") return json({ error: "Accesso non consentito." }, 403);
+  const action = new URL(request.url).pathname.slice("/api/reserved-area/".length);
+  if (action === "status" && request.method === "GET") {
+    const pin = await env.DB.prepare("SELECT user_id FROM reserved_area_pins WHERE user_id=?").bind(session.user.id).first();
+    const unlocked = await reservedAreaUnlocked(env, session);
+    const expiry = unlocked ? await env.DB.prepare("SELECT reserved_area_until FROM sessions WHERE id_hash=?").bind(session.idHash).first() : null;
+    return json({ configured: Boolean(pin), unlocked, expiresAt: expiry?.reserved_area_until || null });
+  }
+  if (request.method !== "POST") return json({ error: "Operazione non consentita." }, 405);
+  const body = await request.json();
+  if (action === "lock" && strictBody(body, [])) {
+    await env.DB.prepare("UPDATE sessions SET reserved_area_until=NULL,reserved_area_generation=NULL WHERE id_hash=?").bind(session.idHash).run();
+    return json({ ok: true });
+  }
+  const allowed = { configure: ["pin", "confirmPin", "operatorPassword"], unlock: ["pin"], reset: ["operatorPassword", "targetId"] };
+  if (!allowed[action] || !strictBody(body, allowed[action])) return json({ error: "La richiesta contiene campi non consentiti." }, 400);
+  const rate = await throttleStatus(env, "RESERVED_PIN", session.user.id);
+  if (rate.blocked) return json({ error: "Troppi tentativi. Attendi 15 minuti prima di riprovare." }, 429);
+  const stored = await env.DB.prepare("SELECT * FROM reserved_area_pins WHERE user_id=?").bind(session.user.id).first();
+  let correct;
+  if (action === "unlock") {
+    correct = typeof body.pin === "string" && /^\d{4}$/.test(body.pin) && stored
+      && constantTimeEqual(await passwordHash(body.pin, base64ToBytes(stored.pin_salt), stored.pin_iterations), stored.pin_hash);
+  } else correct = await verifyPassword(String(body.operatorPassword || ""), session.user);
+  if (!correct) {
+    await throttleFailure(env, "RESERVED_PIN", rate.keyHash);
+    await audit(env, request, session.user, session.user, "RESERVED_PIN", "DENIED", "CONFIRMATION_INVALID");
+    if((await throttleStatus(env,"RESERVED_PIN",session.user.id)).blocked)await audit(env,request,session.user,session.user,"RESERVED_PIN_BLOCK","DENIED","TOO_MANY_ATTEMPTS");
+    return json({ error: "PIN o conferma della password non validi." }, 403);
+  }
+  if (action === "unlock") {
+    const until = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    await env.DB.batch([
+      env.DB.prepare("UPDATE sessions SET reserved_area_until=?,reserved_area_generation=? WHERE id_hash=?").bind(until, stored.generation, session.idHash),
+      ...auditStatements(env, request, session.user, session.user, "RESERVED_UNLOCK", "SUCCESS", "UNLOCKED")
+    ]);
+    await throttleClear(env, "RESERVED_PIN", rate.keyHash);
+    return json({ ok: true, expiresAt: until });
+  }
+  if (action === "configure") {
+    if (stored) return json({ error: "PIN già configurato. Usa il ripristino del PIN." }, 409);
+    if (typeof body.pin !== "string" || !/^\d{4}$/.test(body.pin) || body.pin !== body.confirmPin) return json({ error: "Inserisci e conferma lo stesso PIN di quattro cifre." }, 400);
+    const secret = await makePassword(body.pin);
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO reserved_area_pins(user_id,pin_hash,pin_salt,pin_iterations,generation,updated_at) VALUES(?,?,?,?,?,?)").bind(session.user.id, secret.hash, secret.salt, secret.iterations, crypto.randomUUID(), new Date().toISOString()),
+      ...auditStatements(env, request, session.user, session.user, "RESERVED_PIN_CONFIGURE", "SUCCESS", "CONFIGURED")
+    ]);
+  } else {
+    const targetId = body.targetId || session.user.id;
+    const target = await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(targetId).first();
+    if (!target || requireUserManager(target) || (targetId !== session.user.id && (!isPrimaryAdmin(session.user) || primaryAdminFlag(target) || !(await reservedAreaUnlocked(env, session))))) return json({ error: "Ripristino PIN non autorizzato." }, 403);
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM reserved_area_pins WHERE user_id=?").bind(targetId),
+      env.DB.prepare("UPDATE sessions SET reserved_area_until=NULL,reserved_area_generation=NULL WHERE user_id=?").bind(targetId),
+      ...auditStatements(env, request, session.user, target, "RESERVED_PIN_RESET", "SUCCESS", "RESET")
+    ]);
+  }
+  await throttleClear(env, "RESERVED_PIN", rate.keyHash);
+  return json({ ok: true });
+}
+
+async function createSecretary(request, env, actor) {
+  if (!isPrimaryAdmin(actor)) return json({ error: "Funzione riservata all’amministratore principale." }, 403);
+  const body = await request.json();
+  if (!strictBody(body, ["username", "name", "operatorPassword"])) return json({ error: "La richiesta contiene campi non consentiti." }, 400);
+  const username = normalizeUsername(body.username), name = String(body.name || "").trim();
+  if (!validUsername(username) || !name || name.length > 100) return json({ error: "Nome o username non valido." }, 400);
+  const rate = await throttleStatus(env, "OPERATOR_CONFIRM", actor.id);
+  if (rate.blocked) return json({ error: "Troppi tentativi. Attendi e riprova." }, 429);
+  if (!(await verifyPassword(String(body.operatorPassword || ""), actor))) {
+    await throttleFailure(env, "OPERATOR_CONFIRM", rate.keyHash);
+    await audit(env, request, actor, null, "CREATE_SECRETARY", "DENIED", "OPERATOR_PASSWORD_INVALID");
+    return json({ error: "Conferma dell’operatore non valida." }, 403);
+  }
+  const temporaryPassword = randomTemporaryPassword(), secret = await makePassword(temporaryPassword), id = crypto.randomUUID();
+  const now = new Date().toISOString(), expires = new Date(Date.now() + TEMPORARY_PASSWORD_MS).toISOString();
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO users(id,username,name,role,authorization_role,access_profile,password_hash,password_salt,password_iterations,active,created_at,updated_at,must_change_password,temporary_password_expires_at,password_reset_at)
+        VALUES(?,?,?,'ISTRUTTORE','ISTRUTTORE','SEGRETERIA',?,?,?,1,?,?,1,?,?)`).bind(id, username, name, secret.hash, secret.salt, secret.iterations, now, now, expires, now),
+      ...auditStatements(env, request, actor, { id, username, name }, "CREATE_SECRETARY", "SUCCESS", "CREATED_WITH_TEMPORARY_PASSWORD")
+    ]);
+  } catch (error) {
+    if (String(error).toLowerCase().includes("unique")) return json({ error: "Questo username è già utilizzato." }, 409);
+    throw error;
+  }
+  await throttleClear(env, "OPERATOR_CONFIRM", rate.keyHash);
+  return json({ user: publicUser(await env.DB.prepare(userSelect("WHERE u.id=?")).bind(id).first()), temporaryPassword, temporaryPasswordExpiresAt: expires }, 201);
+}
+
 function json(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...headers } });
 }
@@ -85,7 +195,11 @@ function validPassword(value) { return typeof value === "string" && value.length
 function effectiveRole(row) {
   const legacy = row?.role;
   const assigned = row?.authorization_role;
-  if (assigned == null || assigned === "") return ["ADMIN", "ISTRUTTORE"].includes(legacy) ? legacy : null;
+  if (row?.access_profile != null) {
+    return row.access_profile === "SEGRETERIA" && legacy === "ISTRUTTORE" && assigned === "ISTRUTTORE"
+      && !primaryAdminFlag(row) ? "SEGRETERIA" : null;
+  }
+  if (assigned == null) return ["ADMIN", "ISTRUTTORE"].includes(legacy) ? legacy : null;
   if (!AUTHORIZATION_ROLES.includes(assigned)) return null;
   if (assigned === "USER_MANAGER") return legacy === "ISTRUTTORE" ? assigned : null;
   return assigned === legacy ? assigned : null;
@@ -98,7 +212,7 @@ async function examInstructors(request, env, session) {
   // Same-origin GET may omit Origin. Reject cross-origin and arbitrary query filters.
   if ((origin && !sameOrigin(request)) || request.headers.get("sec-fetch-site") === "cross-site") return json({ error: "Richiesta non autorizzata." }, 403);
   if (url.search) return json({ error: "Parametri non consentiti." }, 400);
-  const { results = [] } = await env.DB.prepare("SELECT id,name,role,authorization_role,is_primary_admin,active FROM users WHERE active=1").all();
+  const { results = [] } = await env.DB.prepare("SELECT id,name,role,authorization_role,access_profile,is_primary_admin,active FROM users WHERE active=1").all();
   const instructors = results.filter(row => Number(row.active) === 1 && ["ADMIN", "ISTRUTTORE"].includes(effectiveRole(row))
       && (!primaryAdminFlag(row) || effectiveRole(row) === "ADMIN")
       && typeof row.id === "string" && row.id.trim() && typeof row.name === "string" && row.name.trim())
@@ -108,7 +222,7 @@ async function examInstructors(request, env, session) {
 }
 function capabilitiesFor(row) {
   const role = effectiveRole(row), primary = primaryAdminFlag(row);
-  return { useApplication: role === "ADMIN" || role === "ISTRUTTORE", manageUsers: role === "ADMIN" || role === "USER_MANAGER", managePrivilegedUsers: role === "ADMIN" && primary, viewAudit: role === "ADMIN" && primary };
+  return { useApplication: ["ADMIN","ISTRUTTORE","SEGRETERIA"].includes(role), manageUsers: role === "ADMIN" || role === "USER_MANAGER", managePrivilegedUsers: role === "ADMIN" && primary, viewAudit: role === "ADMIN" && primary };
 }
 function publicUser(row, purpose = "NORMAL") {
   return {
@@ -235,7 +349,7 @@ async function requireSession(request, env, revokeInvalid = true) {
   const row = await env.DB.prepare(`SELECT u.*, s.id_hash, s.purpose, s.session_version AS authenticated_session_version, ${employmentFields()}
     FROM sessions s JOIN users u ON u.id=s.user_id
     WHERE s.id_hash=? AND s.expires_at>?`).bind(idHash, now).first();
-  if (!row || !row.active || Number(row.authenticated_session_version) !== Number(row.session_version)) {
+  if (!row || !row.active || !effectiveRole(row) || Number(row.authenticated_session_version) !== Number(row.session_version)) {
     if (revokeInvalid && row?.id_hash) await env.DB.prepare("DELETE FROM sessions WHERE id_hash=?").bind(idHash).run();
     return { response: json({ error: "Sessione scaduta o accesso revocato." }, 401, { "set-cookie": sessionCookie("", 0) }) };
   }
@@ -252,7 +366,7 @@ async function login(request, env) {
   const rate = await throttleStatus(env, "LOGIN", `${username}:${request.headers.get("cf-connecting-ip") || "unknown"}`);
   if (rate.blocked) return json({ error: "Troppi tentativi. Attendi alcuni minuti e riprova." }, 429);
   const row = await env.DB.prepare(userSelect("WHERE u.username=?")).bind(username).first();
-  if (!row || !row.active || !(await verifyPassword(password, row))) { await throttleFailure(env, "LOGIN", rate.keyHash); return json({ error: "Credenziali non corrette o utente bloccato." }, 401); }
+  if (!row || !row.active || !effectiveRole(row) || !(await verifyPassword(password, row))) { await throttleFailure(env, "LOGIN", rate.keyHash); return json({ error: "Credenziali non corrette o utente bloccato." }, 401); }
   const now = new Date();
   let purpose = "NORMAL", sessionMs = SESSION_DAYS * 86400000;
   if (row.must_change_password) {
@@ -312,7 +426,8 @@ async function createUser(request, env, admin) {
   const body = await request.json();
   if (!strictBody(body, ["username", "name", "password", "role", "employmentType", "employmentEffectiveFrom"])) return json({ error: "La richiesta contiene campi non consentiti." }, 400);
   const username = normalizeUsername(body.username), name = String(body.name || "").trim(), password = String(body.password || "");
-  const role = AUTHORIZATION_ROLES.includes(body.role) ? body.role : "ISTRUTTORE";
+  if (body.role !== undefined && !AUTHORIZATION_ROLES.includes(body.role)) return json({ error: "Ruolo non consentito." }, 400);
+  const role = body.role || "ISTRUTTORE";
   if (role !== "ISTRUTTORE" && !isPrimaryAdmin(admin)) return json({ error: "Configura e utilizza l’amministratore principale per creare utenti privilegiati." }, 403);
   const employmentType = normalizeEmploymentType(body.employmentType);
   const requestedEffectiveFrom = normalizeDate(body.employmentEffectiveFrom);
@@ -408,7 +523,7 @@ async function managerListUsers(env, actor) {
   const denied = requireUserManager(actor); if (denied) return denied;
   const where = effectiveRole(actor) === "USER_MANAGER" ? "WHERE COALESCE(u.authorization_role,u.role)='ISTRUTTORE' ORDER BY u.name COLLATE NOCASE" : "ORDER BY u.name COLLATE NOCASE";
   const result = await env.DB.prepare(userSelect(where)).all();
-  return json({ users: result.results.map(row => publicUser(row)) });
+  return json({ users: result.results.filter(row => effectiveRole(actor) !== "USER_MANAGER" || normalTarget(row)).map(row => publicUser(row)) });
 }
 async function principalAudit(url, env, actor) {
   if (!isPrimaryAdmin(actor)) return json({ error: "Funzione riservata all’amministratore principale." }, 403);

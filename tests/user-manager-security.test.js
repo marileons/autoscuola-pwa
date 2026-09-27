@@ -60,16 +60,17 @@ test("browser reale: Audit esiste solo per il principale e nessun altro account 
    instructor:{id:"i",name:"ISTRUTTORE",username:"instructor",role:"ISTRUTTORE",capabilities:{useApplication:true,manageUsers:false,managePrivilegedUsers:false,viewAudit:false}}
   };window.__auditRequests=0;const nativeFetch=window.fetch.bind(window);
   window.fetch=async(input,options)=>{const target=new URL(typeof input==="string"?input:input.url,location.href);
+   if(target.pathname==="/api/reserved-area/status")return new Response(JSON.stringify({configured:true,unlocked:true,expiresAt:new Date(Date.now()+900000).toISOString()}),{status:200});
    if(target.pathname==="/api/auth/me")return new Response(JSON.stringify({user:identities[kind]}),{status:200,headers:{"content-type":"application/json"}});
    if(target.pathname==="/api/user-management/users"||target.pathname==="/api/users")return new Response(JSON.stringify({users:[]}),{status:200,headers:{"content-type":"application/json"}});
    if(target.pathname==="/api/user-management/audit"){window.__auditRequests++;document.getElementById("browserAuditRequestCount").textContent=String(window.__auditRequests);return new Response(JSON.stringify({events:[]}),{status:200,headers:{"content-type":"application/json"}})}
    return nativeFetch(input,options);
   };
-  addEventListener("DOMContentLoaded",()=>setTimeout(()=>{if(kind==="primary")document.getElementById("refreshUserAudit")?.click()},350));
+  addEventListener("DOMContentLoaded",()=>setTimeout(()=>{if(kind==="primary")document.getElementById("openUserManagement")?.click()},350));
   })();
  </script>`;
  const fixture=sourceIndex.replace('<script src="auth-client.js?v=5"></script>',injection+'<script src="/auth-client.js"></script>');
- const server=http.createServer((request,response)=>{const pathname=new URL(request.url,"http://local").pathname;if(pathname==="/"){response.setHeader("content-type","text/html; charset=utf-8");response.end(fixture)}else if(pathname==="/auth-client.js"){response.setHeader("content-type","text/javascript");response.end(sourceClient)}else if(pathname.endsWith(".js")){response.setHeader("content-type","text/javascript");response.end("window.AgendaAppReady=Promise.resolve();")}else{response.statusCode=204;response.end()}});
+ const server=http.createServer((request,response)=>{const pathname=new URL(request.url,"http://local").pathname;if(pathname==="/"){response.setHeader("content-type","text/html; charset=utf-8");response.end(fixture)}else if(pathname==="/auth-client.js"){response.setHeader("content-type","text/javascript");response.end(sourceClient)}else if(pathname.endsWith(".js")){response.setHeader("content-type","text/javascript");response.end("window.AgendaAppReady=Promise.resolve();window.show=id=>{document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id))};")}else{response.statusCode=204;response.end()}});
  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));const port=server.address().port;
  try{
   for(const identity of ["primary","admin","manager","instructor"]){const profile=fs.mkdtempSync(path.join(os.tmpdir(),`agenda-audit-${identity}-`));try{const dom=await runEdge(`http://127.0.0.1:${port}/?identity=${identity}`,profile);const authorized=identity==="primary";assert.equal(/id="userManagementAudit"/.test(dom),authorized,`${identity}: presenza pannello`);assert.equal(/id="refreshUserAudit"/.test(dom),authorized,`${identity}: presenza comando`);assert.match(dom,new RegExp(`id="browserAuditRequestCount">${authorized?1:0}<`),`${identity}: richieste audit`)}finally{await removeBrowserProfile(profile)}}
@@ -99,7 +100,7 @@ test("flusso HTTP locale USER_MANAGER, password provvisoria e attacchi restano c
  const employmentEffectiveFrom=futureMonday.toISOString().slice(0,10);
  assert.ok(employmentEffectiveFrom>executionDate.toISOString().slice(0,10));
  assert.equal(futureMonday.getUTCDay(),1);
- const db=new DatabaseSync(":memory:");db.exec("PRAGMA foreign_keys=ON");for(const migration of ["0001_auth.sql","0002_user_employment_periods.sql","0003_user_manager_and_temporary_passwords.sql","0004_persistent_user_management_audit.sql"])db.exec(fs.readFileSync(path.join(root,"migrations",migration),"utf8"));
+ const db=new DatabaseSync(":memory:");db.exec("PRAGMA foreign_keys=ON");for(const migration of ["0001_auth.sql","0002_user_employment_periods.sql","0003_user_manager_and_temporary_passwords.sql","0004_persistent_user_management_audit.sql","0005_secretary_and_reserved_area_pin.sql"])db.exec(fs.readFileSync(path.join(root,"migrations",migration),"utf8"));
  seedSecuredUser(db,{id:"primary",username:"primary",role:"ADMIN",authorizationRole:"ADMIN",primary:1});
  seedSecuredUser(db,{id:"admin",username:"admin2",role:"ADMIN",authorizationRole:"ADMIN"});
  seedSecuredUser(db,{id:"manager",username:"manager",authorizationRole:"USER_MANAGER"});
@@ -107,7 +108,8 @@ test("flusso HTTP locale USER_MANAGER, password provvisoria e attacchi restano c
  seedSecuredUser(db,{id:"blocked",username:"blocked",active:0});
  const module=await worker(),env={DB:new LocalD1(db),ASSETS:{fetch:async()=>new Response("asset")}};
  const call=(path,options)=>module.default.fetch(apiRequest(path,options),env);
- const managerLogin=await responseJson(await call("/api/auth/login",{method:"POST",body:{username:"manager",password:"PasswordFittizia!"}}));assert.equal(managerLogin.status,200);const managerCookie=managerLogin.cookie;
+ async function unlockForTest(cookie){assert.equal((await call("/api/reserved-area/configure",{method:"POST",cookie,body:{pin:"7391",confirmPin:"7391",operatorPassword:"PasswordFittizia!"}})).status,200);assert.equal((await call("/api/reserved-area/unlock",{method:"POST",cookie,body:{pin:"7391"}})).status,200)}
+ const managerLogin=await responseJson(await call("/api/auth/login",{method:"POST",body:{username:"manager",password:"PasswordFittizia!"}}));assert.equal(managerLogin.status,200);const managerCookie=managerLogin.cookie;await unlockForTest(managerCookie);
  const list=await responseJson(await call("/api/user-management/users",{cookie:managerCookie}));assert.equal(list.status,200);assert.deepEqual(list.body.users.map(x=>x.id).sort(),["active","blocked"]);assert.equal(list.body.users.some(x=>x.role!=="ISTRUTTORE"),false);
  assert.equal((await call("/api/users",{cookie:managerCookie})).status,403);
  assert.equal((await call("/api/user-management/users",{method:"POST",cookie:managerCookie,body:{name:"Attacco",username:"attacco",role:"ADMIN",employmentType:"PART_TIME",employmentEffectiveFrom,operatorPassword:"PasswordFittizia!"}})).status,400);
@@ -133,7 +135,7 @@ test("flusso HTTP locale USER_MANAGER, password provvisoria e attacchi restano c
  const auditRows=db.prepare("SELECT * FROM user_management_audit").all();assert.ok(auditRows.length>0);assert.doesNotMatch(JSON.stringify(auditRows),/PasswordFittizia|PasswordPersonaleNuova|agenda_session|password_hash|password_salt/);
  assert.equal((await call("/api/user-management/audit",{cookie:managerCookie})).status,403);
  const adminLogin=await responseJson(await call("/api/auth/login",{method:"POST",body:{username:"admin2",password:"PasswordFittizia!"}}));assert.equal((await call("/api/user-management/audit",{cookie:adminLogin.cookie})).status,403);
- const primaryLogin=await responseJson(await call("/api/auth/login",{method:"POST",body:{username:"primary",password:"PasswordFittizia!"}}));assert.equal((await call("/api/user-management/audit",{cookie:primaryLogin.cookie})).status,200);
+ const primaryLogin=await responseJson(await call("/api/auth/login",{method:"POST",body:{username:"primary",password:"PasswordFittizia!"}}));await unlockForTest(primaryLogin.cookie);assert.equal((await call("/api/user-management/audit",{cookie:primaryLogin.cookie})).status,200);
  const managed=await responseJson(await call("/api/users",{method:"POST",cookie:primaryLogin.cookie,body:{name:"GESTORE COLLAUDO",username:"gestore.audit",password:"PasswordFittizia!",role:"USER_MANAGER",employmentType:"PART_TIME",employmentEffectiveFrom}}));assert.equal(managed.status,201);
  assert.equal((await call(`/api/users/${managed.body.user.id}`,{method:"PATCH",cookie:primaryLogin.cookie,body:{active:false}})).status,200);assert.equal((await call(`/api/users/${managed.body.user.id}`,{method:"PATCH",cookie:primaryLogin.cookie,body:{active:true}})).status,200);assert.equal((await call(`/api/users/${managed.body.user.id}`,{method:"DELETE",cookie:primaryLogin.cookie})).status,200);
  const persisted=db.prepare("SELECT action,target_user_id,target_user_ref,target_username,target_name FROM user_management_audit WHERE target_user_ref=? ORDER BY occurred_at,id").all(managed.body.user.id).map(row=>({...row}));assert.deepEqual(persisted.map(row=>row.action).sort(),["BLOCK_USER","CREATE_USER_MANAGER","DELETE_USER","ENABLE_USER"]);assert.equal(persisted.every(row=>row.target_user_id===null&&row.target_user_ref===managed.body.user.id&&row.target_username==="gestore.audit"&&row.target_name==="GESTORE COLLAUDO"),true);

@@ -79,6 +79,12 @@
     return window.AgendaStudentLicenseStore?window.AgendaStudentLicenseStore.attachStudents(students):students;
   }
 
+  async function storedTrashWithDrivingLicenses(){
+    const entries=await window.AgendaStudentArchiveStore.snapshotTrash();
+    const students=window.AgendaStudentLicenseStore?await window.AgendaStudentLicenseStore.attachStudents(entries.map(e=>e.student)):entries.map(e=>e.student);
+    return entries.map((entry,index)=>({...entry,student:students[index]}));
+  }
+
   function validateAppData(appData){
     if(Object.hasOwn(appData||{},"studentSites"))window.StudentArchiveStore.normalizeSites(appData.studentSites);
     if(!appData||typeof appData!=="object")throw new Error("Dati applicativi mancanti.");
@@ -88,7 +94,8 @@
     if(appData.exams!==undefined)window.AgendaExams.normalizeExams(appData.exams,{strict:true});
     if(appData.examLocations!==undefined&&!Array.isArray(appData.examLocations))throw new Error("Località esami non valide.");
     const studentIds=new Set();
-    for(const student of appData.students){
+    const trash=window.StudentArchiveStore.validateTrash(appData.studentTrash||[]);
+    for(const student of [...appData.students,...trash.map(e=>e.student)]){
       if(!student||typeof student!=="object"||typeof student.id!=="string"||!student.id||studentIds.has(student.id))throw new Error("Il backup contiene allievi duplicati o non validi.");
       if(!Array.isArray(student.lessons)||!Array.isArray(student.checklist))throw new Error("Scheda allievo incompleta nel backup.");
       if(Object.hasOwn(student,"drivingLicense"))window.StudentLicense.normalize(student.drivingLicense,{strict:true});
@@ -254,7 +261,7 @@
 
   async function createSafetySnapshot(){
     const examData=await window.AgendaExamStore.snapshot();
-    const appData={studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[]),exams:examData.exams,examLocations:examData.locations};
+    const appData={studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),studentTrash:await storedTrashWithDrivingLicenses(),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[]),exams:examData.exams,examLocations:examData.locations};
     validateAppData(appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     return{version:1,appData,examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId)};
@@ -456,7 +463,7 @@
 
   async function createBackupPayload(){
     const appData={
-      studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),
+      studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),studentTrash:await storedTrashWithDrivingLicenses(),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
     };
@@ -651,15 +658,15 @@
 
   async function writeAppData(appData){
     const examArchive=window.AgendaExams.canonicalArchive(appData.exams||[],appData.examLocations||[],{strict:true}),exams=examArchive.exams,examLocations=examArchive.locations;
-    const previousSites=await window.AgendaStudentArchiveStore.snapshotSites();const previousStudents=await window.AgendaStudentArchiveStore.snapshot(),previousChecklists=parsedStorageValue(DATA_KEYS.checklists,{}),previousExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),previousLicenses=window.AgendaStudentLicenseStore?await window.AgendaStudentLicenseStore.snapshot():[],previousExamArchive=await window.AgendaExamStore.snapshot();
+    const previousTrash=await window.AgendaStudentArchiveStore.snapshotTrash();const previousSites=await window.AgendaStudentArchiveStore.snapshotSites();const previousStudents=await window.AgendaStudentArchiveStore.snapshot(),previousChecklists=parsedStorageValue(DATA_KEYS.checklists,{}),previousExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),previousLicenses=window.AgendaStudentLicenseStore?await window.AgendaStudentLicenseStore.snapshot():[],previousExamArchive=await window.AgendaExamStore.snapshot();
     await window.AgendaExamStore.replaceAll(exams,examLocations);
     try{
-      await window.AgendaStudentArchiveStore.replaceAll(studentsWithoutDrivingLicenses(appData.students));if(appData.studentSites)await window.AgendaStudentArchiveStore.replaceSites(appData.studentSites);
+      await window.AgendaStudentArchiveStore.replaceArchive(studentsWithoutDrivingLicenses(appData.students),(appData.studentTrash||[]).map(e=>({...e,student:studentsWithoutDrivingLicenses([e.student])[0]})));if(appData.studentSites)await window.AgendaStudentArchiveStore.replaceSites(appData.studentSites);
       localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(appData.checklists));
       localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(appData.examiners));
-      if(window.AgendaStudentLicenseStore)await window.AgendaStudentLicenseStore.replaceAll(drivingLicenseRecords(appData.students));
+      if(window.AgendaStudentLicenseStore)await window.AgendaStudentLicenseStore.replaceAll(drivingLicenseRecords([...appData.students,...(appData.studentTrash||[]).map(e=>e.student)]));
     }catch(error){
-      try{await window.AgendaStudentArchiveStore.replaceSites(previousSites);await window.AgendaStudentArchiveStore.replaceAll(previousStudents);localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(previousChecklists));localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(previousExaminers));if(window.AgendaStudentLicenseStore)await window.AgendaStudentLicenseStore.replaceAll(previousLicenses);await window.AgendaExamStore.replaceAll(previousExamArchive.exams,previousExamArchive.locations)}catch{}
+      try{await window.AgendaStudentArchiveStore.replaceSites(previousSites);await window.AgendaStudentArchiveStore.replaceArchive(previousStudents,previousTrash);localStorage.setItem(DATA_KEYS.checklists,JSON.stringify(previousChecklists));localStorage.setItem(DATA_KEYS.examiners,JSON.stringify(previousExaminers));if(window.AgendaStudentLicenseStore)await window.AgendaStudentLicenseStore.replaceAll(previousLicenses);await window.AgendaExamStore.replaceAll(previousExamArchive.exams,previousExamArchive.locations)}catch{}
       throw error;
     }
   }
@@ -675,6 +682,7 @@
         checklist:cleanItems(student&&student.checklist),
         lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>{
           const canonicalLesson={id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist),errors:window.DrivingErrors.normalizeErrors(lesson&&lesson.errors)};
+          for(const key of ["instructorId","instructorName","completedDraftSignature"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key];
           if(typeof lesson?.duration==="string"&&lesson.duration.trim())canonicalLesson.duration=lesson.duration.trim();
           return canonicalLesson;
         })
@@ -689,7 +697,8 @@
     includedChecklistKeys.sort().forEach(key=>{checklists[key]=Array.isArray(checklistSource[key])?checklistSource[key].map(String):[]});
     const examiners=(Array.isArray(appData.examiners)?appData.examiners:[]).map(examiner=>({id:String(examiner&&examiner.id||""),firstName:String(examiner&&examiner.firstName||""),lastName:String(examiner&&examiner.lastName||""),notes:String(examiner&&examiner.notes||""),habits:Array.isArray(examiner&&examiner.habits)?examiner.habits.map(String):[]}));
     const examArchive=window.AgendaExams.canonicalArchive(appData.exams||[],appData.examLocations||[],{strict:true}),exams=examArchive.exams,examLocations=examArchive.locations;
-    return {students,checklists,examiners,exams,examLocations};
+    const studentTrash=(appData.studentTrash||[]).map(entry=>({...entry,student:canonicalAppData({students:[entry.student],checklists:{},examiners:[]}).students[0]}));
+    return {students,studentTrash,checklists,examiners,exams,examLocations};
   }
 
   async function textSha256(value){
@@ -720,7 +729,7 @@
   async function verifyRestoreManifest(manifest){
     if(!manifest||![1,2].includes(manifest.version)||!Array.isArray(manifest.documents)||!Array.isArray(manifest.checklistKeys))throw new Error("Manifest di verifica non valido.");
     const appData={
-      studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),
+      studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),studentTrash:await storedTrashWithDrivingLicenses(),
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
     };
@@ -749,7 +758,7 @@
     const currentStudents=await storedStudentsWithDrivingLicenses();
     const currentChecklists=parsedStorageValue(DATA_KEYS.checklists,{});
     const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),examData=await window.AgendaExamStore.snapshot(),currentExams=examData.exams,currentExamLocations=examData.locations;
-    const currentCanonical=canonicalAppData({students:currentStudents,checklists:currentChecklists,examiners:currentExaminers,exams:currentExams,examLocations:currentExamLocations}),expectedCanonical=canonicalAppData(validated.payload.appData);
+    const currentCanonical=canonicalAppData({students:currentStudents,studentTrash:await storedTrashWithDrivingLicenses(),checklists:currentChecklists,examiners:currentExaminers,exams:currentExams,examLocations:currentExamLocations}),expectedCanonical=canonicalAppData(validated.payload.appData);
     if(JSON.stringify(currentCanonical)!==JSON.stringify(expectedCanonical))throw new Error("Verifica dei dati applicativi non riuscita.");
     if(Object.hasOwn(validated.payload.appData,"studentSites")&&JSON.stringify(await window.AgendaStudentArchiveStore.snapshotSites())!==JSON.stringify(window.StudentArchiveStore.normalizeSites(validated.payload.appData.studentSites)))throw new Error("Verifica del catalogo sedi non riuscita.");
     if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}

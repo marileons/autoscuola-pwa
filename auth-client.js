@@ -6,6 +6,78 @@
   let checkTimer = null;
   let applicationLoaded = false;
   let applicationLoading = null;
+  let reservedUnlocked = false;
+  let reservedTimer = null;
+
+  async function lockReservedArea() {
+    reservedUnlocked = false;
+    clearTimeout(reservedTimer);
+    removeAuditPanel();
+    document.getElementById("userList")?.replaceChildren();
+    document.getElementById("createUserForm")?.classList.add("hidden");
+    document.getElementById("createSecretary")?.remove();
+    document.getElementById("reservedAreaDialog")?.remove();
+    if (currentUser?.capabilities?.manageUsers) configureUserManagementForm();
+    try { await api("/api/reserved-area/lock", { method: "POST", body: "{}" }); } catch {}
+  }
+
+  async function enterReservedArea() {
+    if (!currentUser?.capabilities?.manageUsers) return false;
+    const identity = currentUser.id;
+    const status = await api("/api/reserved-area/status", { method: "GET" });
+    if (currentUser?.id !== identity) return false;
+    if (status.unlocked && Number.isFinite(Date.parse(status.expiresAt)) && Date.parse(status.expiresAt) > Date.now()) {
+      reservedUnlocked = true; clearTimeout(reservedTimer);
+      reservedTimer = setTimeout(() => { void lockReservedArea(); message("Area riservata bloccata: inserisci nuovamente il PIN.", true); }, Date.parse(status.expiresAt) - Date.now());
+      return true;
+    }
+    reservedUnlocked = false; removeAuditPanel();
+    document.getElementById("reservedAreaDialog")?.remove();
+    return new Promise(resolve => {
+      const dialog = document.createElement("dialog"); dialog.id = "reservedAreaDialog";
+      dialog.setAttribute("aria-label", "PIN personale Area riservata");
+      const form = document.createElement("form"), title = document.createElement("h2"), notice = document.createElement("p"), error = document.createElement("p");
+      title.textContent = status.configured ? "Sblocca Area riservata" : "Configura PIN Area riservata";
+      notice.textContent = "PIN personale di quattro cifre, distinto dal Registro ore e compensi. Sblocco valido per 15 minuti.";
+      error.setAttribute("role", "alert");
+      const inputs = {};
+      function field(key, label, pin) {
+        const wrap = document.createElement("label"), input = document.createElement("input");
+        wrap.textContent = label; input.type = "password"; input.required = true; input.autocomplete = "off";
+        input.style.fontSize = "16px"; input.style.maxWidth = "100%";
+        if (pin) { input.inputMode = "numeric"; input.pattern = "[0-9]{4}"; input.maxLength = 4; }
+        inputs[key] = input; wrap.append(input); form.append(wrap);
+      }
+      form.append(title, notice); field("pin", "PIN", true);
+      if (!status.configured) { field("confirmPin", "Conferma PIN", true); field("operatorPassword", "Password account", false); }
+      const submit = action(status.configured ? "SBLOCCA" : "CONFIGURA E SBLOCCA", () => {}); submit.type = "submit";
+      let cancelled = false;
+      const finish = value => { if (!value) { cancelled = true; void lockReservedArea(); } form.reset(); dialog.close(); dialog.remove(); resolve(value); };
+      form.append(error, submit, action("ANNULLA", () => finish(false)));
+      if (status.configured) form.append(action("RIPRISTINA PIN", async () => {
+        const operatorPassword = prompt("Conferma la password account per azzerare il PIN dell’Area riservata");
+        if (operatorPassword === null) return;
+        try { await api("/api/reserved-area/reset", { method: "POST", body: JSON.stringify({ operatorPassword }) }); finish(false); alert("PIN azzerato. Riapri l’Area riservata per configurarlo."); } catch (e) { error.textContent = e.message; }
+      }));
+      dialog.addEventListener("cancel", event => { event.preventDefault(); finish(false); });
+      let busy = false;
+      form.addEventListener("submit", async event => {
+        event.preventDefault(); if (busy) return; busy = true; submit.disabled = true;
+        try {
+          const values = Object.fromEntries(Object.entries(inputs).map(([key,input]) => [key,input.value]));
+          if (!status.configured) { await api("/api/reserved-area/configure", { method: "POST", body: JSON.stringify(values) }); status.configured = true; }
+          if (cancelled) return;
+          const data = await api("/api/reserved-area/unlock", { method: "POST", body: JSON.stringify({ pin: values.pin }) });
+          if (cancelled) { await lockReservedArea(); return; }
+          if (currentUser?.id !== identity) { finish(false); return; }
+          reservedUnlocked = true; clearTimeout(reservedTimer);
+          reservedTimer = setTimeout(() => { void lockReservedArea(); message("Area riservata bloccata: inserisci nuovamente il PIN.", true); }, Math.max(0, Date.parse(data.expiresAt) - Date.now()));
+          finish(true);
+        } catch (e) { error.textContent = e.message; } finally { busy = false; submit.disabled = false; }
+      });
+      dialog.append(form); document.body.append(dialog); dialog.showModal(); inputs.pin.focus();
+    });
+  }
 
   async function lockRegisterVault() {
     window.RegisterUI?.handleVaultLock?.();
@@ -13,7 +85,7 @@
   }
 
   async function activateRegisterVault() {
-    if (!currentUser?.id || !window.RegisterLocalVault) return;
+    if (!currentUser?.id || !["ADMIN", "ISTRUTTORE"].includes(currentUser.role) || !window.RegisterLocalVault) return;
     await window.RegisterLocalVault.activate(currentUser.id);
   }
 
@@ -38,10 +110,12 @@
     const previousId = currentUser?.id || null;
     const nextId = user?.id || null;
     if (previousId && previousId !== nextId) {
+      reservedUnlocked = false; clearTimeout(reservedTimer); document.getElementById("reservedAreaDialog")?.remove();
       void lockRegisterVault();
       window.ExaminerRoutesUI?.stopAll?.();
     }
     currentUser = user;
+    document.body.classList.toggle("secretary-session",user?.role==="SEGRETERIA");
     syncAuditPanel();
     const adminButton = document.getElementById("openUserManagement");
     if (adminButton) adminButton.classList.toggle("hidden", !user?.capabilities?.manageUsers);
@@ -99,7 +173,8 @@
       await loadScript("student-license-store.js?v=1.21-license-store-v1");
       await loadScript("student-archive-store.js?v=1.21-student-archive-v1");
       await loadScript("lesson-drafts.js?v=1.21-lesson-drafts-v1");
-      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-economic-engine.js?v=1.21-register-v2", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2", "register-report.js?v=1.21-register-report-v3", "register-backup.js?v=1.21-register-backup-v2", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6", "driving-errors.js?v=1.21-driving-errors-v2", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2", "app.js?v=1.21-exams-v2", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=1.21-exams-v2", "student-report-print.js?v=1.21-student-report-print-v1", "r10-features.js?v=1.21-student-report-print-v1"]) await loadScript(src);
+      await loadScript("student-report-print.js?v=1.21-student-report-print-v1");
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-economic-engine.js?v=1.21-register-v2", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2", "register-report.js?v=1.21-register-report-v3", "register-backup.js?v=1.21-register-backup-v2", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6", "driving-errors.js?v=1.21-driving-errors-v2", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2", "app.js?v=1.21-exams-v2", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=1.21-exams-v2", "r10-features.js?v=1.21-student-report-print-v1"]) { if(currentUser?.role==="SEGRETERIA" && !["driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); }
       if (window.AgendaAppReady) await window.AgendaAppReady;
       applicationLoaded = true;
       await activateRegisterVault();
@@ -109,7 +184,7 @@
   }
   async function routeAfterAuthentication() {
     if (currentUser?.mustChangePassword) { showPasswordChangeOnly(); return; }
-    if (currentUser?.role === "USER_MANAGER") { showManagerShell(); await refreshUsers(); return; }
+    if (currentUser?.role === "USER_MANAGER") { showManagerShell(); await openUsers(); return; }
     await loadApplication();
   }
   function showManagerShell() {
@@ -152,6 +227,7 @@
   }
 
   async function logout(showLogin) {
+    await lockReservedArea();
     try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } catch {}
     window.ExaminerRoutesUI?.stopAll?.();
     await lockRegisterVault();
@@ -206,8 +282,11 @@
 
   async function openUsers() {
     if (!currentUser?.capabilities?.manageUsers) return;
-    window.show("userManagement");
+    try { if (!(await enterReservedArea())) return; } catch (error) { message(error.message, true); return; }
+    if (currentUser.role === "USER_MANAGER") showManagerShell(); else window.show("userManagement");
+    syncAuditPanel();
     await refreshUsers();
+    configureUserManagementForm();
     if (currentUser?.capabilities?.viewAudit === true) await refreshAudit();
   }
 
@@ -240,10 +319,10 @@
   }
   function syncAuditPanel() {
     removeAuditPanel();
-    if (currentUser?.capabilities?.viewAudit === true) createAuditPanel();
+    if (reservedUnlocked && currentUser?.capabilities?.viewAudit === true) createAuditPanel();
   }
   async function refreshAudit() {
-    if (currentUser?.capabilities?.viewAudit !== true) { removeAuditPanel(); return; }
+    if (!reservedUnlocked || currentUser?.capabilities?.viewAudit !== true) { removeAuditPanel(); return; }
     const panel = document.getElementById("userManagementAudit") || createAuditPanel();
     if (!panel) return;
     const list = document.getElementById("userAuditList"); list.textContent = "Caricamento…";
@@ -308,9 +387,14 @@
     const scheduled = user.scheduledEmploymentType
       ? ` · programmato ${user.scheduledEmploymentType.replace("_", " ")} dal ${user.scheduledEmploymentEffectiveFrom}`
       : "";
-    detail.textContent = `${user.username} · ${user.role === "ADMIN" ? "Amministratore" : "Istruttore"} · ${employment}${scheduled} · `;
+    detail.textContent = `${user.username} · ${{ADMIN:"Amministratore",USER_MANAGER:"Gestore utenti",SEGRETERIA:"Segreteria",ISTRUTTORE:"Istruttore"}[user.role]||"Ruolo non valido"} · ${employment}${scheduled} · `;
     const status = document.createElement("span"); status.className = user.active ? "user-status-active" : "user-status-blocked"; status.textContent = user.active ? "ATTIVO" : "BLOCCATO"; detail.appendChild(status);
     const actions = document.createElement("div"); actions.className = "user-admin-actions";
+    if(currentUser?.capabilities?.managePrivilegedUsers && user.id!==currentUser.id && ["ADMIN","USER_MANAGER"].includes(user.role))actions.append(action("Azzera PIN Area riservata",async()=>{
+      if(!confirm(`Azzerare il PIN Area riservata di ${user.name}? Gli sblocchi attivi verranno revocati.`))return;
+      const operatorPassword=prompt("Riconferma la password del tuo account");if(operatorPassword===null)return;
+      try{await api("/api/reserved-area/reset",{method:"POST",body:JSON.stringify({targetId:user.id,operatorPassword})});message("PIN Area riservata azzerato.")}catch(error){message(error.message,true)}
+    }));
     if (currentUser?.role === "ADMIN") {
       actions.append(action("Modifica nome", async () => { const value = prompt("Nome e cognome", user.name); if (!value || value.trim() === user.name) return; await update(user.id, { name: value.trim() }); }));
       actions.append(action("Modifica tipo lavorativo", () => changeEmployment(user)));
@@ -338,6 +422,22 @@
     document.getElementById("temporaryPasswordModal").classList.remove("hidden");
   }
   function configureUserManagementForm() {
+    document.getElementById("unlockReservedArea")?.remove();
+    if (!reservedUnlocked && currentUser?.capabilities?.manageUsers) {
+      const unlock = action("SBLOCCA AREA RISERVATA", () => openUsers());
+      unlock.id = "unlockReservedArea";
+      document.getElementById("createUserForm").before(unlock);
+    }
+    document.getElementById("createUserForm").classList.toggle("hidden",!reservedUnlocked);
+    document.getElementById("createSecretary")?.remove();
+    if(reservedUnlocked && currentUser?.capabilities?.managePrivilegedUsers){
+      const button=action("CREA ACCOUNT SEGRETERIA",async()=>{
+        if(button.disabled)return;button.disabled=true;
+        try{const name=prompt("Nome visualizzato del nuovo account Segreteria");if(!name)return;const username=prompt("Username del nuovo account Segreteria");if(!username)return;const operatorPassword=prompt("Riconferma la tua password per creare l’account");if(operatorPassword===null)return;
+          const data=await api("/api/user-management/secretaries",{method:"POST",body:JSON.stringify({name,username,operatorPassword})});showTemporaryPassword(data);message("Account Segreteria creato con password provvisoria.");await refreshUsers();
+        }catch(error){message(error.message,true)}finally{button.disabled=false}
+      });button.id="createSecretary";document.getElementById("createUserForm").before(button);
+    }
     const manager = currentUser?.role === "USER_MANAGER";
     document.getElementById("newUserPasswordLabel").classList.toggle("hidden", manager);
     document.getElementById("newUserPassword").required = !manager;
@@ -374,7 +474,7 @@
 
   function bindAdminUi() {
     document.getElementById("openUserManagement").onclick = openUsers;
-    document.getElementById("backUserManagement").onclick = () => window.show("home");
+    document.getElementById("backUserManagement").onclick = async () => { await lockReservedArea(); window.show("home"); };
     document.getElementById("createUserForm").onsubmit = createUser;
     document.getElementById("openOwnPassword").onclick = openOwnPassword;
     document.getElementById("cancelOwnPassword").onclick = closeOwnPassword;
@@ -404,12 +504,14 @@
   }
 
   window.AgendaAuth = {
+    can: action => currentUser?.role==="SEGRETERIA" ? ["consult","import","share","archive","trash","license","documents","report"].includes(action) : ["ADMIN","ISTRUTTORE"].includes(currentUser?.role),
     applicationReady,
     login,
     logout,
     updateAccountSummary,
     currentUser: () => currentUser,
-    lockRegisterVault
+    lockRegisterVault,
+    lockReservedArea
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();
 })();

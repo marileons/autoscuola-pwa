@@ -52,7 +52,7 @@ function reportFixture(){
 }
 function appPreview(request,response){
  const pathname=new URL(request.url,"http://localhost").pathname;
- if(pathname.startsWith("/api/")){response.setHeader("content-type","application/json");if(pathname==="/api/auth/me")response.end(JSON.stringify({user:{id:"account-demo",name:"ISTRUTTORE DIMOSTRATIVO",role:"ISTRUTTORE",capabilities:{useApplication:true},employmentType:"PART_TIME"}}));else if(pathname==="/api/exams/instructors")response.end(JSON.stringify({instructors:[{id:"teacher-demo",name:"ISTRUTTORE FITTIZIO CON NOME MOLTO LUNGO PER IL COLLAUDO"}]}));else response.end(JSON.stringify({periods:[],enabled:false}));return true}
+ if(pathname.startsWith("/api/")){response.setHeader("content-type","application/json");if(pathname==="/api/auth/me")response.end(JSON.stringify({user:{id:"account-demo",name:"ISTRUTTORE DIMOSTRATIVO",role:String(request.headers.referer||"").includes("secretary=1")?"SEGRETERIA":"ISTRUTTORE",capabilities:{useApplication:true},employmentType:"PART_TIME"}}));else if(pathname==="/api/exams/instructors")response.end(JSON.stringify({instructors:[{id:"teacher-demo",name:"ISTRUTTORE FITTIZIO CON NOME MOLTO LUNGO PER IL COLLAUDO"}]}));else response.end(JSON.stringify({periods:[],enabled:false}));return true}
  if(pathname==="/app-preview"){
   const seed=`<script>if(!sessionStorage.getItem('demo-seeded')){localStorage.setItem('autoscuola_v3_completa',JSON.stringify([{id:'student-demo',firstName:'ALLIEVO',lastName:'FITTIZIO CON COGNOME LUNGO',category:'auto',lessons:[],checklist:[]},{id:'student-demo-2',firstName:'SECONDO',lastName:'DIMOSTRATIVO',category:'auto',lessons:[],checklist:[]}]));localStorage.setItem('autoscuola_v3_examiners',JSON.stringify([{id:'examiner-demo',firstName:'ESAMINATORE',lastName:'FITTIZIO',habits:[]}]));sessionStorage.setItem('demo-seeded','yes')}</script>`;
   response.setHeader("content-type","text/html; charset=utf-8");response.end(fs.readFileSync(path.join(root,"index.html"),"utf8").replace(/https:\/\/unpkg.com\/leaflet@1.9.4\/dist\/leaflet.css/g,"/test-leaflet.css").replace('<script src="auth-client.js?v=5"></script>',seed+'<script src="auth-client.js?v=5"></script>'));return true;
@@ -148,6 +148,27 @@ test("browser locale: documento Blob, navigazione, date, identità guida e stamp
   assert.notEqual(await evaluate('document.getElementById("openStudentPdfFallback").href'),firstUrl);
   assert.equal(await evaluate(`fetch(${JSON.stringify(firstUrl)}).then(r=>r.ok)`),true,"Blob precedente non revocato mentre potrebbe essere aperto");
   await evaluate('window.open=window.__savedOpen');
+  await evaluate('openExaminer("examiner-demo");window.open=()=>null');await click("#exportExaminerPdf");
+  const examinerReport=await evaluate('fetch(document.querySelector("#examinerReportFallback a").href).then(r=>r.text())');
+  assert.match(examinerReport,/studentReportPrint/);assert.doesNotMatch(examinerReport,/onclick=/);assert.match(examinerReport,/TORNA ALL’APP/);
+  await click("#backExaminerForm");assert.equal(await evaluate('document.querySelector(".view.active").id'),"examiners");
+  for(const [width,height] of [[1280,900],[390,844],[768,1024]]){
+   await send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:width===390});await evaluate('window.__testNavigatingAway=true');await send("Page.navigate",{url:`http://127.0.0.1:${server.address().port}/app-preview?secretary=1`});
+   for(let i=0;i<300&&!await evaluate('!window.__testNavigatingAway && window.AgendaAuth?.currentUser()?.role==="SEGRETERIA" && document.querySelector(".view.active")?.id==="secretaryHome"');i++)await new Promise(r=>setTimeout(r,50));
+   assert.equal(await evaluate('document.querySelector(".view.active").id'),"secretaryHome");
+   assert.equal(await evaluate('[...document.scripts].some(s=>/register-|examiner-routes|leaflet|student-photo|full-backup/.test(s.src))'),false,"moduli operativi non necessari non caricati");
+   await click("#secretaryStudents");assert.equal(await evaluate('document.querySelectorAll("#students .student-card").length'),2);
+   await click("#students .student-card");assert.equal(await evaluate('document.querySelector(".view.active").id'),"student");
+   assert.equal(await evaluate('getComputedStyle(document.getElementById("newLesson")).display'),"none");assert.equal(await evaluate('document.querySelectorAll("#lessons button").length'),0);
+   await evaluate('window.__blocked=[];window.alert=text=>window.__blocked.push(text);newLesson();saveStudent();newExam()');assert.equal(await evaluate('window.__blocked.length'),3);
+   assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,`Segreteria overflow ${width}`);
+   await evaluate('window.open=()=>null');await click("#exportStudentPdf");assert.equal(await evaluate('document.getElementById("openStudentPdfFallback").href.startsWith("blob:")'),true);
+   await evaluate('moveStudentsToTrash(["student-demo-2"])');assert.equal(await evaluate('state.students.length'),1);
+   await evaluate('openStudentTrash()');assert.match(await evaluate('document.getElementById("studentTrashList").textContent'),/RIPRISTINA/);
+   await click("#studentTrashList button");
+   for(let i=0;i<100&&await evaluate('state.students.length')!==2;i++)await new Promise(r=>setTimeout(r,50));
+   assert.equal(await evaluate('state.students.length'),2);assert.equal(await evaluate('(async()=> (await studentArchiveStore.snapshotTrash()).length)()'),0);
+  }
   assert.deepEqual(browserErrors,[],"nessuna eccezione JavaScript nel browser isolato");
   await send("Browser.close",{},null).catch(()=>{});
  }finally{

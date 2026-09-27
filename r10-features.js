@@ -116,16 +116,19 @@
       return 12742000*Math.asin(Math.sqrt(Math.min(1,value)));
     };
     const bearing=(a,b)=>Math.atan2(Math.sin((b.lng-a.lng)*Math.PI/180)*Math.cos(b.lat*Math.PI/180),Math.cos(a.lat*Math.PI/180)*Math.sin(b.lat*Math.PI/180)-Math.sin(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.cos((b.lng-a.lng)*Math.PI/180))*180/Math.PI;
-    const valid=[];
+    const valid=[];let invalidGap=false;
     for(let index=0;index<source.length;index++){
       const point=source[index];
-      if(Number.isFinite(point?.lat)&&Number.isFinite(point?.lng))valid.push({lat:point.lat,lng:point.lng,index,breakBefore:point.breakBefore===true});
+      if(Number.isFinite(point?.lat)&&Number.isFinite(point?.lng)&&Math.abs(point.lat)<=90&&Math.abs(point.lng)<=180){valid.push({lat:point.lat,lng:point.lng,index,breakBefore:invalidGap||point.breakBefore===true});invalidGap=false}else invalidGap=true;
     }
     if(!valid.length)return[];
     const candidates=[valid[0]];
     for(let index=1;index<valid.length-1;index++){
       const point=valid[index],previous=candidates[candidates.length-1];
-      if(point.breakBefore||metres(previous,point)>=ROAD_SAMPLE_MIN_METRES)candidates.push(point);
+      const before=valid[index-1],after=valid[index+1];
+      let turn=Math.abs(bearing(before,point)-bearing(point,after));turn=Math.min(turn,360-turn);
+      // Retain genuine turns before distance thinning; never bridge a segment boundary.
+      if(point.breakBefore||after.breakBefore||(!after.breakBefore&&turn>=20&&metres(before,point)>=2)||metres(previous,point)>=ROAD_SAMPLE_MIN_METRES)candidates.push(point);
     }
     const last=valid[valid.length-1];
     if(last.index!==candidates[candidates.length-1].index){
@@ -133,7 +136,7 @@
       if(candidates.length>1&&!last.breakBefore&&metres(previous,last)<ROAD_SAMPLE_MIN_METRES)candidates[candidates.length-1]=last;
       else candidates.push(last);
     }
-    if(candidates.length<=limit)return candidates.map(({lat,lng})=>({lat,lng}));
+    if(candidates.length<=limit)return candidates.map(({lat,lng,breakBefore})=>({lat,lng,breakBefore}));
 
     let travelled=0;
     candidates[0].travelled=0;
@@ -166,7 +169,8 @@
       }
       if(best>=0)selected.add(best);
     }
-    return [...selected].sort((a,b)=>a-b).map(index=>({lat:candidates[index].lat,lng:candidates[index].lng}));
+    const ordered=[...selected].sort((a,b)=>a-b);
+    return ordered.map((index,position)=>({lat:candidates[index].lat,lng:candidates[index].lng,breakBefore:position>0&&candidates.slice(ordered[position-1]+1,index+1).some(point=>point.breakBefore)}));
   }
 
   function loadRoadCache(){
@@ -222,6 +226,7 @@
   function reportItemLabel(value){return value||"Tratto non identificato"}
 
   async function generateRoadReport(){
+    if(window.AgendaAuth?.can?.("operate")===false)return alert("Operazione non consentita al profilo corrente.");
     const currentLesson=lesson(),currentStudent=student(),button=$("generateRoadReport");
     if(!currentLesson||!Array.isArray(currentLesson.route)||currentLesson.route.length<2){
       $("roadReportStatus").textContent="Percorso GPS non disponibile.";
@@ -237,7 +242,7 @@
       return;
     }
     const route=currentLesson.route.map(point=>({lat:point.lat,lng:point.lng,time:point.time,accuracy:point.accuracy,breakBefore:!!point.breakBefore}));
-    const samples=sampleRoute(route);
+    const samples=sampleRoute(route),validCount=route.filter(point=>Number.isFinite(point.lat)&&Number.isFinite(point.lng)&&Math.abs(point.lat)<=90&&Math.abs(point.lng)<=180).length;
     const cache=loadRoadCache(),results=[];
     button.disabled=true;
     $("roadReportStatus").textContent=`Analisi manuale in corso: 0/${samples.length} punti rappresentativi…`;
@@ -250,7 +255,7 @@
         if(index<samples.length-1&&!result.cached)await new Promise(resolve=>setTimeout(resolve,REQUEST_INTERVAL_MS));
       }
       const ordered=[];
-      results.forEach(result=>{const name=reportItemLabel(result.name);if(name!==ordered.at(-1))ordered.push(name)});
+      results.forEach((result,index)=>{if(samples[index].breakBefore)ordered.push("Nuovo segmento — interruzione GPS");const name=reportItemLabel(result.name);if(name!==ordered.at(-1))ordered.push(name)});
       const generated=new Date(),date=new Date(currentLesson.createdAt),metres=routeDistance(route),duration=routeDuration(route);
       const list=ordered.map((name,index)=>`<li><span>${index+1}</span><strong>${esc(name)}</strong></li>`).join("");
       $("roadReportPanel").innerHTML=`<div class="road-report-heading"><div><span class="report-kicker">REPORT STRADE</span><h2>${esc(nameOf(currentStudent)||"Allievo")}</h2></div><span>${date.toLocaleDateString("it-IT")}</span></div><div class="road-report-meta"><span><strong>Distanza</strong>${formatDistance(metres)}</span><span><strong>Durata</strong>${formatDuration(duration)}</span><span><strong>Campioni</strong>${samples.length}</span></div><div class="road-endpoint"><small>PARTENZA</small><strong>${esc(reportItemLabel(results[0]&&results[0].name))}</strong></div><ol class="road-list">${list}</ol><div class="road-endpoint arrival"><small>ARRIVO</small><strong>${esc(reportItemLabel(results.at(-1)&&results.at(-1).name))}</strong></div><p class="road-attribution">Generato ${generated.toLocaleString("it-IT")} · Dati © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ODbL.</p>`;
@@ -259,7 +264,7 @@
       $("toggleRoadReport").setAttribute("aria-expanded","true");
       $("toggleRoadReport").textContent="NASCONDI REPORT";
       const unidentified=results.filter(result=>!result.name).length;
-      $("roadReportStatus").textContent=unidentified?`Report completato con ${unidentified} tratti non identificati.`:"Report strade completato.";
+      $("roadReportStatus").textContent=`Punti originali: ${route.length} · validi: ${validCount} · rappresentati: ${samples.length}. `+(unidentified?`Report completato con ${unidentified} tratti non identificati.`:"Report strade completato.");
     }finally{button.disabled=false;window.AgendaRoadReportCoordinator.release("lesson")}
   }
 
@@ -291,7 +296,7 @@
     const lessons=[...(current.lessons||[])].sort((a,b)=>a.createdAt-b.createdAt).map((item,index)=>{
       const selected=(item.checklist||[]).filter(entry=>entry.status!=="none").map(entry=>`<li>${esc(entry.label)} — ${statusLabel(entry.status)}</li>`).join("")||"<li>Nessuna valutazione registrata</li>";
       const date=new Date(item.createdAt),metres=routeDistance(item.route||[]),gpsDuration=routeDuration(item.route||[]),timing=lessonTiming(item),duration=item.duration||(timing.source==="gps"?`${formatDuration(timing.elapsed)} (GPS)`:"Non disponibile");
-      return`<section class="lesson"><h3>Guida ${index+1}</h3><p><strong>${formatLessonDate(date)}</strong><br>${lessonTimeRange(item)}</p><dl><div><dt>Durata</dt><dd>${esc(duration)}</dd></div><div><dt>Durata GPS</dt><dd>${formatDuration(gpsDuration)}</dd></div><div><dt>Distanza GPS</dt><dd>${item.route&&item.route.length>1?formatDistance(metres):"GPS non usato"}</dd></div></dl><p><strong>Note:</strong> ${esc(item.notes||"Nessuna nota")}</p><ul>${selected}</ul>${drivingErrorsReportHtml(item)}</section>`;
+      return`<section class="lesson"><h3>Guida ${index+1}</h3><p><strong>${formatLessonDate(date)}</strong><br>${lessonTimeRange(item)}</p><p><strong>Istruttore:</strong> ${esc(item.instructorName||"non registrato")}</p><dl><div><dt>Durata</dt><dd>${esc(duration)}</dd></div><div><dt>Durata GPS</dt><dd>${formatDuration(gpsDuration)}</dd></div><div><dt>Distanza GPS</dt><dd>${item.route&&item.route.length>1?formatDistance(metres):"GPS non usato"}</dd></div></dl><p><strong>Note:</strong> ${esc(item.notes||"Nessuna nota")}</p><ul>${selected}</ul>${drivingErrorsReportHtml(item)}</section>`;
     }).join("")||'<p class="empty-report">Nessuna guida registrata.</p>';
     return`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report allievo - ${esc(nameOf(current)||"Allievo")}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#17242d;background:#eef2f3}.toolbar{position:sticky;top:0;display:flex;gap:8px;padding:10px;background:#0d1b24;color:#fff}.toolbar button{border:0;border-radius:10px;padding:10px 14px;background:#1687e8;color:#fff;font-weight:800}.toolbar button.secondary{background:#344955}.sheet{width:min(100%,210mm);min-height:297mm;margin:14px auto;padding:16mm;background:#fff;box-shadow:0 10px 28px #0002}.brand{border-bottom:3px solid #1687e8;padding-bottom:10px}.brand h1{margin:0;font-size:24px}.brand p{margin:2px 0 0;color:#526772}.title{margin:24px 0 14px;color:#12616c}.data-grid,dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.data-grid div,dl div{padding:9px;border:1px solid #d7e0e4;border-radius:8px}.data-grid strong,dt{display:block;color:#526772;font-size:11px;text-transform:uppercase}.data-grid span,dd{margin:2px 0 0;font-weight:700}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid #d7e0e4;text-align:left}.lesson{break-inside:avoid;margin:14px 0;padding:12px;border:1px solid #d7e0e4;border-left:4px solid #d63c49;border-radius:8px;overflow-wrap:anywhere}.lesson h3{margin:0 0 8px}.lesson ul{margin-bottom:0}.empty-report{padding:14px;background:#f2f5f6}.footer{margin-top:24px;padding-top:10px;border-top:1px solid #ccd7dc;text-align:center;color:#667983;font-size:12px}.hint{margin-left:auto;align-self:center;color:#c9d4da;font-size:12px}@media(max-width:650px){.sheet{margin:0;min-height:0;padding:18px}.data-grid,dl{grid-template-columns:1fr}.hint{display:none}}@media print{body{background:#fff}.toolbar{display:none}.sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}}</style></head><body><div class="toolbar"><button onclick="window.print()">STAMPA / SALVA PDF</button><button class="secondary" onclick="window.close()">CHIUDI</button><span class="hint">Su iPhone/Android usa il pannello di stampa per salvare o condividere il PDF.</span></div><article class="sheet"><header class="brand"><h1>AGENDA ISTRUTTORI</h1><p>Report Allievo</p></header><h2 class="title">${esc(nameOf(current)||"Allievo")}</h2><div class="data-grid"><div><strong>Categoria</strong><span>${esc(sectionLabel(current.category))}</span></div><div><strong>Patente</strong><span>${esc(current.license||"Non indicata")}</span></div><div><strong>Telefono</strong><span>${esc(current.phone||"Non indicato")}</span></div><div><strong>Stato</strong><span>${current.archived?"Archiviato":"Attivo"}</span></div><div><strong>Foglio rosa</strong><span>${formatStoredDate(current.pinkSlipIssueDate)}</span></div><div><strong>Generato</strong><span>${generated.toLocaleString("it-IT")}</span></div></div><h2>Note</h2><p>${esc(current.notes||"Nessuna nota")}</p><h2>Percorso didattico</h2><table><thead><tr><th>Voce</th><th>Stato</th></tr></thead><tbody>${checklistRows}</tbody></table><h2>Storico guide (${current.lessons.length})</h2>${lessons}${studentExamsReportHtml(current)}<footer class="footer">© 2026 Mario Leoni — Tutti i diritti riservati.</footer></article></body></html>`;
   }

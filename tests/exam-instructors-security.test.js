@@ -17,7 +17,8 @@ test("elenco istruttori: sessioni, ruoli, minimizzazione e sola lettura su DB fi
   const call=(id,purpose='NORMAL',options={})=>worker.fetch(new Request('https://agenda.test/api/exams/instructors'+(options.query||''),{method:options.method||'GET',headers:{...(id?{cookie:'agenda_session_v2='+id+purpose}:{}),...(options.origin?{origin:options.origin}:{})}}),{DB:{prepare}});
   assert.equal((await call(null)).status,401);
   for(const id of ['i1','p','a']){const res=await call(id);assert.equal(res.status,200);assert.equal(res.headers.get('cache-control'),'no-store');const data=await res.json();assert.deepEqual(Object.keys(data),['instructors']);assert.deepEqual(data.instructors,[{id:'a',name:'ADMIN'},{id:'i1',name:'ALFA'},{id:'i2',name:'ALFA'},{id:'p',name:'PRINCIPALE'},{id:'z',name:'ZETA'}]);}
-  for(const id of ['m','bad','invalid'])assert.equal((await call(id)).status,403);
+  assert.equal((await call('m')).status,403);
+  for(const id of ['bad','invalid'])assert.equal((await call(id)).status,401,"un ruolo incoerente invalida la sessione stessa");
   assert.equal((await call('b')).status,401);
   for(const id of ['i1','a','p','m'])assert.equal((await call(id,'PASSWORD_CHANGE')).status,403);
   assert.equal((await call('i1','NORMAL',{origin:'https://other.test'})).status,403);

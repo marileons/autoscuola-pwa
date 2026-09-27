@@ -12,7 +12,7 @@ header,.app-header{position:static;z-index:auto;text-align:center;padding:max(8p
 button{background:var(--zena-blue)}button:hover{background:var(--zena-blue-dark)}button.secondary{background:#e7e2d6;color:var(--zena-ink)}
 .categories button{background:var(--zena-paper);color:var(--zena-ink);border-left:4px solid var(--zena-green)}.categories button.active{background:var(--zena-blue);color:#fff;border-left-color:var(--zena-orange)}
 .archive-action{background:var(--zena-orange)}.archive-action:hover{background:#b85d21}.restore-action{background:var(--zena-green)}.restore-action:hover{background:#356345}
-.archive-section{border-top:5px solid var(--zena-orange)}.archived-student{border-left:5px solid var(--zena-orange)}
+.archive-section{border-top:5px solid var(--zena-orange)}.archived-student{border-left:5px solid var(--zena-orange);display:flex;flex-direction:column;gap:.5rem;align-items:flex-start;overflow-wrap:anywhere}.archived-student .archive-final-outcome{display:block;margin-top:.25rem}.archived-student .license-complete-badge{display:block}
 input:focus,textarea:focus,select:focus{outline:3px solid #d8783255;border-color:var(--zena-orange)}
 @media(max-width:520px){.main-logo{width:min(68%,270px);max-height:116px}.app-header{padding:max(6px,env(safe-area-inset-top)) 7px 7px}main{padding:12px}}
 #habitList{margin-top:12px}
@@ -328,3 +328,6 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 #appShell input[type="date"]::-webkit-date-and-time-value{min-width:0;text-align:left}
 #appShell input[type="date"]::-webkit-datetime-edit{min-width:0;padding:0}
 #lesson .lesson-student-identity{position:sticky;top:0;z-index:21;margin:0 0 12px;padding:12px;border:1px solid #526671;border-radius:10px;background:#1b2831;color:#f1f4f5;font-weight:700;overflow-wrap:anywhere}
+/* Segreteria: i controlli sono anche negati dal dispatcher applicativo. */
+.secretary-session #newStudent,.secretary-session #editStudent,.secretary-session #newLesson,.secretary-session #toggleLessons,.secretary-session #changeStudentPhoto,.secretary-session #removeStudentPhoto,.secretary-session #unclassifiedStudents{display:none!important}
+#secretaryHome .card{display:grid;gap:12px}#secretaryHome button{min-height:44px;white-space:normal;overflow-wrap:anywhere}

@@ -1,6 +1,18 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 const source=fs.readFileSync(path.join(__dirname,"..","full-backup.js"),"utf8");
+test("verifica canonica reale include cestino patente e identità storica; vecchi backup validi",()=>{
+  const vm=require("node:vm"),context=vm.createContext({window:{AgendaExams:require("../exams.js"),StudentLicense:require("../student-license.js"),DrivingErrors:require("../driving-errors.js")}});
+  vm.runInContext(source.slice(source.indexOf("  function canonicalAppData("),source.indexOf("  async function textSha256(")),context);
+  const lesson={id:"lesson-test",instructorId:"account-test",instructorName:"ISTRUTTORE FITTIZIO",route:[],checklist:[],errors:[]},student={id:"student-test",lessons:[lesson],checklist:[]};
+  const legacy={students:[student],checklists:{},examiners:[]},newBackup={students:[],checklists:{},examiners:[],studentTrash:[{id:student.id,student,deletedAt:"2026-09-01T00:00:00.000Z",purgeAfter:"2026-09-16T00:00:00.000Z"}]};
+  const canonical=value=>JSON.parse(JSON.stringify(context.canonicalAppData(value)));
+  assert.deepEqual(canonical(legacy).studentTrash,[]);
+  const saved=canonical(newBackup);assert.equal(saved.studentTrash[0].student.lessons[0].instructorName,lesson.instructorName);assert.equal(saved.studentTrash[0].student.lessons[0].instructorId,lesson.instructorId);
+  assert.deepEqual(canonical(JSON.parse(JSON.stringify(newBackup))),saved);
+  const corrupted=JSON.parse(JSON.stringify(newBackup));corrupted.studentTrash[0].student.lessons[0].instructorName="NOME ALTERATO";assert.notDeepEqual(canonical(corrupted),saved);
+  assert.equal(newBackup.studentTrash[0].student,student);
+});
 test("il backup completo valida e canonizza la patente conseguita",()=>{assert.match(source,/drivingLicense/);assert.match(source,/StudentLicense/)});
 
 test("il ripristino valida interamente prima di scrivere",()=>{
@@ -86,7 +98,9 @@ test("backup completo conserva i nuovi campi ESAMI senza cambiare formato",()=>{
 test("patenti separate vengono reidratate e verificate canonicalmente nel backup",()=>{
   assert.match(source,/students:await storedStudentsWithDrivingLicenses\(\)/);
   assert.match(source,/studentsWithoutDrivingLicenses\(appData\.students\)/);
-  assert.match(source,/AgendaStudentLicenseStore\.replaceAll\(drivingLicenseRecords\(appData\.students\)\)/);
+  assert.ok(source.includes('AgendaStudentLicenseStore.replaceAll(drivingLicenseRecords([...appData.students,...(appData.studentTrash||[]).map(e=>e.student)]))'));
+  assert.match(source,/studentTrash:await storedTrashWithDrivingLicenses\(\)/);
+  assert.match(source,/replaceArchive\(previousStudents,previousTrash\)/);
   assert.match(source,/currentCanonical=canonicalAppData/);
   assert.match(source,/expectedCanonical=canonicalAppData/);
 });

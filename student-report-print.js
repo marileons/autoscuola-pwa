@@ -90,5 +90,11 @@
   function documentScript() {
     return `(${installReportControls.toString()})(window,document);`;
   }
-  return { installReportControls, documentScript };
+  function prepareExaminerDocument(html) {
+    const controls='<nav class="report-controls"><button id="studentReportPrint" type="button">STAMPA / SALVA PDF</button><button id="studentReportClose" type="button">TORNA ALL’APP</button><p id="studentReportPrintStatus" role="status"></p><div id="studentReportPrintAlternatives"><a id="studentReportOpenAgain" target="_blank" rel="noopener">APRI REPORT</a> <a id="studentReportDownloadHtml" download="report-esaminatore.html">SCARICA REPORT STAMPABILE</a></div></nav>';
+    return html.replace('<button onclick="window.print()">STAMPA / SALVA PDF</button>',controls)
+      .replace('</head>',`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><style>body{overflow-wrap:anywhere}.report-controls{display:flex;flex-wrap:wrap;gap:10px}.report-controls button,.report-controls a{min-height:44px}.report-controls p,.report-controls div{flex-basis:100%}@media print{.report-controls{display:none!important}}</style></head>`)
+      .replace('</body>',`<script>${documentScript()}</script></body>`);
+  }
+  return { installReportControls, documentScript, prepareExaminerDocument };
 });

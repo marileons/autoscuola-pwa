@@ -56,6 +56,13 @@
   <input id="studentsImportFile" class="hidden" type="file" accept=".json,application/json">
 </section>
 
+<section id="secretaryHome" class="view">
+  <a class="home-pro-action link-button full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer">TURNI OPERATIVI ESAMINATORI</a>
+  <div class="card"><h2>SEGRETERIA</h2><p>Archivio esclusivamente locale. Importa le schede condivise dall’istruttore: nessuna sincronizzazione automatica.</p>
+  <button id="secretaryStudents" class="full">CERCA / VISUALIZZA ALLIEVI</button>
+  <button data-secretary-command="importStudent" class="full">IMPORTA ALLIEVO</button><button data-secretary-command="importStudents" class="full">IMPORTA PIÙ ALLIEVI</button>
+  <button data-secretary-command="shareStudents" class="full">CONDIVIDI PIÙ ALLIEVI</button><button data-secretary-command="archiveStudents" class="full">ARCHIVIA PIÙ ALLIEVI</button><button data-secretary-command="openArchive" class="full">ALLIEVI ARCHIVIATI</button><button data-secretary-command="deleteStudents" class="full">CESTINA PIÙ ALLIEVI</button><button data-secretary-command="openStudentTrash" class="full">CESTINO</button><button data-secretary-command="openDocuments" class="full">DOCUMENTI VARI</button><button data-secretary-command="logoutHome" class="full">ESCI</button></div>
+</section>
 <section id="categoryHub" class="view category-hub">
   <button id="categoryHome" type="button" class="home-command full">← HOME</button>
   <div id="studentSection" class="card student-section">
@@ -302,6 +309,7 @@
 </section>
 
 <section id="studentArchive" class="view">
+  <button id="openStudentTrash" type="button" class="full secondary">CESTINO ALLIEVI</button>
   <div class="card student-section archive-section">
     <h2>Allievi archiviati</h2>
     <p class="muted">Allievi che hanno conseguito la patente. Tutti i dati e le guide restano conservati.</p>
@@ -311,6 +319,10 @@
   <div class="other-functions-subnav"><button id="backArchive" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
 </section>
 
+<section id="studentTrash" class="view">
+  <div class="card"><h2>Cestino allievi</h2><p>Le schede e i dati collegati sono conservati per 15 giorni. Ripristina una scheda prima della scadenza per conservarla.</p><p id="studentTrashEmpty">Il cestino è vuoto.</p><div id="studentTrashList"></div></div>
+  <button id="backStudentTrash" type="button" class="full secondary">INDIETRO</button>
+</section>
 <section id="studentForm" class="view">
   <div class="card form"><h2 id="studentFormTitle">Nuovo allievo</h2>
     <label>Categoria<select id="category">
@@ -386,6 +398,7 @@
     <label>Data<input id="lessonDate" type="date"></label>
 <label>Ora<select id="lessonTime"><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option></select></label>
 <label>Durata<select id="lessonDuration"><option>1 ora</option><option>1 ora e 30 minuti</option><option>2 ore</option><option>3 ore</option></select></label>
+    <p id="lessonInstructor" class="muted">Istruttore: non registrato</p>
     <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><button id="voice" class="secondary">🎤 Detta</button>
   </div>
   <div class="card"><h2>Attività didattica</h2><button id="toggleLessonActivity" type="button" class="secondary full" aria-expanded="false" aria-controls="lessonChecklist">VISUALIZZA TUTTA L’ATTIVITÀ DIDATTICA</button><div id="lessonChecklist"></div></div>

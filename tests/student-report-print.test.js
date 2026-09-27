@@ -3,6 +3,17 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { installReportControls, documentScript } = require("../student-report-print.js");
+test("report esaminatore riusa il controller reale senza handler inline e conserva il contenuto",()=>{
+  const {prepareExaminerDocument}=require("../student-report-print.js"),vm=require("node:vm");
+  const content='<h1>ESAMINATORE FITTIZIO</h1><p>Report completo del percorso sintetico.</p>';
+  const html=prepareExaminerDocument('<html><head></head><body><button onclick="window.print()">STAMPA / SALVA PDF</button>'+content+'</body></html>');
+  assert.ok(html.includes(content));assert.doesNotMatch(html,/onclick=/);assert.match(html,/TORNA ALL’APP/);assert.match(html,/report-esaminatore\.html/);
+  const f=fixture();delete f.doc.__agendaStudentReportPrint;f.win.setTimeout=handler=>f.timers.push(handler);
+  vm.runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1],{window:f.win,document:f.doc});
+  f.elements.studentReportPrint.click();f.elements.studentReportPrint.click();assert.equal(f.printCalls(),1);
+  f.advance(1300);for(const timer of f.timers.splice(0))timer();f.elements.studentReportPrint.click();assert.equal(f.printCalls(),2);
+  f.elements.studentReportClose.click();assert.equal(f.closeCalls(),1);
+});
 
 function element() {
   const listeners = {};
