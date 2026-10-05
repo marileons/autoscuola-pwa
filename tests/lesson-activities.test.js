@@ -1,0 +1,20 @@
+"use strict";
+const test=require("node:test"),assert=require("node:assert/strict"),api=require("../lesson-activities.js");
+const initial=()=>[{id:"activity-a",label:"Partenza",status:"good"},{id:"activity-b",label:"Svolta",status:"none"}];
+test("backup e importazione validano entrambi i livelli, arancione e ID",async()=>{
+ const fs=require("node:fs"),path=require("node:path"),vm=require("node:vm"),source=fs.readFileSync(path.join(__dirname,"../full-backup.js"),"utf8");
+ const context=vm.createContext({window:{AgendaExams:require("../exams.js"),StudentLicense:require("../student-license.js"),DrivingErrors:require("../driving-errors.js")}});
+ vm.runInContext(source.slice(source.indexOf("  function canonicalAppData("),source.indexOf("  async function textSha256(")),context);
+ const d=api.begin(initial());api.select(d,"activity-b","orange");const lesson={id:"lesson",checklist:d.snapshot,route:[],errors:[],...api.finish(d)},s={id:"student",lessons:[lesson],checklist:initial()};
+ const payload={students:[s],examiners:[],checklists:{}},before=JSON.stringify(payload),canonical=context.canonicalAppData(payload);
+ assert.equal(canonical.students[0].lessons[0].lessonActivities[0].status,"orange");
+ assert.equal(canonical.students[0].lessons[0].activitySnapshot[1].id,"activity-b");
+ assert.equal(JSON.stringify(payload),before);
+ const corrupt=JSON.parse(before);corrupt.students[0].lessons[0].lessonActivities[0].status="good";
+ assert.notDeepEqual(context.canonicalAppData(corrupt),canonical);
+ const imports=require("../student-multi-import.js"),envelope={app:"Agenda Istruttore",version:"1.21",type:"students",students:[s]};
+ await imports.validate(envelope);await assert.rejects(imports.validate({...envelope,students:corrupt.students}),/incoerenti/);
+});
+test("trasferimento multiplo e copia preservano collegamenti di entrambi i livelli",()=>{const imports=require("../student-multi-import.js"),d=api.begin(initial());api.select(d,"activity-b","orange");const record={id:"s",checklist:initial(),lessons:[{id:"l",checklist:d.snapshot,...api.finish(d),errors:[],route:[]}]};let serial=0;const result=imports.plan([record],{students:[record],documents:[],exams:[]},{s:"copy"},()=>String(++serial)).students[1];const saved=result.lessons[0];api.validateLesson(saved);assert.equal(saved.lessonActivities[0].id,saved.activitySnapshot[1].id);assert.notEqual(saved.lessonActivities[0].id,"activity-b");const single=api.copyStudent(record,()=>String(++serial));api.validateLesson(single.lessons[0]);assert.equal(single.lessons[0].lessonActivities[0].id,single.lessons[0].activitySnapshot[1].id);});
+test("attività: variazioni e snapshot separati senza dati futuri",()=>{const d=api.begin(initial());api.select(d,"activity-b","orange");const a=api.finish(d);assert.equal(a.lessonActivities.length,1);const b=api.begin(a.activitySnapshot);api.select(b,"activity-a","repeat");assert.equal(a.activitySnapshot[0].status,"good");assert.deepEqual(api.states,["none","repeat","orange","good"]);});
+test("attività: ID stabili, selezione ripetuta e storico invariato",()=>{const d=api.begin(initial());api.select(d,"activity-a","good");api.select(d,"activity-a","good");assert.equal(api.finish(d).lessonActivities.length,1);const old={checklist:initial()},before=JSON.stringify(old);assert.equal(api.reopen(old).legacy,true);assert.equal(JSON.stringify(old),before);assert.throws(()=>api.copy([initial()[0],initial()[0]]));});

@@ -1,7 +1,7 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const source=fs.readFileSync(path.join(__dirname,"../app.js"),"utf8"),auth=fs.readFileSync(path.join(__dirname,"../auth-client.js"),"utf8");
-test("Home Segreteria espone lo stesso collegamento Turni senza nuove integrazioni",()=>{const html=fs.readFileSync(path.join(__dirname,"../index.html"),"utf8"),section=html.split('id="secretaryHome"')[1].split("</section>")[0];assert.match(section,/https:\/\/www\.ilportaledellautomobilista\.it\/gms\/turni\/45/);assert.match(section,/rel="noopener noreferrer"/);assert.match(section,/TURNI OPERATIVI ESAMINATORI/)});
+test("Home Segreteria apre Altre funzioni con lo stesso collegamento Turni",()=>{const html=fs.readFileSync(path.join(__dirname,"../index.html"),"utf8"),home=html.split('id="secretaryHome"')[1].split("</section>")[0],section=html.split('id="secretaryMenu"')[1].split("</section>")[0];assert.match(home,/id="secretaryOtherFunctions"/);assert.match(home,/ALTRE FUNZIONI/);assert.match(section,/https:\/\/www\.ilportaledellautomobilista\.it\/gms\/turni\/45/);assert.match(section,/rel="noopener noreferrer"/);assert.match(section,/TURNI OPERATIVI ESAMINATORI/)});
 test("cambio identità non attiva il vault del Registro per Segreteria",async()=>{
  let activated=0;const context=vm.createContext({currentUser:{id:"fake",role:"SEGRETERIA"},window:{RegisterLocalVault:{activate:async()=>activated++}}});
  vm.runInContext(auth.slice(auth.indexOf("  async function activateRegisterVault()"),auth.indexOf("  async function api(")),context);

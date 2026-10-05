@@ -108,44 +108,44 @@ input,textarea,select{min-height:48px;border:1px solid #b9cdd0;border-radius:14p
 @media(max-width:520px){.categories button.automotive-hero{grid-template-columns:none;min-height:152px}.categories button.automotive-hero img{object-position:center 55%}.automotive-hero .hero-copy{left:16px}.automotive-hero .hero-copy strong{font-size:1.55rem}}
 
 /* Home premium r8f: linguaggio automotive approvato, compatto su iPhone. */
-#home{margin:-11px;padding:14px 11px 20px;border-radius:0 0 24px 24px;background:radial-gradient(circle at 90% 4%,#183245 0,transparent 30%),linear-gradient(180deg,#0e1922,#111820 72%,#0c1319);color:#f2f5f6}
-#home .dashboard-intro{padding:4px 4px 10px}
-#home .dashboard-intro p{color:#f1f4f5;letter-spacing:.04em}
-#home .home-authenticated-user{margin:0;padding:3px 4px 1px;text-align:center;color:#a9dce2;font-size:.92rem;font-weight:700;letter-spacing:.02em;overflow-wrap:anywhere}
-#home .categories{gap:10px}
-#home .categories button{border-color:#34434d;color:#f1f4f5;background:linear-gradient(145deg,#1c252d,#151c22);box-shadow:0 8px 20px #0004}
-#home .categories button.automotive-hero{display:block;min-height:132px;padding:0;border-width:1px;border-left-width:1px;background:#07121d}
-#home .categories button.automotive-hero img{left:auto;right:0;width:76%;height:100%;object-fit:contain;object-position:right center;transform:none;filter:saturate(.94) contrast(1.04)}
-#home .categories button.automotive-hero::after{background:linear-gradient(90deg,#06111ef5 0,#07121dd4 30%,#07121d45 58%,transparent 84%)}
-#home .categories button.moto-hero::after,#home .categories button.two-moto-hero::after{background:linear-gradient(90deg,#17080af5 0,#19080bd4 30%,#19080b45 58%,transparent 84%)}
-#home .categories button.microcar-hero{background:#061819;border-color:#276469}
-#home .categories button.microcar-hero::after{background:linear-gradient(90deg,#061819f5 0,#061819cf 31%,#06181940 60%,transparent 85%)}
-#home .categories button.b1-hero{background:#15101d;border-color:#604c76}
-#home .categories button.b1-hero::after{background:linear-gradient(90deg,#15101df5 0,#15101dd0 31%,#15101d40 60%,transparent 85%)}
-#home .automotive-hero .hero-copy{left:16px}
-#home .automotive-hero .hero-copy strong{max-width:155px;font-size:1.22rem;line-height:1.08;letter-spacing:.035em}
-#home .categories button.pro-card{grid-template-columns:68px minmax(0,1fr);min-height:82px;padding:8px 14px 8px 9px;border-left:3px solid #d94249}
-#home .categories .pro-card .category-icon{width:60px;height:58px;background:transparent;box-shadow:none}
-#home .categories .pro-card .category-icon svg{width:55px;height:55px;filter:drop-shadow(0 4px 5px #0005)}
-#home .categories button.ga-pro{border-left-color:#e0b12f}
-#home .categories .ga-pro .icon-ga{width:54px;height:48px;margin:0 3px;border-radius:11px;background:linear-gradient(145deg,#f2d044,#c99b1b)!important;color:#141b20!important;box-shadow:0 6px 13px #0005,inset 0 0 0 1px #ffe986!important;font-size:1rem}
-#home .dashboard-actions,#home .secondary-actions{gap:9px}
-#home .secondary-functions>h2{color:#aab5bc}
-#home .home-pro-action{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:58px;margin:0;padding:8px 12px;border:1px solid #35434c;border-radius:15px;background:linear-gradient(145deg,#202930,#171e24);color:#f1f4f5;box-shadow:0 7px 16px #0003;text-align:left;text-decoration:none}
-#home .home-pro-action:hover{background:linear-gradient(145deg,#28343d,#1b242b)}
-#home .home-pro-action .ui-icon{width:42px;height:42px;background:transparent;box-shadow:none}
-#home .home-pro-action .ui-icon svg{width:40px;height:40px}
-#home .logout-action{justify-content:center;width:min(100%,280px);margin:12px auto 0!important;background:linear-gradient(145deg,#54252a,#3d1c20);border-color:#7d343b}
-@media(max-width:520px){#home .categories{grid-template-columns:1fr}#home .categories button.automotive-hero{min-height:116px}#home .categories button.automotive-hero img{width:72%;object-fit:contain}#home .automotive-hero .hero-copy strong{max-width:142px;font-size:1.08rem}#home .categories button.pro-card{grid-template-columns:62px minmax(0,1fr);min-height:76px}#home .categories .pro-card .category-icon{width:54px;height:52px}#home .categories .pro-card .category-icon svg{width:50px;height:50px}#home .dashboard-actions,#home .secondary-actions{grid-template-columns:1fr}#home .home-pro-action{min-height:56px}}
+:is(#home,#secretaryHome){margin:-11px;padding:14px 11px 20px;border-radius:0 0 24px 24px;background:radial-gradient(circle at 90% 4%,#183245 0,transparent 30%),linear-gradient(180deg,#0e1922,#111820 72%,#0c1319);color:#f2f5f6}
+:is(#home,#secretaryHome) .dashboard-intro{padding:4px 4px 10px}
+:is(#home,#secretaryHome) .dashboard-intro p{color:#f1f4f5;letter-spacing:.04em}
+:is(#home,#secretaryHome) .home-authenticated-user{margin:0;padding:3px 4px 1px;text-align:center;color:#a9dce2;font-size:.92rem;font-weight:700;letter-spacing:.02em;overflow-wrap:anywhere}
+:is(#home,#secretaryHome) .categories{gap:10px}
+:is(#home,#secretaryHome) .categories button{border-color:#34434d;color:#f1f4f5;background:linear-gradient(145deg,#1c252d,#151c22);box-shadow:0 8px 20px #0004}
+:is(#home,#secretaryHome) .categories button.automotive-hero{display:block;min-height:132px;padding:0;border-width:1px;border-left-width:1px;background:#07121d}
+:is(#home,#secretaryHome) .categories button.automotive-hero img{left:auto;right:0;width:76%;height:100%;object-fit:contain;object-position:right center;transform:none;filter:saturate(.94) contrast(1.04)}
+:is(#home,#secretaryHome) .categories button.automotive-hero::after{background:linear-gradient(90deg,#06111ef5 0,#07121dd4 30%,#07121d45 58%,transparent 84%)}
+:is(#home,#secretaryHome) .categories button.moto-hero::after,:is(#home,#secretaryHome) .categories button.two-moto-hero::after{background:linear-gradient(90deg,#17080af5 0,#19080bd4 30%,#19080b45 58%,transparent 84%)}
+:is(#home,#secretaryHome) .categories button.microcar-hero{background:#061819;border-color:#276469}
+:is(#home,#secretaryHome) .categories button.microcar-hero::after{background:linear-gradient(90deg,#061819f5 0,#061819cf 31%,#06181940 60%,transparent 85%)}
+:is(#home,#secretaryHome) .categories button.b1-hero{background:#15101d;border-color:#604c76}
+:is(#home,#secretaryHome) .categories button.b1-hero::after{background:linear-gradient(90deg,#15101df5 0,#15101dd0 31%,#15101d40 60%,transparent 85%)}
+:is(#home,#secretaryHome) .automotive-hero .hero-copy{left:16px}
+:is(#home,#secretaryHome) .automotive-hero .hero-copy strong{max-width:155px;font-size:1.22rem;line-height:1.08;letter-spacing:.035em}
+:is(#home,#secretaryHome) .categories button.pro-card{grid-template-columns:68px minmax(0,1fr);min-height:82px;padding:8px 14px 8px 9px;border-left:3px solid #d94249}
+:is(#home,#secretaryHome) .categories .pro-card .category-icon{width:60px;height:58px;background:transparent;box-shadow:none}
+:is(#home,#secretaryHome) .categories .pro-card .category-icon svg{width:55px;height:55px;filter:drop-shadow(0 4px 5px #0005)}
+:is(#home,#secretaryHome) .categories button.ga-pro{border-left-color:#e0b12f}
+:is(#home,#secretaryHome) .categories .ga-pro .icon-ga{width:54px;height:48px;margin:0 3px;border-radius:11px;background:linear-gradient(145deg,#f2d044,#c99b1b)!important;color:#141b20!important;box-shadow:0 6px 13px #0005,inset 0 0 0 1px #ffe986!important;font-size:1rem}
+:is(#home,#secretaryHome) .dashboard-actions,:is(#home,#secretaryHome) .secondary-actions{gap:9px}
+:is(#home,#secretaryHome) .secondary-functions>h2{color:#aab5bc}
+:is(#home,#secretaryHome) .home-pro-action{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:58px;margin:0;padding:8px 12px;border:1px solid #35434c;border-radius:15px;background:linear-gradient(145deg,#202930,#171e24);color:#f1f4f5;box-shadow:0 7px 16px #0003;text-align:left;text-decoration:none}
+:is(#home,#secretaryHome) .home-pro-action:hover{background:linear-gradient(145deg,#28343d,#1b242b)}
+:is(#home,#secretaryHome) .home-pro-action .ui-icon{width:42px;height:42px;background:transparent;box-shadow:none}
+:is(#home,#secretaryHome) .home-pro-action .ui-icon svg{width:40px;height:40px}
+:is(#home,#secretaryHome) .logout-action{justify-content:center;width:min(100%,280px);margin:12px auto 0!important;background:linear-gradient(145deg,#54252a,#3d1c20);border-color:#7d343b}
+@media(max-width:520px){:is(#home,#secretaryHome) .categories{grid-template-columns:1fr}:is(#home,#secretaryHome) .categories button.automotive-hero{min-height:116px}:is(#home,#secretaryHome) .categories button.automotive-hero img{width:72%;object-fit:contain}:is(#home,#secretaryHome) .automotive-hero .hero-copy strong{max-width:142px;font-size:1.08rem}:is(#home,#secretaryHome) .categories button.pro-card{grid-template-columns:62px minmax(0,1fr);min-height:76px}:is(#home,#secretaryHome) .categories .pro-card .category-icon{width:54px;height:52px}:is(#home,#secretaryHome) .categories .pro-card .category-icon svg{width:50px;height:50px}:is(#home,#secretaryHome) .dashboard-actions,:is(#home,#secretaryHome) .secondary-actions{grid-template-columns:1fr}:is(#home,#secretaryHome) .home-pro-action{min-height:56px}}
 
 /* Rifinitura Home r8h: intestazione e contenuto formano un unico ambiente premium. */
 .app-header{background:radial-gradient(circle at 78% 0,#1b3948 0,transparent 38%),linear-gradient(180deg,#0b1821 0,#0d1a23 72%,#0e1922 100%);border-bottom:1px solid #2b3f4b;box-shadow:none;color:#f3f6f7}
 .app-header h1{color:#f4f7f8;text-shadow:0 2px 10px #0007}
 .app-header>div{color:#b9c8d0}
 .main-logo{clip-path:inset(3.5% round 16%);filter:drop-shadow(0 8px 13px #0007)}
-#home{border-radius:0;background:radial-gradient(circle at 90% 1%,#183245 0,transparent 28%),linear-gradient(180deg,#0e1922,#111820 72%,#0c1319)}
-#home .dashboard-intro{border-top:0}
-@media(max-width:520px){header.app-header img.main-logo{height:112px!important;max-height:112px!important;transform:scale(1.04)}.app-header{padding:max(4px,env(safe-area-inset-top)) 7px 6px}.app-header h1{margin-top:1px;font-size:1.17rem}.app-header>div{font-size:.76rem}#home .dashboard-intro{padding-top:3px}}
+:is(#home,#secretaryHome){border-radius:0;background:radial-gradient(circle at 90% 1%,#183245 0,transparent 28%),linear-gradient(180deg,#0e1922,#111820 72%,#0c1319)}
+:is(#home,#secretaryHome) .dashboard-intro{border-top:0}
+@media(max-width:520px){header.app-header img.main-logo{height:112px!important;max-height:112px!important;transform:scale(1.04)}.app-header{padding:max(4px,env(safe-area-inset-top)) 7px 6px}.app-header h1{margin-top:1px;font-size:1.17rem}.app-header>div{font-size:.76rem}:is(#home,#secretaryHome) .dashboard-intro{padding-top:3px}}
 
 /* Branding orizzontale: proporzioni naturali e margine laterale mobile di 10 px. */
 header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max-width:460px!important;height:auto!important;max-height:none!important;object-fit:contain!important;transform:none!important}
@@ -153,53 +153,53 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 
 /* Pagine interne premium r9. La Home r8h è esclusa intenzionalmente. */
 :root{--premium-bg:#0c141b;--premium-bg-soft:#111c24;--premium-card:#17232c;--premium-card-2:#1c2a34;--premium-line:#334652;--premium-text:#f2f5f6;--premium-muted:#aebdc5;--premium-blue:#1687e8;--premium-blue-2:#29a6ef;--premium-red:#d63c49;--premium-gold:#d7aa35}
-#appShell main>.view:not(#home){min-height:calc(100vh - 160px);margin:-11px;padding:16px 11px 26px;background:radial-gradient(circle at 90% 0,#183245 0,transparent 28%),linear-gradient(180deg,var(--premium-bg-soft),var(--premium-bg) 72%);color:var(--premium-text)}
-#appShell main>.view:not(#home).active{display:block}
-#appShell main>.view:not(#home) h2,#appShell main>.view:not(#home) h3{color:var(--premium-text);letter-spacing:-.015em}
-#appShell main>.view:not(#home) .muted,#appShell main>.view:not(#home) .meta{color:var(--premium-muted)}
-#appShell main>.view:not(#home) .card,#home #studentSection{background:linear-gradient(145deg,var(--premium-card-2),var(--premium-card));border:1px solid var(--premium-line);box-shadow:0 10px 26px #0005;color:var(--premium-text)}
-#appShell main>.view:not(#home) input,#appShell main>.view:not(#home) textarea,#appShell main>.view:not(#home) select,#home #studentSection input{border:1px solid #415764;background:#0f1a22;color:var(--premium-text);box-shadow:inset 0 1px 0 #ffffff0b}
-#appShell main>.view:not(#home) input::placeholder,#appShell main>.view:not(#home) textarea::placeholder,#home #studentSection input::placeholder{color:#81939d}
-#appShell main>.view:not(#home) input:focus,#appShell main>.view:not(#home) textarea:focus,#appShell main>.view:not(#home) select:focus,#home #studentSection input:focus{outline:3px solid #1687e844;border-color:#2a9df0}
-#appShell main>.view:not(#home) button:not(.danger):not(.secondary):not(.archive-action):not(.restore-action):not(.gps-toggle),#home #studentSection button{background:linear-gradient(135deg,#126fc7,var(--premium-blue-2));border:1px solid #4cb5f3;color:#fff;box-shadow:0 7px 16px #001f3a66}
-#appShell main>.view:not(#home) button.secondary{background:linear-gradient(145deg,#263640,#1c2932);border:1px solid #435965;color:#e8eef1;box-shadow:0 5px 13px #0004}
-#appShell main>.view:not(#home) button.danger{background:linear-gradient(135deg,#8e202d,var(--premium-red));border:1px solid #e05a66}
-#appShell main>.view:not(#home) .home-command{background:linear-gradient(145deg,#263640,#1a2730)!important;border:1px solid #4a606b!important;color:#f1f5f6!important;box-shadow:0 6px 14px #0004!important}
-#appShell main>.view:not(#home) .archive-action{background:linear-gradient(135deg,#80591d,#c18a24);border:1px solid #e2b657}
-#appShell main>.view:not(#home) .restore-action{background:linear-gradient(135deg,#246747,#3b9368);border:1px solid #61b789}
-#appShell main>.view:not(#home) .student-card,#appShell main>.view:not(#home) .lesson-card,#home #studentSection .student-card{background:linear-gradient(145deg,#1d2b35,#15212a);border:1px solid #354a56;border-left:4px solid #299fe9;color:var(--premium-text);box-shadow:0 7px 16px #0004}
-#appShell main>.view:not(#home) .student-card:hover,#appShell main>.view:not(#home) .lesson-card:hover,#home #studentSection .student-card:hover{background:linear-gradient(145deg,#243744,#192832);color:#fff}
-#appShell main>.view:not(#home) .detail-row,#appShell main>.view:not(#home) .state-row{border-color:#32434e}
-#appShell main>.view:not(#home) .state-btn{background:#263944;color:#fff;border:1px solid #45606e}
-#appShell main>.view:not(#home) .manager-row{background:#14212a;border-color:#354b57;color:var(--premium-text)}
-#appShell main>.view:not(#home) .check-tabs button{background:#22323c;color:#dce6ea;border:1px solid #40545f;box-shadow:none}
-#appShell main>.view:not(#home) .check-tabs button.active{background:linear-gradient(135deg,#126fc7,var(--premium-blue-2));border-color:#43afe9;color:#fff}
-#appShell main>.view:not(#home) .empty{color:#93a5ae}
-#appShell main>.view:not(#home) .gps-card{border-top:4px solid #1687e8}
-#appShell main>.view:not(#home) .gps-toggle{background:linear-gradient(135deg,#086fd0,#27a2ef);border:1px solid #55b9f2;box-shadow:0 7px 18px #006bc64d}
-#appShell main>.view:not(#home) .gps-toggle.gps-active{background:linear-gradient(135deg,#a91f30,#e33d4e);border-color:#f06672}
-#appShell main>.view:not(#home) .gps-indicator{background:#111d25;color:#aebdc5;border:1px solid #334853}
-#appShell main>.view:not(#home) .gps-indicator.active{color:#ff6975;border-color:#8c3440}
-#appShell main>.view:not(#home) .map,#appShell main>.view:not(#home) .saved-map{border:1px solid #405663;box-shadow:0 8px 22px #0006}
+#appShell main>.view:not(:is(#home,#secretaryHome)){min-height:calc(100vh - 160px);margin:-11px;padding:16px 11px 26px;background:radial-gradient(circle at 90% 0,#183245 0,transparent 28%),linear-gradient(180deg,var(--premium-bg-soft),var(--premium-bg) 72%);color:var(--premium-text)}
+#appShell main>.view:not(:is(#home,#secretaryHome)).active{display:block}
+#appShell main>.view:not(:is(#home,#secretaryHome)) h2,#appShell main>.view:not(:is(#home,#secretaryHome)) h3{color:var(--premium-text);letter-spacing:-.015em}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .muted,#appShell main>.view:not(:is(#home,#secretaryHome)) .meta{color:var(--premium-muted)}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .card,:is(#home,#secretaryHome) #studentSection{background:linear-gradient(145deg,var(--premium-card-2),var(--premium-card));border:1px solid var(--premium-line);box-shadow:0 10px 26px #0005;color:var(--premium-text)}
+#appShell main>.view:not(:is(#home,#secretaryHome)) input,#appShell main>.view:not(:is(#home,#secretaryHome)) textarea,#appShell main>.view:not(:is(#home,#secretaryHome)) select,:is(#home,#secretaryHome) #studentSection input{border:1px solid #415764;background:#0f1a22;color:var(--premium-text);box-shadow:inset 0 1px 0 #ffffff0b}
+#appShell main>.view:not(:is(#home,#secretaryHome)) input::placeholder,#appShell main>.view:not(:is(#home,#secretaryHome)) textarea::placeholder,:is(#home,#secretaryHome) #studentSection input::placeholder{color:#81939d}
+#appShell main>.view:not(:is(#home,#secretaryHome)) input:focus,#appShell main>.view:not(:is(#home,#secretaryHome)) textarea:focus,#appShell main>.view:not(:is(#home,#secretaryHome)) select:focus,:is(#home,#secretaryHome) #studentSection input:focus{outline:3px solid #1687e844;border-color:#2a9df0}
+#appShell main>.view:not(:is(#home,#secretaryHome)) button:not(.danger):not(.secondary):not(.archive-action):not(.restore-action):not(.gps-toggle),:is(#home,#secretaryHome) #studentSection button{background:linear-gradient(135deg,#126fc7,var(--premium-blue-2));border:1px solid #4cb5f3;color:#fff;box-shadow:0 7px 16px #001f3a66}
+#appShell main>.view:not(:is(#home,#secretaryHome)) button.secondary{background:linear-gradient(145deg,#263640,#1c2932);border:1px solid #435965;color:#e8eef1;box-shadow:0 5px 13px #0004}
+#appShell main>.view:not(:is(#home,#secretaryHome)) button.danger{background:linear-gradient(135deg,#8e202d,var(--premium-red));border:1px solid #e05a66}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .home-command{background:linear-gradient(145deg,#263640,#1a2730)!important;border:1px solid #4a606b!important;color:#f1f5f6!important;box-shadow:0 6px 14px #0004!important}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .archive-action{background:linear-gradient(135deg,#80591d,#c18a24);border:1px solid #e2b657}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .restore-action{background:linear-gradient(135deg,#246747,#3b9368);border:1px solid #61b789}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .student-card,#appShell main>.view:not(:is(#home,#secretaryHome)) .lesson-card,:is(#home,#secretaryHome) #studentSection .student-card{background:linear-gradient(145deg,#1d2b35,#15212a);border:1px solid #354a56;border-left:4px solid #299fe9;color:var(--premium-text);box-shadow:0 7px 16px #0004}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .student-card:hover,#appShell main>.view:not(:is(#home,#secretaryHome)) .lesson-card:hover,:is(#home,#secretaryHome) #studentSection .student-card:hover{background:linear-gradient(145deg,#243744,#192832);color:#fff}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .detail-row,#appShell main>.view:not(:is(#home,#secretaryHome)) .state-row{border-color:#32434e}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .state-btn{background:#263944;color:#fff;border:1px solid #45606e}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .manager-row{background:#14212a;border-color:#354b57;color:var(--premium-text)}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .check-tabs button{background:#22323c;color:#dce6ea;border:1px solid #40545f;box-shadow:none}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .check-tabs button.active{background:linear-gradient(135deg,#126fc7,var(--premium-blue-2));border-color:#43afe9;color:#fff}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .empty{color:#93a5ae}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .gps-card{border-top:4px solid #1687e8}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .gps-toggle{background:linear-gradient(135deg,#086fd0,#27a2ef);border:1px solid #55b9f2;box-shadow:0 7px 18px #006bc64d}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .gps-toggle.gps-active{background:linear-gradient(135deg,#a91f30,#e33d4e);border-color:#f06672}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .gps-indicator{background:#111d25;color:#aebdc5;border:1px solid #334853}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .gps-indicator.active{color:#ff6975;border-color:#8c3440}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .map,#appShell main>.view:not(:is(#home,#secretaryHome)) .saved-map{border:1px solid #405663;box-shadow:0 8px 22px #0006}
 #savedMapView{padding-top:11px!important}#savedMapView .saved-map{height:calc(100vh - 240px)}
-@media(max-width:520px){#appShell main>.view:not(#home){min-height:calc(100vh - 160px);padding:14px 11px 24px}#appShell main>.view:not(#home) .card{padding:15px;border-radius:17px}#appShell main>.view:not(#home) .top{gap:8px}#appShell main>.view:not(#home) button{min-height:48px}#appShell main>.view:not(#home) .toolbar{grid-template-columns:1fr}#appShell main>.view:not(#home) .check-tabs{grid-template-columns:1fr 1fr}#savedMapView .saved-map{height:calc(100vh - 245px)}}
+@media(max-width:520px){#appShell main>.view:not(:is(#home,#secretaryHome)){min-height:calc(100vh - 160px);padding:14px 11px 24px}#appShell main>.view:not(:is(#home,#secretaryHome)) .card{padding:15px;border-radius:17px}#appShell main>.view:not(:is(#home,#secretaryHome)) .top{gap:8px}#appShell main>.view:not(:is(#home,#secretaryHome)) button{min-height:48px}#appShell main>.view:not(:is(#home,#secretaryHome)) .toolbar{grid-template-columns:1fr}#appShell main>.view:not(:is(#home,#secretaryHome)) .check-tabs{grid-template-columns:1fr 1fr}#savedMapView .saved-map{height:calc(100vh - 245px)}}
 
 /* Evoluzione r10: la r9 viene schiarita con discrezione, senza cambiarne il linguaggio. */
 .app-header{background:radial-gradient(circle at 78% 0,#244858 0,transparent 40%),linear-gradient(180deg,#11232e 0,#142731 72%,#162a35 100%);border-bottom-color:#3b535f}
-#home{background:radial-gradient(circle at 90% 1%,#25465a 0,transparent 30%),linear-gradient(180deg,#182b36,#1a2933 72%,#14242e)}
-#home .categories button{background:linear-gradient(145deg,#25343e,#1d2932);border-left:3px solid #d94249!important}
-#home .categories button.automotive-hero{border-left:3px solid #d94249!important}
-#home .home-pro-action{background:linear-gradient(145deg,#2a3943,#202c35);border-left:3px solid #d94249!important}
-#home .secondary-functions>h2{color:#c0cbd1}
-#home .ga-pro{position:relative;overflow:hidden;grid-template-columns:62px minmax(0,1fr);padding-right:38%;isolation:isolate}
-#home .ga-pro>*:not(.ga-auto-image){position:relative;z-index:2}
-#home .ga-auto-image{position:absolute;z-index:0;right:0;top:0;width:57%;height:100%;object-fit:cover;object-position:right center;filter:saturate(.9) contrast(1.04);-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 38%);mask-image:linear-gradient(90deg,transparent 0,#000 38%)}
-#home .ga-pro::after{content:"";position:absolute;z-index:1;inset:0;background:linear-gradient(90deg,#202a31 0,#202a31e8 48%,transparent 78%);pointer-events:none}
-#home .categories button[data-f="perfezionamento"]>span:last-child,#home .categories button[data-f="esame-revisione"]>span:last-child,#home .categories button[data-f="esame-esperimento"]>span:last-child{font-size:.93rem;line-height:1.15}
-#appShell main>.view:not(#home){background:radial-gradient(circle at 90% 0,#25465a 0,transparent 30%),linear-gradient(180deg,#192c37,#14242e 72%)}
-#appShell main>.view:not(#home) .card,#home #studentSection{background:linear-gradient(145deg,#22343f,#1b2b35);border-color:#405663}
-#appShell main>.view:not(#home)>.card:first-child,#home #studentSection{border-left:4px solid #d94249}
-#appShell main>.view:not(#home) .student-card,#appShell main>.view:not(#home) .lesson-card,#home #studentSection .student-card{background:linear-gradient(145deg,#263a46,#1c2d37)}
+:is(#home,#secretaryHome){background:radial-gradient(circle at 90% 1%,#25465a 0,transparent 30%),linear-gradient(180deg,#182b36,#1a2933 72%,#14242e)}
+:is(#home,#secretaryHome) .categories button{background:linear-gradient(145deg,#25343e,#1d2932);border-left:3px solid #d94249!important}
+:is(#home,#secretaryHome) .categories button.automotive-hero{border-left:3px solid #d94249!important}
+:is(#home,#secretaryHome) .home-pro-action{background:linear-gradient(145deg,#2a3943,#202c35);border-left:3px solid #d94249!important}
+:is(#home,#secretaryHome) .secondary-functions>h2{color:#c0cbd1}
+:is(#home,#secretaryHome) .ga-pro{position:relative;overflow:hidden;grid-template-columns:62px minmax(0,1fr);padding-right:38%;isolation:isolate}
+:is(#home,#secretaryHome) .ga-pro>*:not(.ga-auto-image){position:relative;z-index:2}
+:is(#home,#secretaryHome) .ga-auto-image{position:absolute;z-index:0;right:0;top:0;width:57%;height:100%;object-fit:cover;object-position:right center;filter:saturate(.9) contrast(1.04);-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 38%);mask-image:linear-gradient(90deg,transparent 0,#000 38%)}
+:is(#home,#secretaryHome) .ga-pro::after{content:"";position:absolute;z-index:1;inset:0;background:linear-gradient(90deg,#202a31 0,#202a31e8 48%,transparent 78%);pointer-events:none}
+:is(#home,#secretaryHome) .categories button[data-f="perfezionamento"]>span:last-child,:is(#home,#secretaryHome) .categories button[data-f="esame-revisione"]>span:last-child,:is(#home,#secretaryHome) .categories button[data-f="esame-esperimento"]>span:last-child{font-size:.93rem;line-height:1.15}
+#appShell main>.view:not(:is(#home,#secretaryHome)){background:radial-gradient(circle at 90% 0,#25465a 0,transparent 30%),linear-gradient(180deg,#192c37,#14242e 72%)}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .card,:is(#home,#secretaryHome) #studentSection{background:linear-gradient(145deg,#22343f,#1b2b35);border-color:#405663}
+#appShell main>.view:not(:is(#home,#secretaryHome))>.card:first-child,:is(#home,#secretaryHome) #studentSection{border-left:4px solid #d94249}
+#appShell main>.view:not(:is(#home,#secretaryHome)) .student-card,#appShell main>.view:not(:is(#home,#secretaryHome)) .lesson-card,:is(#home,#secretaryHome) #studentSection .student-card{background:linear-gradient(145deg,#263a46,#1c2d37)}
 .student-report-action{background:linear-gradient(135deg,#7d2631,#d4424f)!important;border:1px solid #e25d68!important;color:#fff!important}
 .student-license-card{border-left:4px solid #d94249!important}.student-license-card h2{margin-top:0}.student-license-card .form{margin-top:12px}.student-license-card input{width:100%;min-height:48px;font-size:16px}.student-license-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.student-license-actions .danger{grid-column:1/-1}.student-license-recommendation{padding:10px;border:1px solid #6b7540;border-radius:10px;background:#34351f;color:#f0df87}@media(max-width:520px){.student-license-actions{grid-template-columns:1fr}.student-license-actions .danger{grid-column:auto}}
 .wake-lock-status{margin:8px 0 12px;padding:8px 10px;border:1px solid #3d5360;border-radius:11px;background:#13242e}
@@ -215,8 +215,8 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 .page-context-title::before{content:"";display:block;flex:0 0 auto;width:5px;height:28px;border-radius:999px;background:linear-gradient(180deg,#ff6470,#c92d3a);box-shadow:0 0 0 1px #ff7b8533,0 3px 10px #d63c4966}
 .page-context-section{color:#9fe7f5;font-size:clamp(1.08rem,4.7vw,1.18rem);font-weight:600;letter-spacing:.025em}
 .page-context-subpage{padding-left:10px;border-left:1px solid #6f8793;color:#dce5e9;font-size:.9rem;font-weight:500;letter-spacing:.006em}
-#home #currentSectionTitle{display:flex;align-items:center;gap:9px;color:#9fe7f5;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:1.15rem;font-weight:600;letter-spacing:.02em;text-shadow:0 2px 8px #0008}
-#home #currentSectionTitle::before{content:"";width:4px;height:24px;border-radius:999px;background:#e64b58;box-shadow:0 0 10px #d63c4959}
+:is(#home,#secretaryHome) #currentSectionTitle{display:flex;align-items:center;gap:9px;color:#9fe7f5;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:1.15rem;font-weight:600;letter-spacing:.02em;text-shadow:0 2px 8px #0008}
+:is(#home,#secretaryHome) #currentSectionTitle::before{content:"";width:4px;height:24px;border-radius:999px;background:#e64b58;box-shadow:0 0 10px #d63c4959}
 #studentFormTitle,#lessonTitle{color:#e4ecef!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:1rem;font-weight:500;letter-spacing:.005em;text-transform:none}
 :is(#studentArchive,#studentMultiShare,#studentMultiAction,#checklistManager,#examiners,#examinerForm,#settings,#documentsView)>.card:first-of-type>h2{display:flex;align-items:center;gap:9px;color:#a8e4f2!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:clamp(1.05rem,4.6vw,1.18rem);font-weight:600;letter-spacing:.008em;line-height:1.18;text-shadow:0 2px 8px #0007}
 :is(#studentArchive,#studentMultiShare,#studentMultiAction,#checklistManager,#examiners,#examinerForm,#settings,#documentsView)>.card:first-of-type>h2::before{content:"";display:block;flex:0 0 auto;width:4px;height:24px;border-radius:999px;background:linear-gradient(180deg,#ff6672,#c92d3a);box-shadow:0 0 9px #d63c4959}
@@ -226,45 +226,45 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 #checklistManager .check-tabs button.active{background:linear-gradient(135deg,#9f2634,#d63c49)!important;border:2px solid #f0c555!important;color:#fff;box-shadow:0 0 0 3px #e5b83d33,0 8px 18px #001f3a80!important;transform:translateY(-1px)}
 #checklistManager .check-tabs button.active::after{content:"✓";position:absolute;right:9px;top:8px;display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#f0c555;color:#17232c;font-size:.78rem;font-weight:950;box-shadow:0 2px 7px #0005}
 @media(max-width:520px){.page-context-title{margin-bottom:8px;padding-top:4px}.page-context-title::before{height:25px}.page-context-subpage{font-size:.88rem}#checklistManager .check-tabs{grid-template-columns:1fr 1fr}}
-@media(max-width:520px){#home .ga-pro{padding-right:34%}#home .ga-auto-image{width:54%}#home .categories button[data-f="perfezionamento"]>span:last-child,#home .categories button[data-f="esame-revisione"]>span:last-child{font-size:.86rem}.saved-route-actions{grid-template-columns:1fr}.road-report-meta{grid-template-columns:1fr 1fr}.road-report-meta span:last-child{grid-column:1/-1}}
+@media(max-width:520px){:is(#home,#secretaryHome) .ga-pro{padding-right:34%}:is(#home,#secretaryHome) .ga-auto-image{width:54%}:is(#home,#secretaryHome) .categories button[data-f="perfezionamento"]>span:last-child,:is(#home,#secretaryHome) .categories button[data-f="esame-revisione"]>span:last-child{font-size:.86rem}.saved-route-actions{grid-template-columns:1fr}.road-report-meta{grid-template-columns:1fr 1fr}.road-report-meta span:last-child{grid-column:1/-1}}
 #userList{display:grid;gap:10px}.user-admin-row{padding:14px;border:1px solid #405663;border-radius:14px;background:#15232c}.user-admin-row strong{display:block}.user-admin-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.user-admin-actions button{min-height:42px;padding:8px 12px}.user-status-active{color:#70d49a}.user-status-blocked{color:#ff7c86}
 
 /* Navigazione r11: Home breve, categorie isolate e area funzioni secondarie. */
-#home .categories{grid-template-columns:repeat(2,minmax(0,1fr))}
-#home .categories .auto-hero{grid-column:1/-1;min-height:138px}
-#home .categories button.compact-vehicle{min-height:82px}
-#home .categories button.compact-vehicle img{width:68%;object-fit:contain}
-#home .compact-vehicle .hero-copy{left:12px}
-#home .compact-vehicle .hero-copy strong{max-width:120px;font-size:.91rem;line-height:1.08}
-#home .categories button.ga-pro,#home .categories button.car-pro{grid-column:1/-1}
-#home .categories button.car-pro{position:relative;display:flex;align-items:center;min-height:78px;padding:10px 42% 10px 18px;overflow:hidden;isolation:isolate;text-align:left}
-#home .categories button.car-pro>span{position:relative;z-index:2;font-size:.94rem;line-height:1.14}
-#home .categories button.car-pro>img{position:absolute;z-index:0;right:0;top:0;width:58%;height:100%;object-fit:cover;object-position:center;filter:saturate(.88) contrast(1.08);-webkit-mask-image:linear-gradient(90deg,transparent,#000 32%);mask-image:linear-gradient(90deg,transparent,#000 32%)}
-#home .categories button.car-pro::after{content:"";position:absolute;z-index:1;inset:0;background:linear-gradient(90deg,#23323bf7 0,#23323bdd 48%,transparent 78%);pointer-events:none}
-#home .categories button.revision-car{border-left-color:#e0b12f!important}
-#home .categories button.experiment-car{border-left-color:#2ba2e9!important}
-#home .other-functions-entry{margin:13px 0 0;min-height:54px;border:1px solid #55b9f2;background:linear-gradient(135deg,#126fc7,#29a6ef);color:#fff;font-weight:900;letter-spacing:.07em}
+:is(#home,#secretaryHome) .categories{grid-template-columns:repeat(2,minmax(0,1fr))}
+:is(#home,#secretaryHome) .categories .auto-hero{grid-column:1/-1;min-height:138px}
+:is(#home,#secretaryHome) .categories button.compact-vehicle{min-height:82px}
+:is(#home,#secretaryHome) .categories button.compact-vehicle img{width:68%;object-fit:contain}
+:is(#home,#secretaryHome) .compact-vehicle .hero-copy{left:12px}
+:is(#home,#secretaryHome) .compact-vehicle .hero-copy strong{max-width:120px;font-size:.91rem;line-height:1.08}
+:is(#home,#secretaryHome) .categories button.ga-pro,:is(#home,#secretaryHome) .categories button.car-pro{grid-column:1/-1}
+:is(#home,#secretaryHome) .categories button.car-pro{position:relative;display:flex;align-items:center;min-height:78px;padding:10px 42% 10px 18px;overflow:hidden;isolation:isolate;text-align:left}
+:is(#home,#secretaryHome) .categories button.car-pro>span{position:relative;z-index:2;font-size:.94rem;line-height:1.14}
+:is(#home,#secretaryHome) .categories button.car-pro>img{position:absolute;z-index:0;right:0;top:0;width:58%;height:100%;object-fit:cover;object-position:center;filter:saturate(.88) contrast(1.08);-webkit-mask-image:linear-gradient(90deg,transparent,#000 32%);mask-image:linear-gradient(90deg,transparent,#000 32%)}
+:is(#home,#secretaryHome) .categories button.car-pro::after{content:"";position:absolute;z-index:1;inset:0;background:linear-gradient(90deg,#23323bf7 0,#23323bdd 48%,transparent 78%);pointer-events:none}
+:is(#home,#secretaryHome) .categories button.revision-car{border-left-color:#e0b12f!important}
+:is(#home,#secretaryHome) .categories button.experiment-car{border-left-color:#2ba2e9!important}
+:is(#home,#secretaryHome) .other-functions-entry{margin:13px 0 0;min-height:54px;border:1px solid #55b9f2;background:linear-gradient(135deg,#126fc7,#29a6ef);color:#fff;font-weight:900;letter-spacing:.07em}
 
 .category-hub .student-section{margin:10px 0}.category-hub .category-primary-actions{display:grid;gap:10px}.category-hub #studentSearchPanel{margin-top:10px}.category-hub #search{font-size:16px}.category-hub #studentResults{scroll-margin-top:12px;margin-top:14px}.category-hub #students{display:grid;gap:8px}.category-hub>#categoryBack{margin-top:10px}
 .student-result-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0}.student-result-heading strong{min-width:0;overflow-wrap:anywhere}.student-archive-badge{display:inline-flex;flex:0 0 auto;align-items:center;border:1px solid #a45918;border-radius:999px;background:#fff1dc;color:#743608;padding:3px 7px;font-size:.72rem;font-weight:800;line-height:1;letter-spacing:.03em;pointer-events:none}
 .other-functions-view .other-functions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.other-functions-view .home-pro-action{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:58px;margin:0;padding:8px 12px;border:1px solid #405663;border-left:3px solid #d94249;border-radius:15px;background:linear-gradient(145deg,#2a3943,#202c35);color:#f1f4f5;box-shadow:0 7px 16px #0003;text-align:left;text-decoration:none}.other-functions-view .home-pro-action .ui-icon{width:42px;height:42px;background:transparent;box-shadow:none}.other-functions-view .home-pro-action .ui-icon svg{width:40px;height:40px}.other-functions-view .user-management-entry{display:block;width:min(100%,360px);margin:14px auto 0;background:linear-gradient(135deg,#086fd0,#29a6ef)!important;border:1px solid #61c2f5!important;color:#fff;font-weight:900;text-align:center}.other-functions-view .user-management-entry.hidden{display:none}.other-functions-view .logout-action{display:flex;justify-content:center;width:min(100%,280px);margin:12px auto 0;background:linear-gradient(145deg,#54252a,#3d1c20)!important;border:1px solid #7d343b!important}
 #studentMultiShare>.home-command,#studentMultiAction>.home-command{margin:0 0 10px}
 
-@media(max-width:520px){#home .categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#home .categories .auto-hero{min-height:116px}#home .categories button.compact-vehicle{grid-column:auto;min-height:78px}#home .categories button.compact-vehicle img{width:72%;object-position:right center}#home .compact-vehicle .hero-copy{left:9px}#home .compact-vehicle .hero-copy strong{max-width:84px;font-size:.76rem;letter-spacing:.015em}#home .categories button.ga-pro,#home .categories button.car-pro{min-height:70px}#home .categories button.car-pro{padding-left:14px}#home .categories button.car-pro>span{max-width:170px;font-size:.83rem}.other-functions-view .other-functions-grid{grid-template-columns:1fr}.other-functions-view .home-pro-action{min-height:54px}}
+@media(max-width:520px){:is(#home,#secretaryHome) .categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}:is(#home,#secretaryHome) .categories .auto-hero{min-height:116px}:is(#home,#secretaryHome) .categories button.compact-vehicle{grid-column:auto;min-height:78px}:is(#home,#secretaryHome) .categories button.compact-vehicle img{width:72%;object-position:right center}:is(#home,#secretaryHome) .compact-vehicle .hero-copy{left:9px}:is(#home,#secretaryHome) .compact-vehicle .hero-copy strong{max-width:84px;font-size:.76rem;letter-spacing:.015em}:is(#home,#secretaryHome) .categories button.ga-pro,:is(#home,#secretaryHome) .categories button.car-pro{min-height:70px}:is(#home,#secretaryHome) .categories button.car-pro{padding-left:14px}:is(#home,#secretaryHome) .categories button.car-pro>span{max-width:170px;font-size:.83rem}.other-functions-view .other-functions-grid{grid-template-columns:1fr}.other-functions-view .home-pro-action{min-height:54px}}
 
 /* Correzione visiva r12: stile scuro precedente, con il blu riservato a Gestione utenti. */
-#home .other-functions-entry{border:1px solid #405663;border-left:3px solid #d94249;background:linear-gradient(145deg,#2a3943,#202c35);color:#f1f4f5;box-shadow:0 7px 16px #0003}
-#home .other-functions-entry:hover{background:linear-gradient(145deg,#334550,#25333d)}
-#home .other-functions-entry{display:flex;align-items:center;justify-content:center;gap:9px}#home .other-functions-symbol{width:30px;height:30px;flex:0 0 30px;overflow:visible;fill:#e3484f;stroke:#f1f4f5;stroke-width:1.5}
+:is(#home,#secretaryHome) .other-functions-entry{border:1px solid #405663;border-left:3px solid #d94249;background:linear-gradient(145deg,#2a3943,#202c35);color:#f1f4f5;box-shadow:0 7px 16px #0003}
+:is(#home,#secretaryHome) .other-functions-entry:hover{background:linear-gradient(145deg,#334550,#25333d)}
+:is(#home,#secretaryHome) .other-functions-entry{display:flex;align-items:center;justify-content:center;gap:9px}:is(#home,#secretaryHome) .other-functions-symbol{width:30px;height:30px;flex:0 0 30px;overflow:visible;fill:#e3484f;stroke:#f1f4f5;stroke-width:1.5}
 #categoryHub button:not(.danger){background:linear-gradient(145deg,#2a3943,#202c35)!important;border:1px solid #405663!important;border-left:3px solid #d94249!important;color:#f1f4f5!important;box-shadow:0 7px 16px #0003!important}
 #categoryHub button:not(.danger):hover{background:linear-gradient(145deg,#334550,#25333d)!important}
 #categoryHub .home-command,#categoryHub #categoryBack{background:linear-gradient(145deg,#263640,#1a2730)!important}
-#home .categories button.car-pro{border-color:#405663;border-left:3px solid #d94249!important;background:linear-gradient(145deg,#2a3943,#202c35);color:#f1f4f5;box-shadow:0 7px 16px #0003}
-#home .categories button.revision-car,#home .categories button.experiment-car{border-left-color:#d94249!important}
-#home .categories button.car-pro>img{object-fit:cover;object-position:center 52%;filter:saturate(.95) contrast(1.06)}
-#home .categories button.car-pro::after{background:linear-gradient(90deg,#202c35fc 0,#202c35ed 48%,#202c3566 72%,transparent 90%)}
-#home .ga-auto-image{object-fit:cover;object-position:center 53%;filter:saturate(.96) contrast(1.06)}
-#home .ga-pro::after{background:linear-gradient(90deg,#202a31fc 0,#202a31ed 48%,#202a3166 72%,transparent 90%)}
+:is(#home,#secretaryHome) .categories button.car-pro{border-color:#405663;border-left:3px solid #d94249!important;background:linear-gradient(145deg,#2a3943,#202c35);color:#f1f4f5;box-shadow:0 7px 16px #0003}
+:is(#home,#secretaryHome) .categories button.revision-car,:is(#home,#secretaryHome) .categories button.experiment-car{border-left-color:#d94249!important}
+:is(#home,#secretaryHome) .categories button.car-pro>img{object-fit:cover;object-position:center 52%;filter:saturate(.95) contrast(1.06)}
+:is(#home,#secretaryHome) .categories button.car-pro::after{background:linear-gradient(90deg,#202c35fc 0,#202c35ed 48%,#202c3566 72%,transparent 90%)}
+:is(#home,#secretaryHome) .ga-auto-image{object-fit:cover;object-position:center 53%;filter:saturate(.96) contrast(1.06)}
+:is(#home,#secretaryHome) .ga-pro::after{background:linear-gradient(90deg,#202a31fc 0,#202a31ed 48%,#202a3166 72%,transparent 90%)}
 .other-functions-view .home-pro-action:not(.danger):not(.logout-action){background:linear-gradient(145deg,#2a3943,#202c35)!important;border:1px solid #405663!important;border-left:3px solid #d94249!important;color:#f1f4f5!important;box-shadow:0 7px 16px #0003!important}
 .other-functions-view .home-pro-action:not(.danger):not(.logout-action):hover{background:linear-gradient(145deg,#334550,#25333d)!important}
 
@@ -280,11 +280,11 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 @media(max-width:520px){.other-functions-subnav{grid-template-columns:repeat(2,minmax(0,1fr))}.other-functions-subnav button{padding-inline:8px}}
 
 /* Rifinitura r13: sfondi veicoli fusi nelle card e utilitarie sempre intere. */
-#home .categories button.automotive-hero{background:linear-gradient(145deg,#202c35,#172129)}
-#home .categories button.automotive-hero img{mix-blend-mode:screen;-webkit-mask-image:radial-gradient(ellipse 82% 94% at 72% 50%,#000 46%,#000d 64%,transparent 100%);mask-image:radial-gradient(ellipse 82% 94% at 72% 50%,#000 46%,#000d 64%,transparent 100%)}
-#home .categories button.automotive-hero::after,#home .categories button.moto-hero::after,#home .categories button.two-moto-hero::after,#home .categories button.microcar-hero::after,#home .categories button.b1-hero::after{background:linear-gradient(90deg,#202c35fc 0,#202c35e8 38%,#202c3566 66%,#202c3524 100%)}
-#home .ga-auto-image,#home .categories button.car-pro>img{right:2%;top:6%;width:46%;height:88%;object-fit:contain;object-position:right center;filter:saturate(.95) contrast(1.06);mix-blend-mode:normal;-webkit-mask-image:none;mask-image:none}
-#home .categories button.revision-car>img,#home .categories button.experiment-car>img{right:1%;top:3%;width:49%;height:94%}
+:is(#home,#secretaryHome) .categories button.automotive-hero{background:linear-gradient(145deg,#202c35,#172129)}
+:is(#home,#secretaryHome) .categories button.automotive-hero img{mix-blend-mode:screen;-webkit-mask-image:radial-gradient(ellipse 82% 94% at 72% 50%,#000 46%,#000d 64%,transparent 100%);mask-image:radial-gradient(ellipse 82% 94% at 72% 50%,#000 46%,#000d 64%,transparent 100%)}
+:is(#home,#secretaryHome) .categories button.automotive-hero::after,:is(#home,#secretaryHome) .categories button.moto-hero::after,:is(#home,#secretaryHome) .categories button.two-moto-hero::after,:is(#home,#secretaryHome) .categories button.microcar-hero::after,:is(#home,#secretaryHome) .categories button.b1-hero::after{background:linear-gradient(90deg,#202c35fc 0,#202c35e8 38%,#202c3566 66%,#202c3524 100%)}
+:is(#home,#secretaryHome) .ga-auto-image,:is(#home,#secretaryHome) .categories button.car-pro>img{right:2%;top:6%;width:46%;height:88%;object-fit:contain;object-position:right center;filter:saturate(.95) contrast(1.06);mix-blend-mode:normal;-webkit-mask-image:none;mask-image:none}
+:is(#home,#secretaryHome) .categories button.revision-car>img,:is(#home,#secretaryHome) .categories button.experiment-car>img{right:1%;top:3%;width:49%;height:94%}
 
 /* Segnalazione rapida degli errori durante la guida. */
 .driving-error-quick{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom));z-index:450;margin-top:12px;padding:8px;border-radius:14px;background:rgba(24,24,27,.94);box-shadow:0 6px 18px rgba(0,0,0,.28)}
@@ -331,3 +331,5 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 /* Segreteria: i controlli sono anche negati dal dispatcher applicativo. */
 .secretary-session #newStudent,.secretary-session #editStudent,.secretary-session #newLesson,.secretary-session #toggleLessons,.secretary-session #changeStudentPhoto,.secretary-session #removeStudentPhoto,.secretary-session #unclassifiedStudents{display:none!important}
 #secretaryHome .card{display:grid;gap:12px}#secretaryHome button{min-height:44px;white-space:normal;overflow-wrap:anywhere}
+.lesson-card .lesson-notes{display:block;margin-top:.65rem;overflow-wrap:anywhere;white-space:pre-wrap}
+.state-btn.orange{background:#ffad32;color:#17242d;border-color:#ffad32}

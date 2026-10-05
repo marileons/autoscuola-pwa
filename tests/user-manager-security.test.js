@@ -51,7 +51,7 @@ function runEdge(url,profile){
 async function removeBrowserProfile(profile){let lastError;for(let attempt=0;attempt<20;attempt++){try{fs.rmSync(profile,{recursive:true,force:true,maxRetries:2,retryDelay:100});return}catch(error){lastError=error;await new Promise(resolve=>setTimeout(resolve,150))}}throw lastError}
 test("browser reale: Audit esiste solo per il principale e nessun altro account lo richiede",{timeout:300000},async t=>{
  if(!fs.existsSync(edgePath)){t.skip("Microsoft Edge non disponibile");return}
- const sourceIndex=fs.readFileSync(path.join(root,"index.html"),"utf8"),sourceClient=fs.readFileSync(path.join(root,"auth-client.js"),"utf8");
+ const sourceIndex=fs.readFileSync(path.join(root,"index.html"),"utf8"),sourceClient=fs.readFileSync(path.join(root,"auth-client.js"),"utf8").replace("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js","/test-leaflet.js");
  const injection=`<output id="browserAuditRequestCount">0</output><script>
   (()=>{const kind=new URLSearchParams(location.search).get("identity");const identities={
    primary:{id:"p",name:"PRINCIPALE",username:"primary",role:"ADMIN",capabilities:{useApplication:true,manageUsers:true,managePrivilegedUsers:true,viewAudit:true}},
@@ -66,10 +66,10 @@ test("browser reale: Audit esiste solo per il principale e nessun altro account 
    if(target.pathname==="/api/user-management/audit"){window.__auditRequests++;document.getElementById("browserAuditRequestCount").textContent=String(window.__auditRequests);return new Response(JSON.stringify({events:[]}),{status:200,headers:{"content-type":"application/json"}})}
    return nativeFetch(input,options);
   };
-  addEventListener("DOMContentLoaded",()=>setTimeout(()=>{if(kind==="primary")document.getElementById("openUserManagement")?.click()},350));
+  addEventListener("DOMContentLoaded",()=>{if(kind!=="primary")return;let attempts=0;const ready=setInterval(()=>{if(window.AgendaAuth?.currentUser()?.id==="p"&&typeof window.show==="function"){clearInterval(ready);document.getElementById("openUserManagement").click()}else if(++attempts>=60)clearInterval(ready)},20)});
   })();
  </script>`;
- const fixture=sourceIndex.replace('<script src="auth-client.js?v=5"></script>',injection+'<script src="/auth-client.js"></script>');
+ const fixture=sourceIndex.replace(/https:\/\/unpkg.com\/leaflet@1.9.4\/dist\/leaflet.css/g,"/test-leaflet.css").replace('<script src="auth-client.js?v=5"></script>',injection+'<script src="/auth-client.js"></script>');
  const server=http.createServer((request,response)=>{const pathname=new URL(request.url,"http://local").pathname;if(pathname==="/"){response.setHeader("content-type","text/html; charset=utf-8");response.end(fixture)}else if(pathname==="/auth-client.js"){response.setHeader("content-type","text/javascript");response.end(sourceClient)}else if(pathname.endsWith(".js")){response.setHeader("content-type","text/javascript");response.end("window.AgendaAppReady=Promise.resolve();window.show=id=>{document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id))};")}else{response.statusCode=204;response.end()}});
  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));const port=server.address().port;
  try{

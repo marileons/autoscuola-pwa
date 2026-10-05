@@ -57,6 +57,12 @@
 </section>
 
 <section id="secretaryHome" class="view">
+  <div class="dashboard-intro"><p>SEGRETERIA — Ricerca e consultazione</p></div>
+  <div id="secretaryCategories" class="categories"></div>
+  <button id="secretaryOtherFunctions" type="button" class="other-functions-entry full">ALTRE FUNZIONI</button>
+</section>
+<section id="secretaryMenu" class="view">
+  <button id="secretaryMenuHome" type="button" class="home-command full">HOME</button>
   <a class="home-pro-action link-button full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer">TURNI OPERATIVI ESAMINATORI</a>
   <div class="card"><h2>SEGRETERIA</h2><p>Archivio esclusivamente locale. Importa le schede condivise dall’istruttore: nessuna sincronizzazione automatica.</p>
   <button id="secretaryStudents" class="full">CERCA / VISUALIZZA ALLIEVI</button>
@@ -260,6 +266,8 @@
     <section id="registerPrintPanel" class="register-editor register-print-panel hidden">
       <div class="register-print-actions">
         <button id="registerPrintNow" type="button">STAMPA / SALVA PDF</button>
+        <p id="registerPrintStatus" role="status"></p>
+        <div id="registerPrintAlternatives"><a id="registerPrintFallback" target="_blank" rel="noopener">APRI DOCUMENTO STAMPABILE</a></div>
         <button id="registerCancelPrint" type="button" class="secondary">INDIETRO AL REGISTRO</button>
       </div>
       <p class="register-print-hint">Si aprirà il pannello di stampa del browser o del dispositivo. Il prospetto non viene caricato né archiviato su server.</p>
@@ -402,7 +410,7 @@
     <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><button id="voice" class="secondary">🎤 Detta</button>
   </div>
   <div class="card"><h2>Attività didattica</h2><button id="toggleLessonActivity" type="button" class="secondary full" aria-expanded="false" aria-controls="lessonChecklist">VISUALIZZA TUTTA L’ATTIVITÀ DIDATTICA</button><div id="lessonChecklist"></div></div>
-  <div class="card gps-card"><h2>GPS</h2><button id="startGps" type="button" class="gps-toggle full" aria-pressed="false">AVVIA GPS</button><button id="stopGps" type="button" class="hidden" tabindex="-1" aria-hidden="true">Ferma GPS</button><p id="gpsIndicator" class="gps-indicator" role="status">GPS non attivo</p><p id="gpsStatus" class="muted" aria-live="polite">GPS non attivo.</p><p id="wakeLockStatus" class="muted wake-lock-status" aria-live="polite">Schermo attivo: in attesa del GPS.</p><div id="liveMap" class="map"></div><div class="driving-error-quick"><button id="signalDrivingError" type="button" class="signal-driving-error full">SEGNALA ERRORE</button><p id="drivingErrorConfirmation" class="driving-error-confirmation" role="status" aria-live="polite"></p><p id="drivingErrorCount" class="muted">Errori registrati: 0</p></div></div>
+  <div class="card gps-card"><h2>GPS</h2><p id="indicativeSpeed" role="status">VELOCITÀ INDICATIVA — — km/h</p><p class="muted">Valore orientativo, non uno strumento omologato.</p><button id="speedOnly" type="button" class="secondary full">SOLO VELOCITÀ</button><button id="startGps" type="button" class="gps-toggle full" aria-pressed="false">AVVIA GPS</button><button id="stopGps" type="button" class="hidden" tabindex="-1" aria-hidden="true">Ferma GPS</button><p id="gpsIndicator" class="gps-indicator" role="status">GPS non attivo</p><p id="gpsStatus" class="muted" aria-live="polite">GPS non attivo.</p><p id="wakeLockStatus" class="muted wake-lock-status" aria-live="polite">Schermo attivo: in attesa del GPS.</p><div id="liveMap" class="map"></div><div class="driving-error-quick"><button id="signalDrivingError" type="button" class="signal-driving-error full">SEGNALA ERRORE</button><p id="drivingErrorConfirmation" class="driving-error-confirmation" role="status" aria-live="polite"></p><p id="drivingErrorCount" class="muted">Errori registrati: 0</p></div></div>
   <details id="drivingErrorsPanel" class="card driving-errors-panel"><summary id="drivingErrorsSummary">ERRORI SEGNALATI DURANTE LA GUIDA (0)</summary><p id="drivingErrorsPending" class="driving-errors-pending" aria-live="polite"></p><div id="drivingErrorsList"></div><p id="drivingErrorsEmpty" class="muted">Nessun errore segnalato.</p><button id="manageDrivingErrorCatalog" type="button" class="secondary full">GESTISCI CLASSIFICAZIONI ERRORI</button><section id="drivingErrorCatalogManager" class="driving-error-catalog-manager hidden"><h3>Classificazioni errori</h3><p class="muted">Le modifiche valgono per le scelte future. Gli errori storici conservano le etichette originarie.</p><div class="driving-error-catalog-toolbar"><button id="addDrivingErrorCategory" type="button">+ AGGIUNGI CATEGORIA</button><button id="resetDrivingErrorCatalog" type="button" class="danger">RIPRISTINA PREDEFINITE</button></div><div id="drivingErrorCatalogList"></div></section></details>
   <button id="openSavedRoute" class="secondary full hidden">Apri percorso salvato</button>
   <div style="margin-bottom:90px"><button id="saveLesson" class="full">💾 Salva guida</button></div>

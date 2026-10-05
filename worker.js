@@ -33,7 +33,7 @@ export default {
       const session = await requireSession(request, env);
       if (session.response) return session.response;
       const role=effectiveRole(session.user);
-      const secretaryAssets=new Set(["/student-license.js","/student-license-store.js","/student-archive-store.js","/lesson-drafts.js","/student-report-print.js","/driving-errors.js","/student-multi-actions.js","/student-multi-import.js","/exams.js","/app.js","/documents.js","/r10-features.js","/ui-icons.svg"]);
+      const secretaryAssets=new Set(["/student-license.js","/student-license-store.js","/student-archive-store.js","/lesson-drafts.js","/lesson-activities.js","/student-report-print.js","/driving-errors.js","/student-multi-actions.js","/student-multi-import.js","/exams.js","/app.js","/documents.js","/r10-features.js","/ui-icons.svg"]);
       if (session.purpose !== "NORMAL" || role === "USER_MANAGER" || (role === "SEGRETERIA" && !secretaryAssets.has(url.pathname))) return json({ error: "Risorsa non autorizzata." }, 403);
       return env.ASSETS.fetch(request);
     }
@@ -48,6 +48,7 @@ export default {
       if (session.response) return session.response;
       if (session.purpose === "PASSWORD_CHANGE" && !["/api/auth/password", "/api/auth/logout"].includes(url.pathname)) return json({ error: "Prima di continuare devi scegliere una nuova password personale." }, 403);
       if (url.pathname === "/api/auth/password" && request.method === "POST") return changeOwnPassword(request, env, session);
+      if (url.pathname === "/api/auth/presence" && request.method === "POST") return adminPresence(request, env, session);
       // Sole new network read for the exam instructor picker: no application data.
       if (url.pathname === "/api/exams/instructors") return examInstructors(request, env, session);
       if (url.pathname === "/api/account/employment" && request.method === "GET") {
@@ -79,6 +80,17 @@ export default {
     }
   }
 };
+async function adminPresence(request, env, session) {
+  if (session.purpose !== "NORMAL" || effectiveRole(session.user) !== "ADMIN") return json({error:"Accesso non consentito."},403);
+  const body=await request.json().catch(()=>null);
+  if(!body||Object.keys(body).length!==1||!/^[a-f0-9]{64}$/.test(body.deviceHash||""))return json({error:"Richiesta non valida."},400);
+  const now=new Date().toISOString(),recent=new Date(Date.now()-240000).toISOString();
+  try{
+    await env.DB.prepare("UPDATE sessions SET presence_device_hash=?,presence_seen_at=? WHERE id_hash=? AND (presence_seen_at IS NULL OR presence_seen_at<?)").bind(body.deviceHash,now,session.idHash,new Date(Date.now()-90000).toISOString()).run();
+    const rows=await env.DB.prepare("SELECT id_hash FROM sessions WHERE user_id=? AND id_hash<>? AND presence_device_hash<>? AND presence_seen_at>? AND expires_at>? AND purpose='NORMAL' AND session_version=? ORDER BY id_hash LIMIT 20").bind(session.user.id,session.idHash,body.deviceHash,recent,now,session.user.session_version).all();
+    return json({peers:await Promise.all(rows.results.map(async row=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode("agenda-presence:"+row.id_hash))),b=>b.toString(16).padStart(2,"0")).join("")))});
+  }catch{return json({peers:[],unavailable:true});}
+}
 function isPublicAsset(pathname) {
   return pathname === "/" || pathname === "/index.html" || pathname === "/auth-client.js" || pathname === "/service-worker.js" || pathname === "/manifest.json" || pathname === "/favicon.ico" || /\.(?:css|png|jpg|jpeg|webp)$/i.test(pathname);
 }

@@ -62,6 +62,15 @@
     let reportService = null;
     let deletionService = null;
     let currentReport = null;
+    let printableUrl = null, inlinePrintController = null;
+    const openedPrintableUrls=new Set();
+    function releasePrintableReport() {
+      // A new-tab navigation may still be loading when iOS backgrounds and locks
+      // the parent. Opened URLs belong to that document's lifetime; the browser
+      // releases them on unload. Never invalidate an in-flight user navigation.
+      if(printableUrl){if(!openedPrintableUrls.has(printableUrl))root.URL.revokeObjectURL(printableUrl);printableUrl=null;}
+      byId("registerPrintFallback")?.removeAttribute("href");
+    }
     let pendingDeletionPeriod = null;
     let employmentPeriods = [];
     let mode = "week";
@@ -80,6 +89,7 @@
       box.classList.toggle("error", Boolean(error));
     }
     function setLockedUi() {
+      releasePrintableReport();
       ledger = null;
       byId("registerLockBadge").textContent = "BLOCCATO";
       byId("registerLockBadge").classList.remove("unlocked");
@@ -396,6 +406,22 @@
       try {
         currentReport = await reportService.build({ mode, cursor, account: getAuth().currentUser() });
         byId("registerPrintPreview").innerHTML = getReportApi().renderHtml(currentReport);
+        releasePrintableReport();
+        const printer=root.StudentReportPrint;
+        if(printer&&root.URL?.createObjectURL){
+          const css=Array.from(doc.styleSheets||[]).filter(sheet=>sheet.href?.includes("register-ui.css")).map(sheet=>{try{return Array.from(sheet.cssRules).map(rule=>rule.cssText).join("\n")}catch{return ""}}).join("\n");
+          const controls='<nav class="report-controls"><button id="studentReportPrint" type="button">STAMPA / SALVA PDF</button><button id="studentReportClose" type="button">TORNA AL REGISTRO</button><p id="studentReportPrintStatus" role="status"></p><div id="studentReportPrintAlternatives"><a id="studentReportOpenAgain" target="_blank" rel="noopener">APRI DOCUMENTO STAMPABILE</a><a id="studentReportDownloadHtml" download="registro-stampabile.html">SCARICA HTML STAMPABILE</a></div></nav>';
+          const html='<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><style>'+css+' body{background:white;color:#17242d;margin:0;padding:16px;overflow-wrap:anywhere}.report-controls button,.report-controls a{min-height:44px;display:inline-block;margin:6px}@media print{.report-controls{display:none!important}}</style></head><body>'+controls+'<main id="registerPrintPanel">'+getReportApi().renderHtml(currentReport)+'</main>'+'<script>'+printer.documentScript()+'</script></body></html>';
+          printableUrl=root.URL.createObjectURL(new root.Blob([html],{type:"text/html;charset=utf-8"}));
+          byId("registerPrintFallback").href=printableUrl;
+          byId("registerPrintFallback").onclick=()=>{if(printableUrl)openedPrintableUrls.add(printableUrl);};
+          byId("registerPrintStatus").textContent="Documento HTML stampabile locale: il PDF viene creato soltanto dal pannello del browser.";
+          if(!inlinePrintController){
+            const adapter={getElementById:id=>({studentReportPrint:byId("registerPrintNow"),studentReportClose:null,studentReportPrintStatus:byId("registerPrintStatus"),studentReportPrintAlternatives:byId("registerPrintAlternatives"),studentReportOpenAgain:byId("registerPrintFallback")}[id]||null)};
+            const win={print:()=>{if(!currentReport)throw Error("Anteprima non disponibile");(dependencies.print||root.print.bind(root))();},performance:root.performance,setTimeout:root.setTimeout.bind(root),get location(){return {href:printableUrl||""}}};
+            inlinePrintController=printer.installReportControls(win,adapter);
+          }
+        }
         hide("registerWorkspace", "registerDayEditor", "registerRatesPanel", "registerSecurityPanel", "registerBackupPanel");
         reveal("registerPrintPanel"); root.scrollTo?.(0, 0);
       } catch (error) { setMessage(error.message, true); }
@@ -404,7 +430,7 @@
       if (!currentReport) return setMessage("Anteprima non disponibile.", true);
       const print = dependencies.print || root.print?.bind(root);
       if (!print) return setMessage("Stampa non disponibile su questo dispositivo.", true);
-      print();
+      try { print(); } catch { setMessage("Stampa non disponibile. Usa APRI DOCUMENTO STAMPABILE.",true); }
     }
     function resetDeletionPeriodPreview() {
       pendingDeletionPeriod = null;
@@ -483,7 +509,7 @@
       byId("registerChooseImportFile").onclick = () => byId("registerImportFile").click();
       byId("registerImportFile").onchange = (event) => { byId("registerImportFileName").textContent = event.currentTarget.files?.[0]?.name || "Nessun file selezionato"; };
       byId("registerCancelBackup").onclick = closeEditors;
-      byId("registerOpenPrint").onclick = openPrintPreview; byId("registerPrintNow").onclick = printCurrentReport; byId("registerCancelPrint").onclick = closeEditors;
+      byId("registerOpenPrint").onclick = openPrintPreview; byId("registerPrintNow").onclick = () => { if(!root.StudentReportPrint)printCurrentReport(); }; byId("registerCancelPrint").onclick = () => { releasePrintableReport(); closeEditors(); };
       byId("registerOpenDeletion").onclick = openDeletionPanel; byId("registerDeletionPeriodForm").onsubmit = inspectDeletionPeriod;
       byId("registerDeletionPeriodConfirm").onchange = (event) => { byId("registerDeletePeriodNow").disabled = !event.currentTarget.checked; };
       byId("registerDeletePeriodNow").onclick = deleteSelectedPeriod; byId("registerDeleteAllForm").onsubmit = deleteEntireRegister; byId("registerCancelDeletion").onclick = closeEditors;

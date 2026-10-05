@@ -682,6 +682,7 @@
         checklist:cleanItems(student&&student.checklist),
         lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>{
           const canonicalLesson={id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist),errors:window.DrivingErrors.normalizeErrors(lesson&&lesson.errors)};
+          for(const key of ["activityBaseline","activitySnapshot","lessonActivities"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key].map(item=>({id:String(item.id),label:String(item.label),status:String(item.status)}));
           for(const key of ["instructorId","instructorName","completedDraftSignature"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key];
           if(typeof lesson?.duration==="string"&&lesson.duration.trim())canonicalLesson.duration=lesson.duration.trim();
           return canonicalLesson;

@@ -8,6 +8,35 @@
   let applicationLoading = null;
   let reservedUnlocked = false;
   let reservedTimer = null;
+  let presenceTimer=null,presenceBusy=false,presenceLast=0,presenceAccount=null,presencePeers=[];
+  const dismissedPresence=new Set();
+  function dismissPresence(){for(const id of presencePeers)dismissedPresence.add(id);document.getElementById("adminPresenceNotice")?.remove();}
+  async function checkAdminPresence(){
+    if(presenceBusy||document.hidden||currentUser?.role!=="ADMIN"||currentUser.mustChangePassword||Date.now()-presenceLast<90000)return;
+    presenceBusy=true;presenceLast=Date.now();const identity=currentUser.id;
+    try{
+      let installation=localStorage.getItem("agenda-installation-id");
+      if(!installation){installation=crypto.randomUUID();localStorage.setItem("agenda-installation-id",installation);}
+      const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(installation));
+      const deviceHash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+      const response=await api("/api/auth/presence",{method:"POST",body:JSON.stringify({deviceHash})});
+      if(currentUser?.id!==identity||currentUser.role!=="ADMIN"||document.hidden)return;
+      presencePeers=(response.peers||[]).filter(id=>typeof id==="string"&&/^[a-f0-9]{64}$/.test(id));
+      if(!presencePeers.some(id=>!dismissedPresence.has(id))){document.getElementById("adminPresenceNotice")?.remove();return;}
+      document.getElementById("adminPresenceNotice")?.remove();
+      const box=document.createElement("aside"),text=document.createElement("span"),close=document.createElement("button");
+      box.id="adminPresenceNotice";box.setAttribute("role","status");box.className="card";
+      text.textContent="Account amministratore attivo anche su un altro dispositivo.";
+      close.type="button";close.textContent="×";close.setAttribute("aria-label","Chiudi avviso");close.onclick=dismissPresence;
+      box.append(text,close);document.getElementById("appShell")?.prepend(box);
+    }catch{}finally{presenceBusy=false;}
+  }
+  function syncAdminPresence(){
+    if(presenceAccount!==currentUser?.id){presenceAccount=currentUser?.id;presenceLast=0;presencePeers=[];dismissedPresence.clear();dismissPresence();}
+    clearInterval(presenceTimer);presenceTimer=null;
+    if(currentUser?.role!=="ADMIN"||document.hidden){document.getElementById("adminPresenceNotice")?.remove();return;}
+    void checkAdminPresence();presenceTimer=setInterval(checkAdminPresence,120000);
+  }
 
   async function lockReservedArea() {
     reservedUnlocked = false;
@@ -115,6 +144,7 @@
       window.ExaminerRoutesUI?.stopAll?.();
     }
     currentUser = user;
+    syncAdminPresence();
     document.body.classList.toggle("secretary-session",user?.role==="SEGRETERIA");
     syncAuditPanel();
     const adminButton = document.getElementById("openUserManagement");
@@ -173,6 +203,8 @@
       await loadScript("student-license-store.js?v=1.21-license-store-v1");
       await loadScript("student-archive-store.js?v=1.21-student-archive-v1");
       await loadScript("lesson-drafts.js?v=1.21-lesson-drafts-v1");
+      await loadScript("lesson-activities.js?v=1.21-activities-v1");
+      if(currentUser?.role!=="SEGRETERIA")await loadScript("lesson-gps.js?v=1.21-gps-v1");
       await loadScript("student-report-print.js?v=1.21-student-report-print-v1");
       for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-economic-engine.js?v=1.21-register-v2", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2", "register-report.js?v=1.21-register-report-v3", "register-backup.js?v=1.21-register-backup-v2", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6", "driving-errors.js?v=1.21-driving-errors-v2", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2", "app.js?v=1.21-exams-v2", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=1.21", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=1.21-exams-v2", "r10-features.js?v=1.21-student-report-print-v1"]) { if(currentUser?.role==="SEGRETERIA" && !["driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); }
       if (window.AgendaAppReady) await window.AgendaAppReady;
@@ -497,10 +529,13 @@
     if (await checkSession(true)) await routeAfterAuthentication();
     checkTimer = setInterval(() => { if (currentUser) checkSession(); }, 30000);
     document.addEventListener("visibilitychange", () => {
+      syncAdminPresence();
       if (document.hidden) void lockRegisterVault();
       else if (currentUser) checkSession();
     });
     window.addEventListener("pagehide", () => { void lockRegisterVault(); });
+    window.addEventListener("wheel",dismissPresence,{passive:true});
+    window.addEventListener("touchmove",dismissPresence,{passive:true});
   }
 
   window.AgendaAuth = {

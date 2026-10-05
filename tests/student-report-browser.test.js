@@ -41,6 +41,20 @@ async function localCorrections({evaluate,click,capture,width}){
  if(await evaluate('!document.getElementById("choiceModal").classList.contains("hidden")'))await click("#choiceButtons button:first-child");
  assert.match(await evaluate('document.getElementById("lessonStudentIdentity").textContent'),/D’ÀNGELO-TEST/);assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true);await capture(`guida-lunga-${width}`);
  await click("#backLesson");await evaluate('show("home")');
+ // Real Register UI, isolated local vault and native print interception.
+ await evaluate('(async()=>{await RegisterUI.open();if(!RegisterLocalVault.status().pinConfigured)await RegisterLocalVault.setupPin("2468","2468");await RegisterUI.open();document.getElementById("registerUnlockPin").value="2468";document.getElementById("registerPinUnlockForm").requestSubmit()})()');
+ for(let i=0;i<100&&!await evaluate('document.getElementById("registerLockBadge").textContent==="SBLOCCATO"');i++)await new Promise(r=>setTimeout(r,30));
+ assert.equal(await evaluate('document.getElementById("registerLockBadge").textContent'),"SBLOCCATO",await evaluate('JSON.stringify({message:document.getElementById("registerMessage").textContent,status:RegisterLocalVault.status(),valid:document.getElementById("registerPinUnlockForm").checkValidity()})'));
+ await click("#registerOpenPrint");
+ for(let i=0;i<100&&!await evaluate('document.getElementById("registerPrintFallback").href.startsWith("blob:")');i++)await new Promise(r=>setTimeout(r,30));
+ await evaluate('window.__registerPrints=0;window.print=()=>window.__registerPrints++');
+ await click("#registerPrintNow");await click("#registerPrintNow");assert.equal(await evaluate('window.__registerPrints'),1);
+ assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true);
+ const report=await evaluate('fetch(document.getElementById("registerPrintFallback").href).then(r=>r.text())');assert.match(report,/registerPrintPanel/);assert.doesNotMatch(report,/onclick=/);
+ await new Promise(r=>setTimeout(r,1300));await click("#registerPrintNow");assert.equal(await evaluate('window.__registerPrints'),2);
+ await new Promise(r=>setTimeout(r,1300));await evaluate('window.print=()=>{throw Error("synthetic print failure")}');await click("#registerPrintNow");
+ assert.match(await evaluate('document.getElementById("registerPrintStatus").textContent'),/Impossibile aprire la stampa/);
+ await click("#registerCancelPrint");await evaluate('RegisterUI.leave();show("home")');
 }
 function reportFixture(){
  const elements=new Map(),element=id=>{if(!elements.has(id))elements.set(id,{classList:{add(){},remove(){},contains(){return false}},addEventListener(){},setAttribute(){},removeAttribute(){},replaceChildren(){}});return elements.get(id)};
@@ -52,7 +66,7 @@ function reportFixture(){
 }
 function appPreview(request,response){
  const pathname=new URL(request.url,"http://localhost").pathname;
- if(pathname.startsWith("/api/")){response.setHeader("content-type","application/json");if(pathname==="/api/auth/me")response.end(JSON.stringify({user:{id:"account-demo",name:"ISTRUTTORE DIMOSTRATIVO",role:String(request.headers.referer||"").includes("secretary=1")?"SEGRETERIA":"ISTRUTTORE",capabilities:{useApplication:true},employmentType:"PART_TIME"}}));else if(pathname==="/api/exams/instructors")response.end(JSON.stringify({instructors:[{id:"teacher-demo",name:"ISTRUTTORE FITTIZIO CON NOME MOLTO LUNGO PER IL COLLAUDO"}]}));else response.end(JSON.stringify({periods:[],enabled:false}));return true}
+if(pathname.startsWith("/api/")){response.setHeader("content-type","application/json");if(pathname==="/api/auth/me")response.end(JSON.stringify({user:{id:"account-demo",name:"ISTRUTTORE DIMOSTRATIVO",role:String(request.headers.referer||"").includes("secretary=1")?"SEGRETERIA":"ISTRUTTORE",capabilities:{useApplication:true},employmentType:"PART_TIME"}}));else if(pathname==="/api/exams/instructors")response.end(JSON.stringify({instructors:[{id:"teacher-demo",name:"ISTRUTTORE FITTIZIO CON NOME MOLTO LUNGO PER IL COLLAUDO"}]}));else response.end(JSON.stringify({periods:[{employmentType:"PART_TIME",effectiveFrom:"2025-12-29"}],enabled:false}));return true}
  if(pathname==="/app-preview"){
   const seed=`<script>if(!sessionStorage.getItem('demo-seeded')){localStorage.setItem('autoscuola_v3_completa',JSON.stringify([{id:'student-demo',firstName:'ALLIEVO',lastName:'FITTIZIO CON COGNOME LUNGO',category:'auto',lessons:[],checklist:[]},{id:'student-demo-2',firstName:'SECONDO',lastName:'DIMOSTRATIVO',category:'auto',lessons:[],checklist:[]}]));localStorage.setItem('autoscuola_v3_examiners',JSON.stringify([{id:'examiner-demo',firstName:'ESAMINATORE',lastName:'FITTIZIO',habits:[]}]));sessionStorage.setItem('demo-seeded','yes')}</script>`;
   response.setHeader("content-type","text/html; charset=utf-8");response.end(fs.readFileSync(path.join(root,"index.html"),"utf8").replace(/https:\/\/unpkg.com\/leaflet@1.9.4\/dist\/leaflet.css/g,"/test-leaflet.css").replace('<script src="auth-client.js?v=5"></script>',seed+'<script src="auth-client.js?v=5"></script>'));return true;
@@ -157,7 +171,7 @@ test("browser locale: documento Blob, navigazione, date, identità guida e stamp
    for(let i=0;i<300&&!await evaluate('!window.__testNavigatingAway && window.AgendaAuth?.currentUser()?.role==="SEGRETERIA" && document.querySelector(".view.active")?.id==="secretaryHome"');i++)await new Promise(r=>setTimeout(r,50));
    assert.equal(await evaluate('document.querySelector(".view.active").id'),"secretaryHome");
    assert.equal(await evaluate('[...document.scripts].some(s=>/register-|examiner-routes|leaflet|student-photo|full-backup/.test(s.src))'),false,"moduli operativi non necessari non caricati");
-   await click("#secretaryStudents");assert.equal(await evaluate('document.querySelectorAll("#students .student-card").length'),2);
+   await click('#secretaryCategories [data-f="auto"]');assert.equal(await evaluate('document.querySelector(".view.active").id'),"categoryHub");await click("#categoryHome");assert.equal(await evaluate('document.querySelector(".view.active").id'),"secretaryHome");await click("#secretaryOtherFunctions");await click('[data-secretary-command="openDocuments"]');await click("#backDocuments");assert.equal(await evaluate('document.querySelector(".view.active").id'),"secretaryHome");await click("#secretaryOtherFunctions");await click("#secretaryStudents");assert.equal(await evaluate('document.querySelectorAll("#students .student-card").length'),2,await evaluate('JSON.stringify({width:innerWidth,view:document.querySelector(".view.active").id,mode:state.studentListMode,filter:state.filter,count:state.students.length,role:AgendaAuth.currentUser().role,handler:String(document.getElementById("secretaryStudents").onclick)})'));
    await click("#students .student-card");assert.equal(await evaluate('document.querySelector(".view.active").id'),"student");
    assert.equal(await evaluate('getComputedStyle(document.getElementById("newLesson")).display'),"none");assert.equal(await evaluate('document.querySelectorAll("#lessons button").length'),0);
    await evaluate('window.__blocked=[];window.alert=text=>window.__blocked.push(text);newLesson();saveStudent();newExam()');assert.equal(await evaluate('window.__blocked.length'),3);

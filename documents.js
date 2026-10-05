@@ -69,6 +69,8 @@
   }
 
   function showView(id){
+    if(typeof show==="function"){show(id);return;}
+    if(window.AgendaAuth?.currentUser?.()?.role==="SEGRETERIA"&&id==="home")id="secretaryHome";
     document.querySelectorAll(".view").forEach(view=>view.classList.remove("active"));
     byId(id).classList.add("active");
     window.scrollTo(0,0);

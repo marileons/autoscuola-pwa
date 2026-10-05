@@ -30,6 +30,7 @@ function createUiHarness(vaultOverrides = {}, options = {}) {
       replaceChildren(...children) { this.children = children; },
       querySelectorAll() { return []; },
       setAttribute() {},
+      removeAttribute() {},
       reset() { this.resetCalled = true; }
     };
   }

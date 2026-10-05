@@ -3,7 +3,7 @@ const test=require("node:test"),assert=require("node:assert/strict"),fs=require(
 const app=fs.readFileSync(path.join(root,"app.js"),"utf8"),road=fs.readFileSync(path.join(root,"r10-features.js"),"utf8");
 function functions(context,names){for(const name of names)vm.runInContext(app.split(/\r?\n/).find(line=>line.startsWith(`function ${name}(`)),context)}
 test("GPS: dopo la ripresa un solo break, linea continua sui punti successivi e nessun duplicato",()=>{
- let callback,persisted=0;const state={watch:null,tempRoute:[],gpsNeedsBreak:false},context=vm.createContext({state,window:{AgendaAuth:{can:()=>true}},navigator:{geolocation:{watchPosition(fn){callback=fn;return 1}}},drawLive(){},persistLessonSession(){persisted++},updateGpsUi(){},alert(){throw Error("unexpected")}});
+ let callback,persisted=0;const state={watch:null,tempRoute:[],gpsNeedsBreak:false},context=vm.createContext({state,window:{LessonGps:require("../lesson-gps.js"),AgendaAuth:{can:()=>true}},navigator:{geolocation:{watchPosition(fn){callback=fn;return 1}}},drawLive(){},persistLessonSession(){persisted++},updateGpsUi(){},alert(){throw Error("unexpected")}});
  functions(context,["distance","bearing","bearingDelta","evaluateGpsPoint","startGps"]);context.startGps();
  const point=(latitude,timestamp,accuracy=5)=>callback({coords:{latitude,longitude:8.9,accuracy},timestamp});
  point(44.4,1000);point(44.4001,5000);state.gpsNeedsBreak=true;point(44.4002,100000);point(44.4003,105000);point(44.4003,105000);
