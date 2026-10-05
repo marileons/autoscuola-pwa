@@ -23,6 +23,15 @@
   let allDocuments=[];
   let currentSection=null;
   const selectedDocumentIds=new Set();
+  let actionBusy=false;
+  function permitted(){return window.AgendaAuth?.can?.("documents")===true;}
+  async function guarded(action){
+    if(!permitted()){showMessage("Operazione non consentita al profilo corrente.",true);return;}
+    if(actionBusy)return;
+    actionBusy=true;
+    try{return await action();}catch{showMessage("Operazione non riuscita. I documenti precedenti sono conservati.",true);}
+    finally{actionBusy=false;}
+  }
 
   function openDatabase(){
     if(databasePromise)return databasePromise;
@@ -47,7 +56,9 @@
     return new Promise((resolve,reject)=>{
       const transaction=db.transaction(STORE_NAME,mode);
       const request=operation(transaction.objectStore(STORE_NAME));
-      request.onsuccess=()=>resolve(request.result);
+      let result;
+      request.onsuccess=()=>{result=request.result};
+      transaction.oncomplete=()=>resolve(result);
       request.onerror=()=>reject(request.error);
       transaction.onabort=()=>reject(transaction.error||request.error);
     });
@@ -147,7 +158,7 @@
     return button;
   }
 
-  function requestDocumentTitle(initialTitle){
+  function requestDocumentTitle(initialTitle,excludedId=null){
     return new Promise(resolve=>{
       const modal=byId("documentTitleModal");
       const form=byId("documentTitleForm");
@@ -159,47 +170,57 @@
         resolve(value);
       };
       input.value=initialTitle;
+      input.setCustomValidity("");
+      input.oninput=()=>input.setCustomValidity("");
       modal.classList.remove("hidden");
       window.setTimeout(()=>{input.focus();input.select()},0);
       form.onsubmit=event=>{
         event.preventDefault();
         const title=input.value.trim();
-        if(title)finish(title);
+        const invalid=!title||/[\\/:*?"<>|\u0000-\u001f]/u.test(title);
+        const duplicate=allDocuments.some(item=>item.id!==excludedId&&normalizedSection(item)===(currentSection||COMMON_SECTION)&&String(item.title).trim().toLocaleLowerCase("it-IT")===title.toLocaleLowerCase("it-IT"));
+        input.setCustomValidity(invalid?"Inserisci un nome valido senza caratteri speciali.":duplicate?"Esiste già un documento con questo nome nella sezione.":"");
+        if(input.reportValidity())finish(title);
       };
       byId("cancelDocumentTitle").onclick=()=>finish(null);
     });
   }
 
+  let viewerUrl="";
+  let printBlockedUntil=0;
+  function closeViewer(){
+    byId("documentViewer").replaceChildren();
+    byId("documentViewer").hidden=true;
+    if(viewerUrl)URL.revokeObjectURL(viewerUrl);
+    viewerUrl="";
+  }
+  function offerDocument(record,printing=false){
+    closeViewer();
+    const panel=byId("documentViewer");panel.hidden=false;
+    viewerUrl=URL.createObjectURL(record.blob);
+    const close=makeButton("CHIUDI DOCUMENTO","secondary",closeViewer);
+    const link=document.createElement("a");link.href=viewerUrl;link.target="_blank";link.rel="noopener";
+    link.textContent=printing?"APRI DOCUMENTO STAMPABILE":"APRI DOCUMENTO";
+    const save=document.createElement("a");save.href=viewerUrl;save.download=record.originalName||record.title;save.textContent="SALVA / SCARICA";
+    const hint=document.createElement("p");hint.textContent=printing?"Usa Stampa o Condividi nel visualizzatore del dispositivo. Un PDF già esistente non viene convertito.":"Il documento resta disponibile qui. Chiudi la scheda del documento per tornare all’elenco.";
+    panel.append(close,link,save,hint);
+    return viewerUrl;
+  }
+  window.addEventListener("pagehide",event=>{if(!event.persisted)closeViewer()});
   function openDocument(record){
     try{
-      const url=URL.createObjectURL(record.blob);
+      const url=offerDocument(record);
       const opened=window.open(url,"_blank");
-      if(!opened){
-        const link=document.createElement("a");
-        link.href=url;
-        link.target="_blank";
-        link.rel="noopener";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      }
-      // Mantiene il Blob URL video disponibile per riproduzione e ricerca, poi lo revoca.
-      window.setTimeout(()=>URL.revokeObjectURL(url),isVideo(record.mimeType)?3600000:300000);
+      if(!opened)showMessage("Apertura automatica bloccata: usa APRI DOCUMENTO.",true);
     }catch(error){
       showMessage("Non è stato possibile aprire il documento.",true);
     }
   }
 
   function downloadDocument(record){
-    const url=URL.createObjectURL(record.blob);
-    const link=document.createElement("a");
-    link.href=url;
-    link.download=record.originalName||record.title;
-    link.style.display="none";
-    document.body.appendChild(link);
+    offerDocument(record);
+    const link=byId("documentViewer").querySelector("a[download]");
     link.click();
-    link.remove();
-    window.setTimeout(()=>URL.revokeObjectURL(url),60000);
   }
 
   function saveDocument(record){
@@ -212,38 +233,27 @@
   }
 
   function printDocument(record){
+    if(Date.now()<printBlockedUntil)return;
+    printBlockedUntil=Date.now()+1200;
+    if(!["application/pdf","image/jpeg","image/png"].includes(record.mimeType)){
+      showMessage("Questo formato non è stampabile. Puoi aprirlo, condividerlo o salvarlo.",true);return;
+    }
     try{
-      const url=URL.createObjectURL(record.blob);
-      const printWindow=window.open(record.mimeType==="application/pdf"?url:"","_blank");
-      if(!printWindow){
-        URL.revokeObjectURL(url);
-        showMessage("Il browser ha bloccato la finestra di stampa. Consenti i popup e riprova.",true);
-        return;
-      }
-      let printRequested=false;
-      const releaseUrl=()=>URL.revokeObjectURL(url);
-      const requestPrint=()=>{
-        if(printRequested)return;
-        printRequested=true;
-        try{printWindow.focus();printWindow.print()}catch(error){
-          showMessage("Usa il comando Stampa o Condividi della finestra aperta.");
-        }
-      };
-      try{printWindow.addEventListener("afterprint",releaseUrl,{once:true})}catch(error){}
-      if(record.mimeType==="application/pdf"){
-        try{printWindow.addEventListener("load",()=>window.setTimeout(requestPrint,500),{once:true})}catch(error){}
-        window.setTimeout(requestPrint,1500);
-      }else{
-        const image=printWindow.document.createElement("img");
-        image.alt=record.title;
-        image.src=url;
-        image.style.cssText="display:block;max-width:100%;height:auto;margin:auto";
-        image.onload=()=>window.setTimeout(requestPrint,100);
-        printWindow.document.title=record.title;
-        printWindow.document.body.style.margin="0";
-        printWindow.document.body.appendChild(image);
-      }
-      window.setTimeout(releaseUrl,300000);
+      const url=offerDocument(record,true);
+      if(record.mimeType==="application/pdf")return; // Native PDF viewers own their print UI.
+      const frame=document.createElement("iframe");frame.title="Documento stampabile";
+      byId("documentViewer").append(frame);
+      const doc=frame.contentDocument,win=frame.contentWindow;
+      const style=doc.createElement("style");style.textContent="img{max-width:100%;height:auto}button,a{min-height:44px} @media print{nav{display:none}}";doc.head.append(style);
+      const nav=doc.createElement("nav");
+      const button=doc.createElement("button");button.id="studentReportPrint";button.textContent="STAMPA / SALVA PDF";
+      const status=doc.createElement("p");status.id="studentReportPrintStatus";status.setAttribute("role","status");
+      const alternatives=doc.createElement("div");alternatives.id="studentReportPrintAlternatives";
+      const link=doc.createElement("a");link.href=url;link.target="_blank";link.textContent="APRI DOCUMENTO STAMPABILE";alternatives.append(link);
+      nav.append(button,status,alternatives);doc.body.append(nav);
+      const image=doc.createElement("img");image.alt=record.title;image.src=url;doc.body.append(image);
+      window.StudentReportPrint.installReportControls(win,doc);
+      showMessage("Documento pronto: premi STAMPA / SALVA PDF nel riquadro. Il comando alternativo resta disponibile.");
     }catch(error){
       showMessage("Non è stato possibile preparare il documento per la stampa.",true);
     }
@@ -260,20 +270,20 @@
           if(error&&error.name==="AbortError")return;
         }
       }
-      downloadDocument(record);
+      offerDocument(record);
+      showMessage("Condivisione file non disponibile: usa SALVA / SCARICA.");
     }catch(error){
-      try{downloadDocument(record)}catch(downloadError){
+      try{offerDocument(record)}catch(downloadError){
         showMessage("Non è stato possibile condividere o salvare il documento.",true);
       }
     }
   }
 
   async function renameDocument(record){
-    const title=await requestDocumentTitle(record.title);
+    const title=await requestDocumentTitle(record.title,record.id);
     if(title===null)return;
     try{
-      record.title=title;
-      await putDocument(record);
+      await putDocument({...record,title});
       await refreshDocuments();
     }catch(error){
       showMessage("Non è stato possibile modificare il titolo.",true);
@@ -335,7 +345,7 @@
     byId("selectedDocumentLabel").textContent=!count?"Seleziona prima un documento":single?`Documento selezionato: ${selected[0].title}`:`${count} documenti selezionati`;
     ["documentOpen","documentShare","documentDownload","documentRename"].forEach(id=>{byId(id).disabled=!single});
     byId("documentMove").disabled=!count;
-    byId("documentPrint").disabled=!single||isVideo(selected[0]&&selected[0].mimeType);
+    byId("documentPrint").disabled=!single;
     const deleteButton=byId("documentDelete");
     deleteButton.disabled=!count;
     deleteButton.textContent=count>1?`🗑️ Elimina ${count} documenti`:"🗑️ Elimina";
@@ -367,7 +377,7 @@
       showMessage(selected.length?"Questo comando richiede un solo documento selezionato.":"Seleziona prima un documento.",true);
       return;
     }
-    return action(selected[0]);
+    return guarded(()=>action(selected[0]));
   }
 
   async function updateStorageEstimate(){
@@ -483,11 +493,12 @@
     const destination=await requestMoveDestination();
     if(destination===null)return;
     try{
-      for(const record of selected){
-        // Mantiene lo stesso ID e lo stesso Blob: cambia soltanto la classificazione.
-        record.section=destination;
-        await putDocument(record);
-      }
+      const db=await openDatabase();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction(STORE_NAME,"readwrite"),store=tx.objectStore(STORE_NAME);
+        for(const record of selected)store.put({...record,section:destination});
+        tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);tx.onerror=()=>reject(tx.error);
+      });
       const count=selected.length;
       selectedDocumentIds.clear();
       showMessage(count===1?"Documento spostato.":`${count} documenti spostati.`);
@@ -498,22 +509,23 @@
   }
 
   byId("openDocuments").addEventListener("click",()=>{
+    if(!permitted())return;
     showView("documentsView");
     showDocumentCategories();
   });
   byId("backDocuments").addEventListener("click",()=>showView("home"));
   byId("backDocumentSection").addEventListener("click",showDocumentCategories);
-  byId("addDocument").addEventListener("click",()=>byId("documentFile").click());
+  byId("addDocument").addEventListener("click",()=>{if(permitted()&&!actionBusy)byId("documentFile").click()});
   byId("documentFile").addEventListener("change",async event=>{
     const file=event.target.files[0];
     event.target.value="";
-    if(file)await addSelectedDocument(file);
+    if(file)await guarded(()=>addSelectedDocument(file));
   });
   byId("documentOpen").addEventListener("click",()=>runSingleDocumentAction(openDocument));
   byId("documentShare").addEventListener("click",()=>runSingleDocumentAction(shareDocument));
   byId("documentPrint").addEventListener("click",()=>runSingleDocumentAction(printDocument));
   byId("documentDownload").addEventListener("click",()=>runSingleDocumentAction(saveDocument));
   byId("documentRename").addEventListener("click",()=>runSingleDocumentAction(renameDocument));
-  byId("documentMove").addEventListener("click",moveSelectedDocuments);
-  byId("documentDelete").addEventListener("click",deleteSelectedDocuments);
+  byId("documentMove").addEventListener("click",()=>guarded(moveSelectedDocuments));
+  byId("documentDelete").addEventListener("click",()=>guarded(deleteSelectedDocuments));
 })();

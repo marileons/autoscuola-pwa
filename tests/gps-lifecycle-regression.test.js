@@ -7,8 +7,9 @@ test("GPS: dopo la ripresa un solo break, linea continua sui punti successivi e 
  functions(context,["distance","bearing","bearingDelta","evaluateGpsPoint","startGps"]);context.startGps();
  const point=(latitude,timestamp,accuracy=5)=>callback({coords:{latitude,longitude:8.9,accuracy},timestamp});
  point(44.4,1000);point(44.4001,5000);state.gpsNeedsBreak=true;point(44.4002,100000);point(44.4003,105000);point(44.4003,105000);
- assert.equal(state.tempRoute.length,4);assert.deepEqual(state.tempRoute.map(p=>p.breakBefore),[false,false,true,false]);assert.equal(persisted,4);
- point(44.4004,110000,150);assert.equal(state.tempRoute.length,4);point(44.4004,115000);assert.equal(state.tempRoute.at(-1).breakBefore,true);assert.equal(state.gpsNeedsBreak,false);
+ assert.equal(state.tempRoute.length,3);assert.deepEqual(state.tempRoute.map(p=>p.breakBefore),[false,false,true]);assert.equal(persisted,3);
+ point(44.4004,110000,150);assert.equal(state.tempRoute.length,3);point(44.4004,115000);assert.equal(state.tempRoute.length,3);point(44.4005,120000);assert.equal(state.tempRoute.at(-1).breakBefore,true);assert.equal(state.gpsNeedsBreak,false);
+ point(44.4006,125000);assert.equal(state.tempRoute.at(-1).breakBefore,false);assert.equal(state.tempRoute.length,5);
 });
 test("coordinate invalide separano i segmenti senza inventare punti; zero e un punto validi",()=>{
  const c=vm.createContext({});functions(c,["validRoutePoints","routeSegments"]);

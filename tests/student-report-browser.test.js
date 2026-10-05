@@ -1,7 +1,35 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),os=require("node:os"),http=require("node:http"),vm=require("node:vm"),{spawn}=require("node:child_process");
 const root=path.join(__dirname,".."),printer=require("../student-report-print.js");
+async function documentCorrections({evaluate,click}){
+ await click("#secretaryOtherFunctions");await click('[data-secretary-command="openDocuments"]');
+ assert.equal(await evaluate('document.querySelector(".view.active").id'),"documentsView");
+ for(let i=0;i<100&&!await evaluate('!!document.querySelector("#documentSections button")');i++)await new Promise(r=>setTimeout(r,30));
+ await click('[data-section="common"]');
+ await evaluate(`(()=>{const input=document.getElementById('documentFile'),transfer=new DataTransfer();transfer.items.add(new File([Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aJ1sAAAAASUVORK5CYII='),c=>c.charCodeAt(0))],'sintetico.png',{type:'image/png'}));input.files=transfer.files;input.dispatchEvent(new Event('change'))})()`);
+ await evaluate('document.getElementById("documentTitleInput").value="Documento fittizio";document.getElementById("documentTitleForm").requestSubmit()');
+ for(let i=0;i<100&&!await evaluate('!!document.querySelector("#documentsList .document-card")');i++)await new Promise(r=>setTimeout(r,30));
+ await click('#documentsList .document-card');await evaluate('window.open=()=>null');await click('#documentOpen');
+ assert.equal(await evaluate('document.getElementById("documentViewer").hidden'),false);
+ const url=await evaluate('document.querySelector("#documentViewer a").href');assert.equal(await evaluate(`fetch(${JSON.stringify(url)}).then(r=>r.ok)`),true);
+ await click('#documentViewer button');assert.equal(await evaluate('document.querySelector(".view.active").id'),"documentsView");
+ await click('#documentRename');await evaluate('document.getElementById("documentTitleInput").value="";document.getElementById("documentTitleForm").requestSubmit()');assert.equal(await evaluate('document.getElementById("documentTitleModal").classList.contains("hidden")'),false);
+ await evaluate('document.getElementById("documentTitleInput").value="Rinominato fittizio";document.getElementById("documentTitleInput").dispatchEvent(new Event("input"));document.getElementById("documentTitleForm").requestSubmit()');
+ for(let i=0;i<100&&!await evaluate('document.getElementById("documentsList").textContent.includes("Rinominato")');i++)await new Promise(r=>setTimeout(r,30));
+ assert.match(await evaluate('document.getElementById("documentsList").textContent'),/Rinominato/);
+ await evaluate('Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>false})');await click('#documentShare');assert.match(await evaluate('document.getElementById("documentViewer").textContent'),/SALVA/);
+ await evaluate('window.__shares=0;Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>true});Object.defineProperty(navigator,"share",{configurable:true,value:async()=>{window.__shares++}})');await click('#documentShare');assert.equal(await evaluate('window.__shares'),1);
+ await click('#documentPrint');
+ await evaluate('window.__documentPrints=0;const frame=document.querySelector("#documentViewer iframe");frame.contentWindow.print=()=>window.__documentPrints++;const b=frame.contentDocument.getElementById("studentReportPrint");b.dispatchEvent(new Event("click"));b.dispatchEvent(new Event("click"))');assert.equal(await evaluate('window.__documentPrints'),1);
+ assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true);
+ await evaluate('window.confirm=()=>false');await click('#documentDelete');assert.equal(await evaluate('document.querySelectorAll("#documentsList .document-card").length'),1);
+ await evaluate('window.confirm=()=>true');await click('#documentDelete');for(let i=0;i<100&&await evaluate('document.querySelectorAll("#documentsList .document-card").length');i++)await new Promise(r=>setTimeout(r,30));assert.equal(await evaluate('document.querySelectorAll("#documentsList .document-card").length'),0);
+ await click('#documentsView [data-other-functions-back]');assert.equal(await evaluate('document.querySelector(".view.active").id'),"secretaryMenu");await click('[data-secretary-command="openDocuments"]');await click('#backDocuments');assert.equal(await evaluate('document.querySelector(".view.active").id'),"secretaryHome");
+}
 async function localCorrections({evaluate,click,capture,width}){
+ const feedback=await evaluate('(()=>{show("otherFunctions");document.getElementById("exportFullBackup").click();return {busy:document.getElementById("exportFullBackup").disabled,text:document.getElementById("fullBackupMessage").textContent}})()');assert.equal(feedback.busy,true);assert.match(feedback.text,/Preparazione backup completo/);
+ for(let i=0;i<200&&await evaluate('document.getElementById("exportFullBackup").disabled');i++)await new Promise(r=>setTimeout(r,30));
+ assert.match(await evaluate('document.getElementById("fullBackupMessage").textContent'),/Backup completo creato/);await click('#fullBackupModalButtons button:first-child');await evaluate('show("home")');
  await click("#openOtherFunctions");await click("#openGeneralStudentManagement");
  assert.equal(await evaluate('document.querySelector(".view.active").id'),"generalStudentManagement");
  const sizes=await evaluate('[...document.querySelectorAll("#generalStudentManagement .home-pro-action:not([hidden]):not(.hidden)")].map(b=>{const r=b.getBoundingClientRect(),s=b.querySelector("svg").getBoundingClientRect();return {height:r.height,icon:s.width,right:r.right}})');
@@ -28,6 +56,7 @@ async function localCorrections({evaluate,click,capture,width}){
  for(let i=0;i<100&&!await evaluate('lessonDraftReady||!document.getElementById("choiceModal").classList.contains("hidden")');i++)await new Promise(r=>setTimeout(r,30));
  if(await evaluate('!document.getElementById("choiceModal").classList.contains("hidden")'))await click("#choiceButtons button:first-child");
  assert.equal(await evaluate('document.getElementById("lessonStudentIdentity").textContent'),"ALLIEVO: ALLIEVO FITTIZIO CON COGNOME LUNGO");
+ const dial=await evaluate('(()=>{state.watch=123;state.indicativeSpeed=12;updateGpsUi();const a=document.getElementById("indicativeSpeed").getBoundingClientRect(),m=document.getElementById("liveMap").getBoundingClientRect(),f=document.querySelector(".live-map-frame").getBoundingClientRect();state.watch=null;updateGpsUi();return {top:a.top,mapBottom:m.bottom,bottom:a.bottom,frameBottom:f.bottom,width:a.width,hidden:document.getElementById("indicativeSpeed").hidden}})()');assert.ok(dial.width>=90&&dial.top>=dial.mapBottom&&dial.bottom<=dial.frameBottom);assert.equal(dial.hidden,true);
  await evaluate('document.getElementById("lessonNotes").value="Nota sintetica ripristinata";persistLessonSession()');
  await capture(`guida-${width}`);
  await evaluate('scrollTo(0,document.getElementById("lessonDate").getBoundingClientRect().top+scrollY+200)');
@@ -170,6 +199,7 @@ test("browser locale: documento Blob, navigazione, date, identità guida e stamp
    await send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:width===390});await evaluate('window.__testNavigatingAway=true');await send("Page.navigate",{url:`http://127.0.0.1:${server.address().port}/app-preview?secretary=1`});
    for(let i=0;i<300&&!await evaluate('!window.__testNavigatingAway && window.AgendaAuth?.currentUser()?.role==="SEGRETERIA" && document.querySelector(".view.active")?.id==="secretaryHome"');i++)await new Promise(r=>setTimeout(r,50));
    assert.equal(await evaluate('document.querySelector(".view.active").id'),"secretaryHome");
+   await documentCorrections({evaluate,click});
    assert.equal(await evaluate('[...document.scripts].some(s=>/register-|examiner-routes|leaflet|student-photo|full-backup/.test(s.src))'),false,"moduli operativi non necessari non caricati");
    await click('#secretaryCategories [data-f="auto"]');assert.equal(await evaluate('document.querySelector(".view.active").id'),"categoryHub");await click("#categoryHome");assert.equal(await evaluate('document.querySelector(".view.active").id'),"secretaryHome");await click("#secretaryOtherFunctions");await click('[data-secretary-command="openDocuments"]');await click("#backDocuments");assert.equal(await evaluate('document.querySelector(".view.active").id'),"secretaryHome");await click("#secretaryOtherFunctions");await click("#secretaryStudents");assert.equal(await evaluate('document.querySelectorAll("#students .student-card").length'),2,await evaluate('JSON.stringify({width:innerWidth,view:document.querySelector(".view.active").id,mode:state.studentListMode,filter:state.filter,count:state.students.length,role:AgendaAuth.currentUser().role,handler:String(document.getElementById("secretaryStudents").onclick)})'));
    await click("#students .student-card");assert.equal(await evaluate('document.querySelector(".view.active").id'),"student");

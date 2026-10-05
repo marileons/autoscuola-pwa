@@ -4,6 +4,10 @@
 @media(max-width:1100px){.document-global-actions{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.document-sections{grid-template-columns:1fr}.document-command-panel{position:static}.document-global-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.document-global-actions button{min-height:42px;font-size:14px}}
 
+#documentViewer[hidden]{display:none!important}
+#documentViewer{overflow-wrap:anywhere}
+#documentViewer a{display:inline-block;min-height:44px;padding:10px;margin:4px;color:inherit}
+#documentViewer iframe{display:block;width:100%;height:65vh;border:0;background:white}
 /* Documenti premium r9. */
 #documentsView .document-section-button{background:linear-gradient(145deg,#20313c,#17242d);border:1px solid #405762;color:#eef4f6;box-shadow:0 7px 16px #0004}
 #documentsView .documents-summary,#documentsView .document-command-panel{background:linear-gradient(145deg,#1b2a34,#14212a);border-color:#354a56}

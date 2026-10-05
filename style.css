@@ -333,3 +333,12 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 #secretaryHome .card{display:grid;gap:12px}#secretaryHome button{min-height:44px;white-space:normal;overflow-wrap:anywhere}
 .lesson-card .lesson-notes{display:block;margin-top:.65rem;overflow-wrap:anywhere;white-space:pre-wrap}
 .state-btn.orange{background:#ffad32;color:#17242d;border-color:#ffad32}
+/* The speed dial has its own lower map band: it cannot obscure tiles,
+   route markers, controls or attribution. No pointer interception. */
+.live-map-frame{position:relative;padding-bottom:calc(112px + env(safe-area-inset-bottom,0px));background:#17242d;border-radius:12px;overflow:hidden}
+.speed-dial{position:absolute;bottom:calc(6px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);width:100px;height:100px;border-radius:50%;border:2px solid #55d4ec;background:#10232ee8;color:#f5fcff;box-shadow:0 0 8px #55d4ec55;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.speed-dial[hidden]{display:none!important}
+.speed-dial strong{font-size:30px;line-height:1}.speed-dial small{font-size:13px}.speed-dial span{font-size:10px}
+.backup-preparing::after{content:"";display:inline-block;width:1em;height:1em;margin-left:8px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:backup-spin 1s linear infinite}
+@keyframes backup-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.backup-preparing::after{animation:none}}

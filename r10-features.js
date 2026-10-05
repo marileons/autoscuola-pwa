@@ -184,16 +184,16 @@
     }catch{}
   }
 
-  function roadCacheKey(point){return`${point.lat.toFixed(4)},${point.lng.toFixed(4)}`}
+  function roadCacheKey(point){return`${point.lat.toFixed(5)},${point.lng.toFixed(5)}`}
 
   function roadNameFromResponse(data){
     const address=data&&data.address||{};
-    return address.road||address.pedestrian||address.motorway||address.trunk||address.cycleway||address.path||address.footway||data&&data.name||"";
+    return address.road||address.pedestrian||address.motorway||address.trunk||address.cycleway||address.path||address.footway||"";
   }
 
   async function reverseRoad(point,cache){
     const key=roadCacheKey(point),cached=cache[key];
-    if(cached&&typeof cached.name==="string")return{name:cached.name,cached:true};
+    if(cached&&typeof cached.name==="string"&&cached.name&&Date.now()-cached.savedAt<7*86400000)return{name:cached.name,cached:true};
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
     try{
       const url=new URL(ROAD_ENDPOINT);
@@ -225,6 +225,18 @@
 
   function reportItemLabel(value){return value||"Tratto non identificato"}
 
+  function confirmedRoads(samples,results){
+    const ordered=[],uncertain="Tratto con segnale GPS insufficiente";
+    const append=name=>{if(ordered.at(-1)!==name)ordered.push(name)};
+    for(let i=0;i<results.length;){
+      if(samples[i]?.breakBefore)append(uncertain);
+      const name=String(results[i]?.name||"").trim();let end=i+1;
+      while(end<results.length&&!samples[end]?.breakBefore&&String(results[end]?.name||"").trim()===name)end++;
+      append(name&&end-i>=2?name:uncertain);i=end;
+    }
+    return ordered;
+  }
+
   async function generateRoadReport(){
     if(window.AgendaAuth?.can?.("operate")===false)return alert("Operazione non consentita al profilo corrente.");
     const currentLesson=lesson(),currentStudent=student(),button=$("generateRoadReport");
@@ -254,11 +266,10 @@
         $("roadReportStatus").textContent=`Analisi manuale in corso: ${index+1}/${samples.length} punti rappresentativi…`;
         if(index<samples.length-1&&!result.cached)await new Promise(resolve=>setTimeout(resolve,REQUEST_INTERVAL_MS));
       }
-      const ordered=[];
-      results.forEach((result,index)=>{if(samples[index].breakBefore)ordered.push("Nuovo segmento — interruzione GPS");const name=reportItemLabel(result.name);if(name!==ordered.at(-1))ordered.push(name)});
+      const ordered=confirmedRoads(samples,results);
       const generated=new Date(),date=new Date(currentLesson.createdAt),metres=routeDistance(route),duration=routeDuration(route);
       const list=ordered.map((name,index)=>`<li><span>${index+1}</span><strong>${esc(name)}</strong></li>`).join("");
-      $("roadReportPanel").innerHTML=`<div class="road-report-heading"><div><span class="report-kicker">REPORT STRADE</span><h2>${esc(nameOf(currentStudent)||"Allievo")}</h2></div><span>${date.toLocaleDateString("it-IT")}</span></div><div class="road-report-meta"><span><strong>Distanza</strong>${formatDistance(metres)}</span><span><strong>Durata</strong>${formatDuration(duration)}</span><span><strong>Campioni</strong>${samples.length}</span></div><div class="road-endpoint"><small>PARTENZA</small><strong>${esc(reportItemLabel(results[0]&&results[0].name))}</strong></div><ol class="road-list">${list}</ol><div class="road-endpoint arrival"><small>ARRIVO</small><strong>${esc(reportItemLabel(results.at(-1)&&results.at(-1).name))}</strong></div><p class="road-attribution">Generato ${generated.toLocaleString("it-IT")} · Dati © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ODbL.</p>`;
+      $("roadReportPanel").innerHTML=`<div class="road-report-heading"><div><span class="report-kicker">REPORT STRADE</span><h2>${esc(nameOf(currentStudent)||"Allievo")}</h2></div><span>${date.toLocaleDateString("it-IT")}</span></div><div class="road-report-meta"><span><strong>Distanza</strong>${formatDistance(metres)}</span><span><strong>Durata</strong>${formatDuration(duration)}</span><span><strong>Campioni</strong>${samples.length}</span></div><div class="road-endpoint"><small>PARTENZA</small><strong>${esc(reportItemLabel(ordered[0]))}</strong></div><ol class="road-list">${list}</ol><div class="road-endpoint arrival"><small>ARRIVO</small><strong>${esc(reportItemLabel(ordered.at(-1)))}</strong></div><p class="road-attribution">Report indicativo, non certificazione del percorso. Generato ${generated.toLocaleString("it-IT")} · Dati © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ODbL.</p>`;
       $("roadReportPanel").classList.remove("hidden");
       $("toggleRoadReport").classList.remove("hidden");
       $("toggleRoadReport").setAttribute("aria-expanded","true");
@@ -372,5 +383,5 @@
   window.clearStudentPdfFallback=clearStudentPdfFallback;
   resetRoadReport();
 
-  window.__agendaR10Test={sampleRoute,routeDistance,routeDuration,roadNameFromResponse,studentReportHtml};
+  window.__agendaR10Test={sampleRoute,routeDistance,routeDuration,roadNameFromResponse,studentReportHtml,confirmedRoads};
 })();

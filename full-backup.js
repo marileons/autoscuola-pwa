@@ -605,30 +605,40 @@
         try{nativeShare=!!(shareAvailable&&canShareAvailable&&navigator.canShare({files:[file]}))}catch(error){}
         if(nativeShare)await navigator.share({title:"Backup completo Agenda Istruttori",files:[file]});
         else downloadFile(file);
-        modal.classList.add("hidden");
+        paragraph.textContent="Salvataggio richiesto. Se il file non compare, premi nuovamente Condividi / Salva backup.";
       }catch(error){
         if(!error||error.name!=="AbortError"){
-          downloadFile(file);
-          modal.classList.add("hidden");
+          paragraph.textContent="Salvataggio non riuscito. Riprova con un nuovo tocco su Condividi / Salva backup.";
         }
       }finally{save.disabled=false}
     };
     actions.append(cancel,save);modal.classList.remove("hidden");
   }
 
+  let exportInProgress=false;
   async function exportFullBackup(){
-    clearMessage();
-    byId("exportFullBackup").disabled=true;
+    if(exportInProgress)return;
+    exportInProgress=true;
+    const button=byId("exportFullBackup");
+    button.disabled=true;
+    button.setAttribute("aria-busy","true");
+    button.classList.add("backup-preparing");
+    showMessage("Preparazione backup completo in corso…");
     try{
+      // Allow visible feedback before serialization; hidden tabs also progress.
+      await new Promise(resolve=>{const timer=window.setTimeout(resolve,100);window.requestAnimationFrame(()=>window.setTimeout(()=>{clearTimeout(timer);resolve()},0))});
       const payload=await createBackupPayload();
       const timestamp=new Date().toISOString().replace(/[:.]/g,"-");
       const file=createBackupFile(payload,`AgendaIstruttori_BackupCompleto_${timestamp}.${BACKUP_EXTENSION}`);
-      showMessage(`Backup pronto: ${payload.metadata.students} allievi, ${payload.metadata.documents} documenti, circa ${formatBytes(file.size)}.`);
+      showMessage(`Backup completo creato: ${payload.metadata.students} allievi, ${payload.metadata.documents} documenti, circa ${formatBytes(file.size)}.`);
       presentPreparedBackup(file);
     }catch(error){
-      showMessage(error&&error.message?error.message:"Non è stato possibile creare il backup completo.",true);
+      showMessage("Non è stato possibile creare il backup completo. I dati sono invariati; riprova dal pulsante Backup completo.",true);
     }finally{
-      byId("exportFullBackup").disabled=false;
+      exportInProgress=false;
+      button.disabled=false;
+      button.removeAttribute("aria-busy");
+      button.classList.remove("backup-preparing");
     }
   }
 
