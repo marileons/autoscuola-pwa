@@ -6,6 +6,18 @@
   let checkTimer = null;
   let applicationLoaded = false;
   let applicationLoading = null;
+  let sessionChecking=false,sessionRetry=null,sessionFailures=0,authEpoch=0;
+  const loadedScripts=new Set();
+  const diagnosticEvents=[];
+  const diagnosticCodes=new Set(["network_unavailable","session_denied","session_resumed","backup_collect","backup_encode","backup_ready","backup_failed","share_cancelled","share_unsupported","share_failed","share_completed","download_requested","draft_recovered"]);
+  function recordEvent(code){if(!diagnosticCodes.has(code))return;diagnosticEvents.push({code,at:Date.now()});if(diagnosticEvents.length>24)diagnosticEvents.shift();}
+  function connectionNotice(text="Connessione temporaneamente assente"){
+    let box=document.getElementById("connectionNotice");
+    if(!box){box=document.createElement("aside");box.id="connectionNotice";box.className="card";box.setAttribute("role","status");document.body.prepend(box);}
+    box.replaceChildren(document.createTextNode(text+" "));
+    const retry=document.createElement("button");retry.type="button";retry.textContent="RIPROVA";
+    retry.onclick=async()=>{if(await checkSession(!currentUser)){if(!applicationLoaded)await routeAfterAuthentication()}};box.append(retry);
+  }
   let reservedUnlocked = false;
   let reservedTimer = null;
   let presenceTimer=null,presenceBusy=false,presenceLast=0,presenceAccount=null,presencePeers=[];
@@ -126,10 +138,12 @@
       headers: { "content-type": "application/json", ...(options.headers || {}) }
     });
     let body = {};
-    try { body = await response.json(); } catch {}
+    let validJson=false;
+    try { body = await response.json();validJson=!!body&&typeof body==="object"; } catch {}
     if (!response.ok) {
       const error = new Error(body.error || "Operazione non riuscita.");
       error.status = response.status;
+      error.authDenied=validJson&&typeof body.error==="string"&&(response.status===401||response.status===403);
       throw error;
     }
     return body;
@@ -143,6 +157,7 @@
       void lockRegisterVault();
       window.ExaminerRoutesUI?.stopAll?.();
     }
+    if(previousId!==nextId)authEpoch++;
     currentUser = user;
     syncAdminPresence();
     document.body.classList.toggle("secretary-session",user?.role==="SEGRETERIA");
@@ -162,23 +177,39 @@
   }
 
   function loseAccess(message) {
-    applyUser(null);
+    document.getElementById("connectionNotice")?.remove();
+    clearTimeout(sessionRetry);sessionRetry=null;
+    // The app snapshots the lesson with its still-valid account ID first.
     if (onShowLogin) onShowLogin(); else showPublicLogin();
+    applyUser(null);
     const error = document.getElementById("loginError");
     if (error && message) { error.textContent = message; error.classList.remove("hidden"); }
   }
 
   async function checkSession(initial = false) {
+    if(sessionChecking)return false;
+    sessionChecking=true;
+    const epoch=authEpoch,controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
     try {
-      const data = await api("/api/auth/me", { method: "GET" });
+      const data = await api("/api/auth/me", { method: "GET",signal:controller.signal });
+      if(epoch!==authEpoch)return false;
+      if(!data?.user?.id||!data.user.role)throw new Error("Risposta di sessione non valida");
       applyUser(data.user);
+      if(sessionFailures)recordEvent("session_resumed");
+      sessionFailures=0;clearTimeout(sessionRetry);sessionRetry=null;
+      document.getElementById("connectionNotice")?.remove();
       return true;
     } catch (error) {
-      if (error.status === 401 && initial) { applyUser(null); showPublicLogin(); }
-      else if (error.status === 401) loseAccess("La sessione è scaduta o l’accesso è stato revocato.");
-      else loseAccess("Impossibile verificare l’accesso. Riconnettiti per entrare.");
+      if(epoch!==authEpoch)return false;
+      if (error.authDenied) {recordEvent("session_denied");loseAccess("La sessione è scaduta o l’accesso è stato revocato.");}
+      else {
+        recordEvent("network_unavailable");
+        connectionNotice();
+        clearTimeout(sessionRetry);
+        if(sessionFailures<3){const delay=[1000,3000,10000][sessionFailures++];sessionRetry=setTimeout(async()=>{if(await checkSession(initial)){if(!applicationLoaded)await routeAfterAuthentication()}},delay);}
+      }
       return false;
-    }
+    }finally{clearTimeout(timeout);sessionChecking=false;}
   }
 
   function showPublicLogin() {
@@ -187,9 +218,10 @@
   }
 
   function loadScript(src) {
+    if(loadedScripts.has(src))return Promise.resolve();
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = src; script.onload = resolve; script.onerror = () => reject(new Error(`Caricamento non autorizzato: ${src}`));
+      script.src = src; script.onload = ()=>{loadedScripts.add(src);resolve()}; script.onerror = () => {script.remove();reject(new Error("Caricamento temporaneamente non disponibile"))};
       document.body.appendChild(script);
     });
   }
@@ -212,7 +244,7 @@
       await activateRegisterVault();
       onShowApp?.();
     })();
-    try { await applicationLoading; } catch { applicationLoading = null; loseAccess(window.AgendaArchiveFailureMessage || "Impossibile caricare le funzioni protette. Riprova."); }
+    try { await applicationLoading; } catch { applicationLoading = null; connectionNotice(window.AgendaArchiveFailureMessage || "Caricamento temporaneamente non disponibile. Riprova."); }
   }
   async function routeAfterAuthentication() {
     if (currentUser?.mustChangePassword) { showPasswordChangeOnly(); return; }
@@ -263,7 +295,7 @@
     try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } catch {}
     window.ExaminerRoutesUI?.stopAll?.();
     await lockRegisterVault();
-    applyUser(null); showLogin();
+    showLogin();applyUser(null);clearTimeout(sessionRetry);sessionRetry=null;
   }
 
   function updateAccountSummary() {
@@ -301,7 +333,7 @@
       messageBox.style.color = "#70d49a";
       messageBox.classList.remove("hidden");
     } catch (error) {
-      if (error.status === 401) { closeOwnPassword(); loseAccess("La sessione è scaduta. Accedi nuovamente."); return; }
+      if (error.authDenied && error.status === 401) { closeOwnPassword(); loseAccess("La sessione è scaduta. Accedi nuovamente."); return; }
       errorBox.textContent = error.status ? error.message : "Errore di rete. Controlla la connessione e riprova.";
       errorBox.classList.remove("hidden");
     } finally { submit.disabled = false; }
@@ -330,7 +362,7 @@
       const data = await api(path, { method: "GET" });
       list.replaceChildren(...data.users.map(userRow));
     } catch (error) {
-      if (error.status === 401) return loseAccess("L’accesso è stato revocato.");
+      if (error.authDenied && error.status === 401) return loseAccess("L’accesso è stato revocato.");
       list.textContent = error.message;
     }
   }
@@ -526,6 +558,7 @@
       document.getElementById("toggleLoginPassword").setAttribute("aria-pressed", String(visible));
     };
     bindAdminUi();
+    document.getElementById("loginScreen")?.classList.add("hidden");
     if (await checkSession(true)) await routeAfterAuthentication();
     checkTimer = setInterval(() => { if (currentUser) checkSession(); }, 30000);
     document.addEventListener("visibilitychange", () => {
@@ -534,11 +567,14 @@
       else if (currentUser) checkSession();
     });
     window.addEventListener("pagehide", () => { void lockRegisterVault(); });
+    window.addEventListener("online",async()=>{sessionFailures=0;if(await checkSession(!currentUser)){if(!applicationLoaded)await routeAfterAuthentication()}});
     window.addEventListener("wheel",dismissPresence,{passive:true});
     window.addEventListener("touchmove",dismissPresence,{passive:true});
   }
 
   window.AgendaAuth = {
+    recordEvent,
+    diagnostics:()=>diagnosticEvents.map(event=>({...event})),
     can: action => currentUser?.role==="SEGRETERIA" ? ["consult","import","share","archive","trash","license","documents","report"].includes(action) : ["ADMIN","ISTRUTTORE"].includes(currentUser?.role),
     applicationReady,
     login,

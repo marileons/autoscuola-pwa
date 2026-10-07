@@ -29,7 +29,17 @@ async function documentCorrections({evaluate,click}){
 async function localCorrections({evaluate,click,capture,width}){
  const feedback=await evaluate('(()=>{show("otherFunctions");document.getElementById("exportFullBackup").click();return {busy:document.getElementById("exportFullBackup").disabled,text:document.getElementById("fullBackupMessage").textContent}})()');assert.equal(feedback.busy,true);assert.match(feedback.text,/Preparazione backup completo/);
  for(let i=0;i<200&&await evaluate('document.getElementById("exportFullBackup").disabled');i++)await new Promise(r=>setTimeout(r,30));
- assert.match(await evaluate('document.getElementById("fullBackupMessage").textContent'),/Backup completo creato/);await click('#fullBackupModalButtons button:first-child');await evaluate('show("home")');
+ assert.match(await evaluate('document.getElementById("fullBackupMessage").textContent'),/Backup completo creato/);
+ const backupUrl=await evaluate('document.querySelector("#fullBackupModalButtons a").href');assert.equal(await evaluate(`fetch(${JSON.stringify(backupUrl)}).then(r=>r.ok)`),true);
+ await evaluate('Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>false})');await click('#fullBackupModalButtons button:nth-child(2)');assert.match(await evaluate('document.getElementById("fullBackupModalBody").textContent'),/non supportata/);
+ await new Promise(r=>setTimeout(r,1250));
+ await evaluate('window.__backupShares=0;Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>true});Object.defineProperty(navigator,"share",{configurable:true,value:async()=>{window.__backupShares++;throw new DOMException("cancel","AbortError")}})');await click('#fullBackupModalButtons button:nth-child(2)');assert.match(await evaluate('document.getElementById("fullBackupModalBody").textContent'),/annullata/);assert.equal(await evaluate('window.__backupShares'),1);
+ assert.equal(await evaluate('document.querySelector("#fullBackupModalButtons a").href'),backupUrl);assert.equal(await evaluate(`fetch(${JSON.stringify(backupUrl)}).then(r=>r.ok)`),true);
+ await click('#fullBackupModalButtons button:first-child');await evaluate('show("home")');
+ await evaluate('window.__originalFetch=window.fetch;window.fetch=(url,...args)=>String(url).includes("/api/auth/me")?Promise.reject(new TypeError("offline sintetico")):window.__originalFetch(url,...args);window.dispatchEvent(new Event("online"))');
+ for(let i=0;i<50&&!await evaluate('!!document.getElementById("connectionNotice")');i++)await new Promise(r=>setTimeout(r,20));
+ assert.equal(await evaluate('document.querySelector(".view.active").id'),"home");assert.equal(await evaluate('AgendaAuth.currentUser().id'),"account-demo");assert.match(await evaluate('document.getElementById("connectionNotice").textContent'),/Connessione temporaneamente assente/);
+ await evaluate('window.fetch=window.__originalFetch;window.dispatchEvent(new Event("online"))');for(let i=0;i<50&&await evaluate('!!document.getElementById("connectionNotice")');i++)await new Promise(r=>setTimeout(r,20));assert.equal(await evaluate('!!document.getElementById("connectionNotice")'),false);
  await click("#openOtherFunctions");await click("#openGeneralStudentManagement");
  assert.equal(await evaluate('document.querySelector(".view.active").id'),"generalStudentManagement");
  const sizes=await evaluate('[...document.querySelectorAll("#generalStudentManagement .home-pro-action:not([hidden]):not(.hidden)")].map(b=>{const r=b.getBoundingClientRect(),s=b.querySelector("svg").getBoundingClientRect();return {height:r.height,icon:s.width,right:r.right}})');

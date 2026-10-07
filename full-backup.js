@@ -94,7 +94,7 @@
     if(appData.exams!==undefined)window.AgendaExams.normalizeExams(appData.exams,{strict:true});
     if(appData.examLocations!==undefined&&!Array.isArray(appData.examLocations))throw new Error("Località esami non valide.");
     const studentIds=new Set();
-    const trash=window.StudentArchiveStore.validateTrash(appData.studentTrash||[]);
+    const trash=window.StudentArchiveStore.validateTrash(appData.studentTrash||[],false);
     for(const student of [...appData.students,...trash.map(e=>e.student)]){
       if(!student||typeof student!=="object"||typeof student.id!=="string"||!student.id||studentIds.has(student.id))throw new Error("Il backup contiene allievi duplicati o non validi.");
       if(!Array.isArray(student.lessons)||!Array.isArray(student.checklist))throw new Error("Scheda allievo incompleta nel backup.");
@@ -421,14 +421,10 @@
     return parts;
   }
 
-  function createBackupFile(payload,fileName){
-    let file;
-    for(let attempt=0;attempt<3;attempt++){
-      file=new File(backupJsonParts(payload),fileName,{type:"application/json"});
-      if(payload.metadata.approximateBytes===file.size)break;
-      payload.metadata.approximateBytes=file.size;
-    }
-    return file;
+  async function createBackupFile(payload,fileName){
+    window.AgendaAuth?.recordEvent?.("backup_encode");
+    const result=await window.AgendaFullBackupStream.createLegacyFile(payload,payload.documentKeys,readDocumentByKey,fileName,{onProgress:(phase,done,total)=>showMessage(`${phase}: ${done}/${total}…`)});
+    return result.file;
   }
 
   async function deserializeDocument(serialized){
@@ -462,8 +458,17 @@
   }
 
   async function createBackupPayload(){
+    const archive=await window.AgendaStudentArchiveStore.snapshotForBackup();
+    if(window.AgendaStudentLicenseStore){
+      const licenses=new Map((await window.AgendaStudentLicenseStore.snapshot()).map(value=>[value.studentId,value]));
+      // Only this detached snapshot is enriched; no photo/lesson arrays are cloned.
+      for(const student of [...archive.students,...archive.studentTrash.map(entry=>entry.student)]){
+        delete student.drivingLicense;const value=licenses.get(String(student.id));
+        if(value)student.drivingLicense={number:value.number,issueDate:value.issueDate,expiryDate:value.expiryDate,...(value.category?{category:value.category}:{})};
+      }
+    }
     const appData={
-      studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),studentTrash:await storedTrashWithDrivingLicenses(),
+      ...archive,
       checklists:parsedStorageValue(DATA_KEYS.checklists,{}),
       examiners:parsedStorageValue(DATA_KEYS.examiners,[])
     };
@@ -471,15 +476,6 @@
     appData.exams=examData.exams;appData.examLocations=examData.locations;
     validateAppData(appData);
     const documentKeys=await readDocumentKeys();
-    const documents=[];
-    for(let index=0;index<documentKeys.length;index++){
-      const record=await readDocumentByKey(documentKeys[index]);
-      if(!record)throw new Error(`Documento ${index+1} non disponibile durante il backup.`);
-      documents.push(await serializeDocument(record));
-      record.blob=null;
-      await new Promise(resolve=>setTimeout(resolve,0));
-    }
-    if(documents.length!==documentKeys.length)throw new Error("Conteggio documenti non coerente durante la creazione del backup.");
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     const payload={
       format:FORMAT,
@@ -487,12 +483,13 @@
       app:"Agenda Istruttori",
       appVersion:APP_VERSION,
       createdAt:new Date().toISOString(),
-      metadata:{students:appData.students.length,documents:documents.length,approximateBytes:0},
+      metadata:{students:appData.students.length,documents:documentKeys.length,approximateBytes:0},
       appData,
       examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,
       drivingErrorCatalog:window.DrivingErrors?.createCatalogStore?.(localStorage).snapshot(accountId)||null,
-      documents
+      documents:[]
     };
+    Object.defineProperty(payload,"documentKeys",{value:documentKeys});
     return payload;
   }
 
@@ -588,32 +585,52 @@
     window.setTimeout(()=>URL.revokeObjectURL(url),60000);
   }
 
+  let releasePreparedBackup=null;
   function presentPreparedBackup(file){
+    releasePreparedBackup?.();
     const modal=byId("fullBackupModal"),content=byId("fullBackupModalBody"),actions=byId("fullBackupModalButtons");
     byId("fullBackupModalTitle").textContent="Backup completo pronto";
     content.replaceChildren();actions.replaceChildren();
     const paragraph=document.createElement("p");
-    paragraph.textContent="Premi il pulsante seguente per condividere o salvare il file sul dispositivo.";
+    paragraph.textContent="Condividi oppure usa SCARICA / SALVA FILE. Il file resta disponibile per 20 minuti senza rigenerazione.";
     content.appendChild(paragraph);
-    const cancel=document.createElement("button");cancel.type="button";cancel.className="secondary";cancel.textContent="Chiudi";cancel.onclick=()=>modal.classList.add("hidden");
-    const save=document.createElement("button");save.type="button";save.textContent="Condividi / Salva backup";
-    save.onclick=async()=>{
-      save.disabled=true;
-      try{
-        const shareAvailable=typeof navigator.share==="function",canShareAvailable=typeof navigator.canShare==="function";
-        let nativeShare=false;
-        try{nativeShare=!!(shareAvailable&&canShareAvailable&&navigator.canShare({files:[file]}))}catch(error){}
-        if(nativeShare)await navigator.share({title:"Backup completo Agenda Istruttori",files:[file]});
-        else downloadFile(file);
-        paragraph.textContent="Salvataggio richiesto. Se il file non compare, premi nuovamente Condividi / Salva backup.";
-      }catch(error){
-        if(!error||error.name!=="AbortError"){
-          paragraph.textContent="Salvataggio non riuscito. Riprova con un nuovo tocco su Condividi / Salva backup.";
-        }
-      }finally{save.disabled=false}
+    let url=URL.createObjectURL(file),busy=false,used=false,closed=false,until=0;
+    const release=()=>{
+      if(closed)return;closed=true;clearTimeout(expiry);
+      modal.classList.add("hidden");actions.replaceChildren();content.replaceChildren();
+      const previous=url;url="";file=null;
+      if(used)window.setTimeout(()=>URL.revokeObjectURL(previous),60000);else URL.revokeObjectURL(previous);
+      if(releasePreparedBackup===release)releasePreparedBackup=null;
     };
-    actions.append(cancel,save);modal.classList.remove("hidden");
+    const expiry=window.setTimeout(()=>{release();showMessage("Disponibilità temporanea del file terminata. Puoi preparare un nuovo backup.");},20*60*1000);
+    releasePreparedBackup=release;
+    const cancel=document.createElement("button");cancel.type="button";cancel.className="secondary";cancel.textContent="Chiudi";cancel.onclick=release;
+    const download=document.createElement("a");download.href=url;download.download=file.name;download.textContent="SCARICA / SALVA FILE";download.className="secondary";
+    download.onclick=event=>{
+      if(closed||busy||Date.now()<until){event.preventDefault();return;}
+      used=true;until=Date.now()+1200;
+      window.AgendaAuth?.recordEvent?.("download_requested");
+      paragraph.textContent="Download richiesto al dispositivo. Se non compare, riprova con questo collegamento; il file non viene rigenerato.";
+    };
+    const save=document.createElement("button");save.type="button";save.textContent="CONDIVIDI BACKUP";
+    save.onclick=async()=>{
+      if(closed||busy||Date.now()<until)return;
+      busy=true;save.disabled=true;
+      try{
+        let supported=false;
+        try{supported=typeof navigator.share==="function"&&typeof navigator.canShare==="function"&&navigator.canShare({files:[file]})}catch{}
+        if(!supported){window.AgendaAuth?.recordEvent?.("share_unsupported");paragraph.textContent="Condivisione di questo file non supportata. Usa SCARICA / SALVA FILE.";return;}
+        await navigator.share({title:"Backup completo Agenda Istruttori",files:[file]});
+        window.AgendaAuth?.recordEvent?.("share_completed");
+        paragraph.textContent="Condivisione completata. Il file resta disponibile anche per il download.";
+      }catch(error){
+        window.AgendaAuth?.recordEvent?.(error?.name==="AbortError"?"share_cancelled":"share_failed");
+        paragraph.textContent=error?.name==="AbortError"?"Condivisione annullata. Il backup è ancora disponibile.":"Condivisione non riuscita. Usa SCARICA / SALVA FILE senza rigenerare il backup.";
+      }finally{busy=false;until=Date.now()+1200;save.disabled=false;}
+    };
+    actions.append(cancel,save,download);modal.classList.remove("hidden");
   }
+  window.addEventListener("pagehide",event=>{if(!event.persisted)releasePreparedBackup?.()});
 
   let exportInProgress=false;
   async function exportFullBackup(){
@@ -624,15 +641,18 @@
     button.setAttribute("aria-busy","true");
     button.classList.add("backup-preparing");
     showMessage("Preparazione backup completo in corso…");
+    window.AgendaAuth?.recordEvent?.("backup_collect");
     try{
       // Allow visible feedback before serialization; hidden tabs also progress.
       await new Promise(resolve=>{const timer=window.setTimeout(resolve,100);window.requestAnimationFrame(()=>window.setTimeout(()=>{clearTimeout(timer);resolve()},0))});
       const payload=await createBackupPayload();
       const timestamp=new Date().toISOString().replace(/[:.]/g,"-");
-      const file=createBackupFile(payload,`AgendaIstruttori_BackupCompleto_${timestamp}.${BACKUP_EXTENSION}`);
+      const file=await createBackupFile(payload,`AgendaIstruttori_BackupCompleto_${timestamp}.${BACKUP_EXTENSION}`);
       showMessage(`Backup completo creato: ${payload.metadata.students} allievi, ${payload.metadata.documents} documenti, circa ${formatBytes(file.size)}.`);
       presentPreparedBackup(file);
+      window.AgendaAuth?.recordEvent?.("backup_ready");
     }catch(error){
+      window.AgendaAuth?.recordEvent?.("backup_failed");
       showMessage("Non è stato possibile creare il backup completo. I dati sono invariati; riprova dal pulsante Backup completo.",true);
     }finally{
       exportInProgress=false;

@@ -33,5 +33,43 @@ async function parseLegacyBackup(file,options={}){
 }
 function estimateBinaryBytes(fileBytes){return Math.ceil(Math.max(0,Number(fileBytes)||0)*.75)}
 async function estimateCapacity(fileBytes,currentBytes=0,storage=typeof navigator!=="undefined"?navigator.storage:null){const required=estimateBinaryBytes(fileBytes)+Math.max(0,Number(currentBytes)||0),result={requiredBytes:required,availableBytes:null,quota:null,usage:null,supported:false,sufficient:null};if(!storage?.estimate)return result;try{const estimate=await storage.estimate();result.quota=Number(estimate.quota)||0;result.usage=Number(estimate.usage)||0;result.availableBytes=Math.max(0,result.quota-result.usage);result.supported=true;result.sufficient=result.availableBytes>=required}catch{}return result}
-return Object.freeze({DEFAULT_CHUNK_BYTES,parseLegacyBackup,estimateBinaryBytes,estimateCapacity,createSha256:()=>new Sha256});
+// Output remains format 4 JSON. Only small strings/byte windows live on the
+// JS heap; Blob parts hold the completed output without one giant Base64 string.
+async function jsonBlob(value){
+ const parts=[];let pending="";
+ function flush(){if(pending){parts.push(new Blob([pending]));pending="";}}
+ function* tokens(v){
+  if(typeof v==="string"){yield '"';for(let i=0;i<v.length;i+=32768)yield asciiJson(v.slice(i,i+32768)).slice(1,-1);yield '"';}
+  else if(Array.isArray(v)){yield '[';for(let i=0;i<v.length;i++){if(i)yield ',';yield* tokens(v[i]===undefined?null:v[i])}yield ']';}
+  else if(v&&typeof v==="object"){yield '{';let first=true;for(const k of Object.keys(v)){if(v[k]===undefined)continue;if(!first)yield ',';first=false;yield asciiJson(k)+':';yield* tokens(v[k])}yield '}';}
+  else yield JSON.stringify(v);
+ }
+ for(const token of tokens(value)){pending+=token;if(pending.length>=65536){flush();await new Promise(r=>setTimeout(r,0));}}
+ flush();return new Blob(parts,{type:"application/json"});
+}
+function asciiJson(value){return JSON.stringify(value).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));}
+async function createLegacyFile(header,keys,readDocument,fileName,{onProgress=()=>{},signal}={}){
+ const parts=[],block=3*8192;let maxBufferBytes=0;
+ for(let index=0;index<keys.length;index++){
+  checkAbort(signal);const record=await readDocument(keys[index]);
+  if(!record||!(record.blob instanceof Blob))throw Error("Documento non leggibile durante il backup.");
+  const blob=record.blob,hash=new Sha256;
+  for(let offset=0;offset<blob.size;offset+=block){checkAbort(signal);const bytes=new Uint8Array(await blob.slice(offset,offset+block).arrayBuffer());hash.update(bytes);maxBufferBytes=Math.max(maxBufferBytes,bytes.length);if(offset%(block*32)===0){onProgress("Verifica documenti",index,keys.length);await new Promise(r=>setTimeout(r,0));}}
+  const metadata={id:String(record.id),originalName:String(record.originalName||"documento"),title:String(record.title||record.originalName||"Documento"),mimeType:String(record.mimeType||blob.type||"application/octet-stream"),size:blob.size,createdAt:Number(record.createdAt||Date.now()),section:String(record.section||"common"),sha256:hash.hex()};
+  if(index)parts.push(new Blob([',']));parts.push(new Blob([asciiJson(metadata).slice(0,-1)+',"dataBase64":"']));
+  const verify=new Sha256;
+  for(let offset=0;offset<blob.size;offset+=block){checkAbort(signal);const bytes=new Uint8Array(await blob.slice(offset,offset+block).arrayBuffer());verify.update(bytes);const text=btoa(String.fromCharCode(...bytes));parts.push(new Blob([text]));if(offset%(block*32)===0){onProgress("Preparazione documenti",index,keys.length);await new Promise(r=>setTimeout(r,0));}}
+  if(verify.hex()!==metadata.sha256)throw Error("Verifica documento non riuscita.");
+  parts.push(new Blob(['"}']));onProgress("Documenti completati",index+1,keys.length);
+ }
+ const body=new Blob(parts);parts.length=0;
+ const cleanHeader={...header};delete cleanHeader.documents;delete cleanHeader.metadata;
+ const metadata={...header.metadata,documents:keys.length,approximateBytes:0};
+ const complete=await jsonBlob(cleanHeader),stem=complete.slice(0,complete.size-1);
+ let prefix;
+ for(let attempt=0;attempt<4;attempt++){checkAbort(signal);prefix=new Blob([stem,complete.size>2?',':'', '"metadata":'+asciiJson(metadata)+',"documents":[']);const size=prefix.size+body.size+2;if(metadata.approximateBytes===size)break;metadata.approximateBytes=size;}
+ const file=new File([prefix,body,']}'],fileName,{type:"application/json"});
+ return {file,maxBufferBytes};
+}
+return Object.freeze({DEFAULT_CHUNK_BYTES,parseLegacyBackup,estimateBinaryBytes,estimateCapacity,createSha256:()=>new Sha256,createLegacyFile,jsonBlob});
 });
