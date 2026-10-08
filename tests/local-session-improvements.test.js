@@ -16,7 +16,7 @@ test("GPS: acquisizione, punto iniziale accurato, jitter, velocità e partenza",
  assert.equal(filter.observe(p(2000),0).ready,true);
  assert.equal(filter.observe(p(4000,5,44.400001),null).speed,0);
  assert.ok(filter.observe(p(6000,5,44.4002),10).speed>0);
- assert.equal(filter.observe(p(5000),10).ready,false);
+ assert.equal(filter.observe(p(5000),10).accept,false);
  assert.equal(filter.observe(p(8000,150),20).speed,null);
  const direct=gps.create();assert.equal(direct.observe(p(1000),10).speed,36);
  assert.equal(gps.create().observe(p(1000),-1).speed,null);

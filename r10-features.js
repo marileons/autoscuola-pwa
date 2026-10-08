@@ -4,7 +4,7 @@
 (()=>{
   const ROAD_CACHE_KEY="agenda_road_report_cache_r10";
   const ROAD_ENDPOINT="https://nominatim.openstreetmap.org/reverse";
-  const MAX_ROAD_REQUESTS=26;
+  const MAX_ROAD_REQUESTS=96;
   const ROAD_SAMPLE_MIN_METRES=15;
   const REQUEST_INTERVAL_MS=1100;
   let wakeLock=null;
@@ -145,7 +145,8 @@
       candidates[index].travelled=travelled;
     }
     const selected=new Set([0,candidates.length-1]);
-    const canSelect=index=>!selected.has(index)&&[...selected].every(chosen=>metres(candidates[index],candidates[chosen])>=ROAD_SAMPLE_MIN_METRES);
+    // Visits at the same coordinates at different times are distinct route events.
+    const canSelect=index=>!selected.has(index);
     for(let index=1;index<candidates.length-1&&selected.size<limit;index++)if(candidates[index].breakBefore&&canSelect(index))selected.add(index);
 
     const turns=[];
@@ -205,7 +206,7 @@
       url.searchParams.set("layer","address");
       url.searchParams.set("accept-language","it");
       const response=await fetch(url,{headers:{Accept:"application/json"},signal:controller.signal});
-      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+      if(!response.ok){const error=new Error(`HTTP ${response.status}`);error.status=response.status;throw error;}
       const data=await response.json(),name=roadNameFromResponse(data);
       cache[key]={name,savedAt:Date.now()};
       saveRoadCache(cache);
@@ -232,9 +233,16 @@
       if(samples[i]?.breakBefore)append(uncertain);
       const name=String(results[i]?.name||"").trim();let end=i+1;
       while(end<results.length&&!samples[end]?.breakBefore&&String(results[end]?.name||"").trim()===name)end++;
-      append(name&&end-i>=2?name:uncertain);i=end;
+      append(name||"Tratto non identificato");i=end;
     }
     return ordered;
+  }
+
+  function routeSamplingWarning(route){
+    const valid=route.filter(p=>Number.isFinite(p?.lat)&&Number.isFinite(p?.lng)&&Math.abs(p.lat)<=90&&Math.abs(p.lng)<=180);
+    const metres=routeDistance(valid),duration=routeDuration(valid);
+    return valid.length>1&&metres>=10000&&duration>=30*60000&&metres/(valid.length-1)>500
+      ?"Campionamento GPS molto rado: il report può omettere vie. I punti originali sono conservati.":"";
   }
 
   async function generateRoadReport(){
@@ -255,13 +263,13 @@
     }
     const route=currentLesson.route.map(point=>({lat:point.lat,lng:point.lng,time:point.time,accuracy:point.accuracy,breakBefore:!!point.breakBefore}));
     const samples=sampleRoute(route),validCount=route.filter(point=>Number.isFinite(point.lat)&&Number.isFinite(point.lng)&&Math.abs(point.lat)<=90&&Math.abs(point.lng)<=180).length;
-    const cache=loadRoadCache(),results=[];
+    const cache=loadRoadCache(),results=[];let limited=false;
     button.disabled=true;
     $("roadReportStatus").textContent=`Analisi manuale in corso: 0/${samples.length} punti rappresentativi…`;
     try{
       for(let index=0;index<samples.length;index++){
         let result;
-        try{result=await reverseRoad(samples[index],cache)}catch{result={name:"",cached:false,error:true}}
+        try{result=await reverseRoad(samples[index],cache)}catch(error){if(error.status===429){limited=true;break}result={name:"",cached:false,error:true}}
         results.push(result);
         $("roadReportStatus").textContent=`Analisi manuale in corso: ${index+1}/${samples.length} punti rappresentativi…`;
         if(index<samples.length-1&&!result.cached)await new Promise(resolve=>setTimeout(resolve,REQUEST_INTERVAL_MS));
@@ -275,7 +283,7 @@
       $("toggleRoadReport").setAttribute("aria-expanded","true");
       $("toggleRoadReport").textContent="NASCONDI REPORT";
       const unidentified=results.filter(result=>!result.name).length;
-      $("roadReportStatus").textContent=`Punti originali: ${route.length} · validi: ${validCount} · rappresentati: ${samples.length}. `+(unidentified?`Report completato con ${unidentified} tratti non identificati.`:"Report strade completato.");
+      $("roadReportStatus").textContent=`Punti originali: ${route.length} · validi: ${validCount} · analizzati: ${results.length}/${samples.length}. `+(limited?"Servizio temporaneamente limitato: report parziale, nessun tentativo automatico. ":unidentified?`Report completato con ${unidentified} tratti non identificati. `:"Report strade completato. ")+routeSamplingWarning(route);
     }finally{button.disabled=false;window.AgendaRoadReportCoordinator.release("lesson")}
   }
 
