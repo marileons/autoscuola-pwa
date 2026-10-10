@@ -19,3 +19,37 @@
 .shared-calendar .sc-choice input[type="checkbox"],.shared-calendar .sc-choice input[type="radio"]{width:20px;height:20px;min-width:20px;min-height:20px;padding:0;margin:0;position:static;transform:none}
 .shared-calendar .sc-choice span{margin:0;padding:0;line-height:1.25;overflow-wrap:anywhere}
 .shared-calendar .sc-participant{border-bottom:1px solid #ccc;padding:8px 0}
+.shared-calendar.sc-main{width:calc(100vw - 24px);max-width:calc(100vw - 24px);height:94dvh;max-height:94dvh}
+.shared-calendar [hidden]{display:none!important}
+.shared-calendar .sc-list.sc-daily{display:block}
+.shared-calendar .sc-grid-scroll{max-width:100%;max-height:65dvh;overflow:auto;position:relative;isolation:isolate;border:1px solid #9aa8b6}
+.shared-calendar .sc-grid{display:grid;grid-template-rows:auto repeat(960,var(--sc-minute,3px)) auto auto;min-width:100%;width:max-content;align-items:stretch}
+.shared-calendar .sc-grid-head{position:sticky;top:0;z-index:5;background:#e4edf6;color:#172537;font-weight:700;padding:12px;border:1px solid #b4c0cb;overflow-wrap:anywhere}
+.shared-calendar .sc-time{position:sticky;left:0;z-index:4;background:#f0f4f8;color:#172537;padding:6px;border-bottom:1px solid #adb9c5;font-size:16px}
+.shared-calendar .sc-grid-head.sc-time{z-index:6}
+.shared-calendar .sc-slot{border:0;border-bottom:1px solid #c5ced7;border-right:1px solid #c5ced7;border-radius:0;background:#fff;color:#355575;min-height:0;padding:0;align-self:stretch}
+.shared-calendar button.sc-slot{min-height:44px;text-align:right;vertical-align:top;padding:8px}
+.shared-calendar button.sc-slot:hover,.shared-calendar button.sc-slot:focus-visible{background:#e9f3ff;outline:2px solid #375b83;outline-offset:-2px}
+.shared-calendar .sc-grid-event{position:relative;z-index:2;min-height:0;align-self:stretch;margin:2px;padding:8px;background:#eef6fc;border-left:5px solid #356593;overflow-wrap:anywhere}
+.shared-calendar .sc-grid-event h3,.shared-calendar .sc-grid-event p{margin:3px 0;font-size:16px;line-height:1.3}
+.shared-calendar .sc-grid-event button{padding:6px;min-height:44px}
+.shared-calendar .sc-motorcycle{border-left:5px double #386346;background:#edf6ed}
+.shared-calendar .sc-grid-event.sc-exam{border:2px dashed #7653bb;background:#f3edff}
+.shared-calendar .sc-now{z-index:3;border-top:2px solid #b24635;pointer-events:none}
+.shared-calendar .sc-totals{padding:12px;background:#eef3f8;border:1px solid #a9b5c0;overflow-wrap:anywhere}
+.shared-calendar .sc-totals p{margin:5px 0}
+.shared-calendar .sc-week-totals,.shared-calendar .sc-week-days{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+.shared-calendar .sc-week-totals>*{flex:1 1 260px}
+.shared-calendar .sc-week-days button{flex:1 1 100px}
+.shared-calendar .sc-week-heading{margin:8px 0}
+.shared-calendar .sc-controls{align-items:center}
+.shared-calendar .sc-controls>input,.shared-calendar .sc-controls>select{width:auto;flex:0 1 190px}
+.shared-calendar .sc-controls>label{flex:1 1 150px}
+.shared-calendar .sc-controls>label input{flex:none;height:44px}
+.shared-calendar .sc-grid{width:100%}
+.shared-calendar .sc-controls>label.sc-print-option{display:flex;align-items:center;gap:8px;min-height:44px;flex:1 1 260px}.shared-calendar .sc-controls>label.sc-print-option input[type="checkbox"]{appearance:auto;width:20px;height:20px;min-height:20px;padding:0;margin:0;flex:0 0 20px}.shared-calendar .sc-print-output a{display:inline-flex;align-items:center;min-height:44px;padding:8px;overflow-wrap:anywhere}
+.shared-calendar .sc-notifications:not(:empty){border:1px solid #7995af;border-radius:8px;padding:10px;background:#eff6fc}
+.shared-calendar .sc-notifications summary{cursor:pointer;min-height:44px;padding:10px;font-weight:700}
+.shared-calendar .sc-notifications article{border-top:1px solid #b6c7d6;padding:8px}
+.shared-calendar .sc-notifications button{margin-right:8px}
+@media(max-width:440px){.shared-calendar.sc-main{width:calc(100vw - 12px);max-width:calc(100vw - 12px);padding:8px}.shared-calendar .sc-controls>*{flex-basis:auto}.shared-calendar .sc-controls>input,.shared-calendar .sc-controls>select{flex:1 1 140px}.shared-calendar .sc-grid-scroll{max-height:62dvh}}
