@@ -7,5 +7,7 @@ node_modules
 migrations
 tests/
 worker.js
+shared-calendar-api.js
+shared-calendar-events.js
 wrangler.toml
 *.patch

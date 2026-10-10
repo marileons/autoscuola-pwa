@@ -28,6 +28,17 @@ function employmentFields(referenceDate = today()) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const calendarEnabled = env.SHARED_CALENDAR_ENABLED === "true" || env.SHARED_CALENDAR_ENABLED === true;
+    if (url.pathname.startsWith("/api/calendar/") || /^\/shared-calendar(?:-store|-api|-events)?\.js$/.test(url.pathname)) {
+      if (!calendarEnabled || ["/shared-calendar-api.js","/shared-calendar-events.js"].includes(url.pathname)) return json({error:"Risorsa non disponibile."},404);
+      const session = await requireSession(request,env,false);
+      if (session.response) return session.response;
+      const role=effectiveRole(session.user);
+      if(session.purpose!=="NORMAL"||!["ADMIN","ISTRUTTORE","SEGRETERIA"].includes(role))return json({error:"Accesso non consentito."},403);
+      if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+      const {handleCalendar}=await import("./shared-calendar-api.js");
+      return handleCalendar(request,env,session,role,isPrimaryAdmin(session.user));
+    }
     if (!url.pathname.startsWith("/api/")) {
       if (isPublicAsset(url.pathname)) return env.ASSETS.fetch(request);
       const session = await requireSession(request, env);
@@ -369,7 +380,12 @@ async function requireSession(request, env, revokeInvalid = true) {
 }
 async function me(request, env) {
   const session = await requireSession(request, env);
-  return session.response || json({ user: publicUser(session.user, session.purpose) });
+  return session.response || json({ user: calendarPublicUser(session.user,session.purpose,env) });
+}
+function calendarPublicUser(row,purpose,env) {
+  const user=publicUser(row,purpose);
+  if ((env.SHARED_CALENDAR_ENABLED==="true"||env.SHARED_CALENDAR_ENABLED===true)&&purpose==="NORMAL"&&["ADMIN","ISTRUTTORE","SEGRETERIA"].includes(user.role)) user.sharedCalendarEnabled=true;
+  return user;
 }
 async function login(request, env) {
   const body = await request.json();
@@ -394,7 +410,7 @@ async function login(request, env) {
     env.DB.prepare("DELETE FROM sessions WHERE expires_at<=?").bind(now.toISOString()),
     env.DB.prepare("INSERT INTO sessions (id_hash,user_id,expires_at,created_at,session_version,purpose) VALUES (?,?,?,?,?,?)").bind(await sha256(token), row.id, expires.toISOString(), now.toISOString(), row.session_version, purpose)
   ]);
-  return json({ user: publicUser(row, purpose) }, 200, { "set-cookie": sessionCookie(token, Math.floor(sessionMs / 1000)) });
+  return json({ user: calendarPublicUser(row, purpose, env) }, 200, { "set-cookie": sessionCookie(token, Math.floor(sessionMs / 1000)) });
 }
 async function logout(request, env) {
   const token = cookieValue(request);

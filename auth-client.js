@@ -159,6 +159,7 @@
     }
     if(previousId!==nextId)authEpoch++;
     currentUser = user;
+    if(!user?.sharedCalendarEnabled || previousId!==nextId)window.SharedCalendar?.dispose?.();
     syncAdminPresence();
     document.body.classList.toggle("secretary-session",user?.role==="SEGRETERIA");
     syncAuditPanel();
@@ -250,6 +251,16 @@
     if (currentUser?.mustChangePassword) { showPasswordChangeOnly(); return; }
     if (currentUser?.role === "USER_MANAGER") { showManagerShell(); await openUsers(); return; }
     await loadApplication();
+    if(currentUser?.sharedCalendarEnabled===true && applicationLoaded){
+      try {
+        await loadScript("shared-calendar-store.js?v=1");
+        await loadScript("shared-calendar.js?v=1");
+        window.SharedCalendar.mount(currentUser);
+      } catch {
+        window.SharedCalendar?.dispose?.();
+        connectionNotice("Agenda condivisa temporaneamente non disponibile. Le altre funzioni restano utilizzabili.");
+      }
+    }
   }
   function showManagerShell() {
     syncAuditPanel();
