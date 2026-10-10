@@ -16,6 +16,6 @@
 .shared-calendar .sc-exam h3{color:#56328c}
 .shared-calendar fieldset{min-width:0;margin:12px 0;padding:12px;border:1px solid #bbb;border-radius:8px}
 .shared-calendar .sc-choice{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:start;gap:10px;min-height:44px;padding:10px 0;margin:0}
-.shared-calendar .sc-choice input[type="checkbox"]{width:20px;height:20px;min-width:20px;min-height:20px;padding:0;margin:0;position:static;transform:none}
+.shared-calendar .sc-choice input[type="checkbox"],.shared-calendar .sc-choice input[type="radio"]{width:20px;height:20px;min-width:20px;min-height:20px;padding:0;margin:0;position:static;transform:none}
 .shared-calendar .sc-choice span{margin:0;padding:0;line-height:1.25;overflow-wrap:anywhere}
 .shared-calendar .sc-participant{border-bottom:1px solid #ccc;padding:8px 0}

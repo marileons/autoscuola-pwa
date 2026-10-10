@@ -3,6 +3,7 @@ const test=require("node:test"),assert=require("node:assert/strict"),fs=require(
 const {fixture,event,root}=require("./shared-calendar-support.js");
 test("calendario browser isolato: interfaccia reale, cache, ruoli, offline e responsive",{timeout:120000},async()=>{
  const f=await fixture();let actor="secretary";
+ for(const id of ["m1","m2"])f.db.prepare("INSERT INTO calendar_vehicles(id,name,type,categories,site_id,status,created_at,updated_at) VALUES(?,?,'Moto','[\"moto\"]','a','DISPONIBILE','2026-01-01','2026-01-01')").run(id,"MOTO FITTIZIA "+id);
  const long="ALLIEVO DIMOSTRATIVO CON NOME MOLTO LUNGO PER VERIFICARE LA LEGGIBILITÀ";
  const today=new Date().toISOString().slice(0,10);
  await f.call("secretary","events",event({student_name:long,starts_at:today+"T09:00:00Z",ends_at:today+"T10:00:00Z"}));
@@ -55,6 +56,30 @@ test("calendario browser isolato: interfaccia reale, cache, ruoli, offline e res
   await wait('document.querySelector(".shared-calendar [role=status]").textContent.startsWith("OFFLINE")');
   assert.equal(await evaluate('[...document.querySelectorAll(".sc-controls button")].find(b=>b.textContent==="NUOVO ESAME").disabled'),true);
   assert.equal(await evaluate('document.querySelectorAll(".sc-card").length'),5);
+  await evaluate('delete navigator.onLine;window.dispatchEvent(new Event("online"))');await wait('document.querySelector(".shared-calendar [role=status]").textContent.startsWith("SINCRONIZZATO")');
+  await send("Emulation.setDeviceMetricsOverride",{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await click("NUOVA GUIDA MOTO");await wait('document.querySelector(".sc-editor h2")?.textContent==="Nuova GUIDA MOTO"');
+  await field("Inizio (Europe/Rome)",today+"T20:00");await field("Fine (Europe/Rome)",today+"T21:00");
+  await wait('document.querySelectorAll(".sc-editor input[type=radio]").length===2');
+  await evaluate('document.querySelector(".sc-editor input[type=radio]").click()');
+  await field("Nome allievo","MOTO ALLIEVO UNO");await field("ID stabile (se disponibile)","moto-p1");await field("Sigla moto (facoltativa)","moto-code-sh");
+  await wait('[...document.querySelectorAll(".sc-participant select option")].some(o=>o.value==="m1")');
+  await field("Veicolo fisico individuale (facoltativo)","m1");await click("AGGIUNGI ALLIEVO");
+  await evaluate('(()=>{const row=document.querySelectorAll(".sc-participant")[1],inputs=row.querySelectorAll("input"),selects=row.querySelectorAll("select");inputs[0].value="MOTO ALLIEVO DUE";inputs[1].value="moto-p2";selects[0].value="moto-code-k2";selects[1].value="m2";selects[1].dispatchEvent(new Event("change"))})()');
+  assert.equal(await evaluate('document.querySelector(".sc-editor").scrollWidth<=document.querySelector(".sc-editor").clientWidth'),true);
+  assert.ok(await evaluate('[...document.querySelectorAll(".sc-editor input,.sc-editor select")].every(i=>parseFloat(getComputedStyle(i).fontSize)>=16)'));
+  await click("SALVA");await wait('!document.querySelector(".sc-editor") && document.querySelectorAll(".sc-card").length===6');
+  assert.match(await evaluate('document.querySelector(".sc-motorcycle").textContent'),/MOTO ALLIEVO UNO — SH/);assert.match(await evaluate('document.querySelector(".sc-motorcycle").textContent'),/MOTO ALLIEVO DUE — K2/);
+  const motoId=f.db.prepare("SELECT id FROM calendar_events WHERE category='moto'").get().id;
+  await click("SIGLE MOTO");await wait('[...document.querySelectorAll("dialog[open] button")].some(b=>b.textContent==="SH · ordine 50 · attiva"&&!b.disabled&&b.getClientRects().length)');await click("SH · ordine 50 · attiva");await field("Sigla","SH NUOVA");await field("Stato","0");await click("SALVA");await wait('!document.querySelector(".sc-editor") && document.querySelector(".shared-calendar [role=status]").textContent.startsWith("SINCRONIZZATO")');
+  assert.match(await evaluate('document.querySelector(".sc-motorcycle").textContent'),/MOTO ALLIEVO UNO — SH/);
+  await click("NUOVA GUIDA MOTO");await wait('!!document.querySelector(".sc-participant select")');assert.equal(await evaluate('[...document.querySelectorAll(".sc-participant select option")].some(o=>o.value==="moto-code-sh")'),false);await click("ANNULLA");
+  await evaluate('document.querySelector(".sc-motorcycle button:last-child").click()');await wait('document.querySelector(".sc-editor h2")?.textContent==="Modifica GUIDA MOTO"');
+  assert.equal(await evaluate('document.querySelector(".sc-participant select").value'),"moto-code-sh");assert.match(await evaluate('document.querySelector(".sc-participant select").selectedOptions[0].textContent'),/SH.*storica/);
+  await evaluate('document.querySelectorAll(".sc-participant")[1].querySelector("button").click()');await click("SALVA");await wait('!document.querySelector(".sc-editor") && document.querySelector(".shared-calendar [role=status]").textContent.startsWith("SINCRONIZZATO")');
+  assert.equal(f.db.prepare("SELECT count(*) n FROM calendar_events WHERE category='moto'").get().n,1);assert.equal(f.db.prepare("SELECT version FROM calendar_events WHERE id=?").get(motoId).version,2);
+  await evaluate('Object.defineProperty(navigator,"onLine",{configurable:true,get:()=>false});window.dispatchEvent(new Event("offline"))');await wait('document.querySelector(".shared-calendar [role=status]").textContent.startsWith("OFFLINE")');
+  assert.match(await evaluate('document.querySelector(".sc-motorcycle").textContent'),/MOTO ALLIEVO UNO — SH/);assert.equal(await evaluate('document.querySelector(".sc-motorcycle button:last-child").disabled'),true);
   await evaluate('delete navigator.onLine;window.dispatchEvent(new Event("online"))');await wait('document.querySelector(".shared-calendar [role=status]").textContent.startsWith("SINCRONIZZATO")');
   actor="i1";await evaluate('SharedCalendar.dispose();window.user={id:"i1",role:"ISTRUTTORE",sharedCalendarEnabled:true};SharedCalendar.mount(user)');await click("AGENDA CONDIVISA");await wait('document.querySelector(".shared-calendar [role=status]").textContent.startsWith("SINCRONIZZATO")');
   assert.equal(await evaluate('[...document.querySelectorAll(".shared-calendar button")].some(b=>b.textContent==="NUOVO APPUNTAMENTO")'),false);

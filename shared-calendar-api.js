@@ -22,11 +22,12 @@ export async function handleCalendar(request,env,session,role,primary){
   const ids=sites.map(s=>s.id),scope=ids.length?ids.map(()=>"?").join(","):"NULL";
   const site=id=>{if(!ids.includes(id))fail(403,"Sede non autorizzata.");return id};
   if(method==="GET"){
-   const allowed={config:[],sites:[],events:["site","from","to","deleted"],sync:["cursor","updated_since"],vehicles:["site","at","until","category","event"],instructors:["site"],memberships:[],movements:["vehicle"]};
+   const allowed={config:[],sites:[],"motorcycle-codes":[],events:["site","from","to","deleted"],sync:["cursor","updated_since"],vehicles:["site","at","until","category","event"],instructors:["site"],memberships:[],movements:["vehicle"]};
    if(!allowed[route])fail(404,"Risorsa non trovata.");
    if([...url.searchParams.keys()].some(k=>!allowed[route].includes(k)))fail(400,"Parametri non consentiti.");
    if(route==="config")return json({enabled:true,manage,assign:primary,sites:ids});
    if(route==="sites")return json({sites});
+   if(route==="motorcycle-codes")return json({codes:manage||ids.length?await all("SELECT id,code,sort_order,active,version FROM calendar_motorcycle_codes ORDER BY sort_order,id"):[]});
    if(route==="memberships"){
     if(!primary)fail(403,"Operazione riservata al principale.");
     return json({memberships:await all("SELECT user_id,site_id FROM calendar_user_sites ORDER BY site_id,user_id"),users:await all("SELECT id,name FROM users WHERE active=1 AND access_profile IS NULL AND ((role='ISTRUTTORE' AND (authorization_role IS NULL OR authorization_role='ISTRUTTORE')) OR (role='ADMIN' AND (authorization_role IS NULL OR authorization_role='ADMIN'))) ORDER BY name,id")});
@@ -71,6 +72,15 @@ export async function handleCalendar(request,env,session,role,primary){
   let b;try{b=JSON.parse(raw)}catch{fail(400,"Richiesta non valida.")}
   const count=await q("SELECT count(*) AS n FROM calendar_event_audit WHERE actor_id=? AND created_at>?",user,new Date(Date.now()-60000).toISOString()).first();
   if(count.n>=30)fail(429,"Troppe modifiche. Attendi un minuto.");
+  if(route==="motorcycle-codes"){
+   strict(b,["id","code","sort_order","active","version"]);
+   const code=text(b.code,80).normalize("NFKC").replace(/\s+/g,"").toUpperCase();
+   if(!/^[A-Z0-9-]{1,20}$/.test(code)||!Number.isSafeInteger(b.sort_order)||b.sort_order<0||b.sort_order>100000||typeof b.active!=="boolean")fail(400,"Sigla, ordine o stato non validi.");
+   const id=b.id?text(b.id):crypto.randomUUID(),active=b.active?1:0;
+   const stmt=b.id?q("UPDATE calendar_motorcycle_codes SET code=?,normalized_code=?,sort_order=?,active=?,version=version+1,updated_at=? WHERE id=? AND version=?",code,code,b.sort_order,active,now,id,version(b.version)):q("INSERT INTO calendar_motorcycle_codes(id,code,normalized_code,sort_order,active,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",id,code,code,b.sort_order,active,now,now);
+   const result=await batch([stmt,q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) SELECT ?,'motorcycle_code',?,?,? WHERE changes()=1",user,id,b.id?(active?"UPDATE":"DEACTIVATE"):"CREATE",now)]);
+   if(!result[0].meta.changes)fail(409,conflict);return json({id});
+  }
   if(route==="memberships"){
    if(!primary)fail(403,"Operazione riservata al principale.");
    strict(b,["user_id","site_id","assigned"]);site(b.site_id);text(b.user_id);
@@ -118,6 +128,8 @@ export async function handleCalendar(request,env,session,role,primary){
   fail(404,"Risorsa non trovata.");
  }catch(e){
   const reason=String(e.message||"");
+  if(reason.includes("calendar_motorcycle_codes.normalized_code"))return json({error:"Sigla già presente, anche se disattivata."},409);
+  if(reason.includes("CALENDAR_MOTORCYCLE_CODE"))return json({error:"Sigla moto modificata o non disponibile. Ricarica il catalogo prima di salvare."},409);
   if(reason.includes("CALENDAR_RATE"))return json({error:"Troppe modifiche. Attendi un minuto."},429);
   if(reason.includes("CALENDAR_TRANSFER_CONFLICT"))return json({error:"Sono comparsi nuovi appuntamenti incompatibili. Ricarica prima di confermare."},409);
   if(reason.includes("CALENDAR_CONFLICT"))return json({error:"Conflitto: istruttore, allievo o veicolo già impegnato."},409);

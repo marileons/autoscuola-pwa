@@ -1,6 +1,8 @@
 "use strict";
 (function(root){
  let instance=null;
+ const motorcycleCategory=value=>["moto","corso-moto","am","a1","a2","a"].includes(String(value).toLowerCase());
+ const participantLabel=(p,e)=>p.name+(p.motorcycle_code_snapshot?" — "+p.motorcycle_code_snapshot:"")+(p.vehicle_id?" · "+(e.vehicles.find(v=>v.id===p.vehicle_id)?.name||p.vehicle_id):"");
  const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n};
  const button=(label,fn)=>{const b=el("button",label);b.type="button";b.onclick=fn;return b};
  const rome=value=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Rome",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(value)).replace(" ","T");
@@ -56,19 +58,19 @@
    if(state.denied){list.replaceChildren();tools.replaceChildren();notice.textContent="Accesso al calendario non disponibile. I dati locali non vengono mostrati.";return}if(!state.snapshot)return;
    const snapshot=state.snapshot,selected=state.site||selector.value;
    selector.replaceChildren();for(const s of snapshot.sites){const o=el("option",s.name+(s.active?"":" (disattivata)"));o.value=s.id;selector.append(o)}selector.value=snapshot.scope.includes(selected)?selected:(snapshot.scope[0]||"");state.site=selector.value;
-   tools.replaceChildren();if(state.config?.manage){for(const [label,fn]of [["NUOVO APPUNTAMENTO",()=>edit()],["NUOVO ESAME",()=>editExam()],["SEDI",sites],["VEICOLI",vehicles],["APPUNTAMENTI ELIMINATI",deletedEvents]]){const b=button(label,fn);b.disabled=!navigator.onLine;tools.append(b)}}if(state.config?.assign){const b=button("ASSEGNAZIONI SEDI",memberships);b.disabled=!navigator.onLine;tools.append(b)}
+   tools.replaceChildren();if(state.config?.manage){for(const [label,fn]of [["NUOVO APPUNTAMENTO",()=>edit()],["NUOVA GUIDA MOTO",()=>editExam(null,true)],["NUOVO ESAME",()=>editExam()],["SIGLE MOTO",motorcycleCodes],["SEDI",sites],["VEICOLI",vehicles],["APPUNTAMENTI ELIMINATI",deletedEvents]]){const b=button(label,fn);b.disabled=!navigator.onLine;tools.append(b)}}if(state.config?.assign){const b=button("ASSEGNAZIONI SEDI",memberships);b.disabled=!navigator.onLine;tools.append(b)}
    list.replaceChildren();const from=day.value,to=new Date(Date.parse(from+"T12:00Z")+state.mode*86400000).toISOString().slice(0,10);
    const entries=snapshot.events.filter(e=>e.site_id===state.site&&rome(e.starts_at).slice(0,10)>=from&&rome(e.starts_at).slice(0,10)<to&&Object.entries(state.filter).every(([k,v])=>(k==="vehicles"?(e.vehicles||[]).map(x=>x.name).join(" "):k==="instructor_name"?(e.instructors||[]).map(x=>x.name).join(" "):String(e[k]||"")).toLocaleLowerCase("it").includes(v))).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)||a.id.localeCompare(b.id));
    if(!entries.length)list.append(el("p","Nessun appuntamento per i filtri selezionati."));
    for(const e of entries){
-    const exam=e.event_type==="ESAME",row=el("article",null,"sc-card"+(exam?" sc-exam":""));
-    row.append(el("h3",exam?"ESAME · "+e.category:"GUIDA · "+e.student_name),el("p",rome(e.starts_at).replace("T"," ")+" – "+rome(e.ends_at).slice(11)),el("p",e.category+" · "+e.status));
+    const exam=e.event_type==="ESAME",row=el("article",null,"sc-card"+(exam?" sc-exam":motorcycleCategory(e.category)?" sc-motorcycle":""));
+    row.append(el("h3",exam?"ESAME · "+e.category:motorcycleCategory(e.category)?"GUIDA MOTO":"GUIDA · "+e.student_name),el("p",rome(e.starts_at).replace("T"," ")+" – "+rome(e.ends_at).slice(11)),el("p",e.category+" · "+e.status));
     if(exam)row.append(el("p","Località: "+e.meeting_point));
     row.append(el("p","Istruttori: "+(e.instructors||[]).map(x=>x.name).join(", ")),el("p","Veicoli: "+((e.vehicles||[]).map(x=>x.name).join(", ")||"non assegnato")));
-    if(exam)row.append(el("p","N. allievi: "+e.participants.length),button("ALLIEVI CONVOCATI",()=>examDetails(e)));
+    if(exam||motorcycleCategory(e.category)){row.append(el("p","N. allievi: "+e.participants.length));for(const p of e.participants)row.append(el("p",participantLabel(p,e)));row.append(button(exam?"ALLIEVI CONVOCATI":"DETTAGLIO ALLIEVI",()=>examDetails(e)));}
     row.append(el("p",e.note));
     if(state.config?.manage){const b=button("APRI / MODIFICA",()=>exam?editExam(e):edit(e));b.disabled=!navigator.onLine;row.append(b)}
-    else if(!exam&&e.instructor_id===user.id)row.append(button("APRI ALLIEVO",()=>openLocal(e,false)),button("INIZIA GUIDA",()=>openLocal(e,true)));
+    else if(!exam&&e.instructor_id===user.id){for(const p of e.participants){const local={...e,student_id:p.id},suffix=e.participants.length>1?" · "+p.name:"";row.append(button("APRI ALLIEVO"+suffix,()=>openLocal(local,false)),button("INIZIA GUIDA"+suffix,()=>openLocal(local,true)))}}
     list.append(row)
    }
   }
@@ -90,6 +92,7 @@
    return{d,f,fields,field,finish,err};
   }
   async function edit(e=null){
+   if(e&&motorcycleCategory(e.category))return editExam(e,true);
    try{
     const id=e?.site_id||state.site;if(!id)throw Error("Crea prima una sede e assegna un istruttore.");
     const [people,v]=await Promise.all([api("instructors?site="+encodeURIComponent(id)),api("vehicles?site="+encodeURIComponent(id))]);
@@ -117,51 +120,78 @@
    }catch(e){notice.textContent=e.message}
   }
   function examDetails(e){
-   const f=form("ESAME · "+e.category);
+   const f=form((e.event_type==="ESAME"?"ESAME":"GUIDA MOTO")+" · "+e.category);
    f.f.append(el("p",rome(e.starts_at).replace("T"," ")+" – "+rome(e.ends_at).slice(11)),el("p","Località: "+e.meeting_point),el("p","Istruttori: "+e.instructors.map(x=>x.name).join(", ")),el("p","Veicoli: "+e.vehicles.map(x=>x.name).join(", ")),el("p","Esaminatore: "+(e.examiner||"non inserito")));
-   const names=el("ol");for(const p of e.participants)names.append(el("li",p.name));f.f.append(names,el("p",e.note),el("p","Solo organizzazione: gli esiti restano negli ESAMI locali."),button("CHIUDI",()=>f.d.remove()));f.d.showModal();
+   const names=el("ol");for(const p of e.participants)names.append(el("li",participantLabel(p,e)));f.f.append(names,el("p",e.note),el("p","Solo organizzazione: gli esiti restano negli ESAMI locali."),button("CHIUDI",()=>f.d.remove()));f.d.showModal();
   }
-  async function editExam(e=null){
+  async function editExam(e=null,motorcycle=false){
    try{
     const id=e?.site_id||state.site;if(!id)throw Error("Crea prima una sede.");
-    const f=form(e?"Modifica seduta ESAME":"Nuova seduta ESAME"),x=f.field;
+    const catalog=await api("motorcycle-codes");
+    const f=form(motorcycle?(e?"Modifica GUIDA MOTO":"Nuova GUIDA MOTO"):(e?"Modifica seduta ESAME":"Nuova seduta ESAME")),x=f.field;
     x("site_id","Sede",id,state.snapshot.sites.filter(s=>s.active||s.id===id).map(s=>[s.id,s.name]));
     x("starts_at","Inizio (Europe/Rome)",e?rome(e.starts_at):day.value+"T09:00",null,"datetime-local");
     x("ends_at","Fine (Europe/Rome)",e?rome(e.ends_at):day.value+"T10:00",null,"datetime-local");
-    x("category","Categoria/percorso",e?.category||"auto");
-    x("meeting_point","Località / punto di ritrovo",e?.meeting_point).maxLength=160;
-    x("examiner","Esaminatore (informazione facoltativa)",e?.examiner).maxLength=120;
+    x("category","Categoria/percorso",e?.category||(motorcycle?"moto":"auto"),motorcycle?["moto","corso-moto","am","a1","a2","a"].map(c=>[c,c]):null);
+    if(!motorcycle){x("meeting_point","Località / punto di ritrovo",e?.meeting_point).maxLength=160;
+    x("examiner","Esaminatore (informazione facoltativa)",e?.examiner).maxLength=120;}
     const chosen={instructors:new Set((e?.instructors||[]).map(x=>x.id)),vehicles:new Set((e?.vehicles||[]).map(x=>x.id))},boxes={};
-    for(const [key,label]of [["instructors","Istruttori"],["vehicles","Veicoli"]]){const box=el("fieldset");box.append(el("legend",label));const body=el("div");box.append(body);f.f.append(box);boxes[key]=body}
-    let epoch=0;
+    for(const [key,label]of (motorcycle?[["instructors","Istruttore"]]:[["instructors","Istruttori"],["vehicles","Veicoli"]])){const box=el("fieldset");box.append(el("legend",label));const body=el("div");box.append(body);f.f.append(box);boxes[key]=body}
+    let epoch=0,availableVehicles=[];
     async function resources(){
      const n=++epoch;try{
       const site=encodeURIComponent(f.fields.site_id.value),at=encodeURIComponent(utc(f.fields.starts_at.value)),until=encodeURIComponent(utc(f.fields.ends_at.value)),category=encodeURIComponent(f.fields.category.value);
       const [people,cars]=await Promise.all([api("instructors?site="+site),api("vehicles?site="+site+"&at="+at+"&until="+until+"&category="+category+(e?"&event="+encodeURIComponent(e.id):""))]);
       if(n!==epoch||!f.d.isConnected)return;
-      for(const [key,items]of [["instructors",people.instructors],["vehicles",cars.vehicles]]){
+      availableVehicles=cars.vehicles;for(const p of rows)fillVehicle(p);
+      for(const [key,items]of [["instructors",people.instructors],...(!motorcycle?[["vehicles",cars.vehicles]]:[])]){
        const body=boxes[key];body.replaceChildren();
-       for(const item of items){const label=el("label",null,"sc-choice"),input=el("input");input.type="checkbox";input.value=item.id;input.checked=chosen[key].has(item.id);input.onchange=()=>input.checked?chosen[key].add(item.id):chosen[key].delete(item.id);label.append(input,el("span",item.name));body.append(label)}
+       for(const item of items){const label=el("label",null,"sc-choice"),input=el("input");input.type=motorcycle?"radio":"checkbox";input.name="sc-resource-"+key;input.value=item.id;input.checked=chosen[key].has(item.id);input.onchange=()=>{if(motorcycle)chosen[key].clear();input.checked?chosen[key].add(item.id):chosen[key].delete(item.id)};label.append(input,el("span",item.name));body.append(label)}
        for(const selected of chosen[key])if(!items.some(x=>x.id===selected)){const label=el("label",null,"sc-choice"),input=el("input");input.type="checkbox";input.checked=true;input.onchange=()=>{chosen[key].delete(selected);label.remove()};label.append(input,el("span",(e?.[key]?.find(x=>x.id===selected)?.name||selected)+" — non disponibile: rimuovi o cambia orario"));body.append(label)}
        if(!items.length)body.append(el("p","Nessuna risorsa disponibile per sede, orario e categoria."));
       }
      }catch(err){f.err.textContent=err.message}
     }
     for(const key of ["site_id","starts_at","ends_at","category"])f.fields[key].onchange=resources;
-    const participants=el("fieldset"),rows=[];participants.append(el("legend","Allievi convocati"));f.f.append(participants);
+    const participants=el("fieldset"),rows=[];participants.append(el("legend",motorcycle?"Allievi della guida moto":"Allievi convocati"));f.f.append(participants);
+    function fillVehicle(data){
+     const selected=data.vehicle.value||data.initialVehicle||"",options=[{id:"",name:"Nessun veicolo fisico"},...availableVehicles];
+     if(selected&&!options.some(v=>v.id===selected))options.push({id:selected,name:(e?.vehicles.find(v=>v.id===selected)?.name||selected)+" — non disponibile"});
+     data.vehicle.replaceChildren();for(const v of options){const o=el("option",v.name);o.value=v.id;data.vehicle.append(o)}data.vehicle.value=selected;
+    }
     function participant(p={}){
      const row=el("div",null,"sc-participant"),name=el("input"),id=el("input"),n=el("label","Nome allievo"),i=el("label","ID stabile (se disponibile)");
-     name.value=p.name||"";id.value=p.id||"";name.maxLength=120;id.maxLength=120;n.append(name);i.append(id);const data={row,name,id};rows.push(data);row.append(n,i,button("RIMUOVI ALLIEVO",()=>{rows.splice(rows.indexOf(data),1);row.remove()}));participants.append(row);
+     const code=el("select"),vehicle=el("select"),c=el("label","Sigla moto (facoltativa)"),v=el("label","Veicolo fisico individuale (facoltativo)");
+     const codeOptions=[{id:"",code:"Nessuna sigla"},...catalog.codes.filter(c=>c.active)];
+     if(p.motorcycle_code_id&&!codeOptions.some(c=>c.id===p.motorcycle_code_id))codeOptions.push({id:p.motorcycle_code_id,code:p.motorcycle_code_snapshot+" (storica, disattivata)"});
+     for(const item of codeOptions){const historical=item.id===p.motorcycle_code_id&&p.motorcycle_code_snapshot;const option=el("option",historical?historical+(catalog.codes.find(c=>c.id===item.id)?.active?" (storica)":" (storica, disattivata)"):item.code);option.value=item.id;code.append(option)}code.value=p.motorcycle_code_id||"";
+     name.value=p.name||"";id.value=p.id||"";name.maxLength=120;id.maxLength=120;n.append(name);i.append(id);c.append(code);v.append(vehicle);
+     const data={row,name,id,code,vehicle,initialVehicle:p.vehicle_id||null};vehicle.onchange=()=>data.initialVehicle=vehicle.value;rows.push(data);fillVehicle(data);
+     row.append(n,i,c,v,button("RIMUOVI ALLIEVO",()=>{rows.splice(rows.indexOf(data),1);row.remove()}));participants.append(row);
     }
-    for(const p of e?.participants||[{}])participant(p);
+    for(const p of e?.participants||[{}])participant(motorcycle&&e?.participants.length===1&&p.vehicle_id===undefined?{...p,vehicle_id:e.vehicle_id}:p);
     f.f.append(button("AGGIUNGI ALLIEVO",()=>participant()));
     x("note","Nota organizzativa (massimo 200 caratteri)",e?.note).maxLength=200;
-    x("status","Stato",e?.status||"PROGRAMMATO",["PROGRAMMATO","CONFERMATO","ANNULLATO","CONCLUSO"].map(s=>[s,s]));
-    f.f.append(el("p","Un solo evento per tutta la seduta. Nessun esito viene sincronizzato con gli ESAMI locali."));
-    const payload=(deleted=false)=>({...Object.fromEntries(Object.entries(f.fields).map(([k,i])=>[k,i.value])),event_type:"ESAME",starts_at:utc(f.fields.starts_at.value),ends_at:utc(f.fields.ends_at.value),instructors:[...chosen.instructors],vehicles:[...chosen.vehicles],participants:rows.map(p=>({id:p.id.value||null,name:p.name.value})),deleted,...(e?{id:e.id,version:e.version}:{})});
+    x("status","Stato",e?.status||(motorcycle?"PROGRAMMATA":"PROGRAMMATO"),(motorcycle?["PROGRAMMATA","CONFERMATA","ANNULLATA","ASSENTE","SVOLTA"]:["PROGRAMMATO","CONFERMATO","ANNULLATO","CONCLUSO"]).map(s=>[s,s]));
+    f.f.append(el("p",motorcycle?"Un unico evento con un solo istruttore. Le guide svolte sul dispositivo restano individuali.":"Un solo evento per tutta la seduta. Nessun esito viene sincronizzato con gli ESAMI locali."));
+    const payload=(deleted=false)=>({...Object.fromEntries(Object.entries(f.fields).map(([k,i])=>[k,i.value])),event_type:motorcycle?"GUIDA":"ESAME",starts_at:utc(f.fields.starts_at.value),ends_at:utc(f.fields.ends_at.value),...(motorcycle?{instructor_id:[...chosen.instructors][0]||""}:{instructors:[...chosen.instructors],vehicles:[...chosen.vehicles]}),participants:rows.map(p=>({id:p.id.value||null,name:p.name.value,motorcycle_code_id:p.code.value||null,vehicle_id:p.vehicle.value||null})),deleted,...(e?{id:e.id,version:e.version}:{})});
     if(e&&!e.deleted)f.f.append(button("ELIMINA APPUNTAMENTO",async()=>{if(state.saving||!navigator.onLine||!confirm("Eliminare logicamente questa seduta?"))return;state.saving=true;try{await api("events",payload(true));f.d.remove();await sync()}catch(err){f.err.textContent=err.message}finally{state.saving=false}}));
     f.finish(()=>api("events",payload()));void resources();
    }catch(err){notice.textContent=err.message}
+  }
+  async function motorcycleCodes(){
+   try{
+    const data=await api("motorcycle-codes"),menu=form("Catalogo SIGLE MOTO");
+    menu.f.append(el("p","La sigla è un tipo operativo, non un veicolo fisico. Le modifiche non cambiano gli appuntamenti già salvati."));
+    for(const c of data.codes)menu.f.append(button(c.code+" · ordine "+c.sort_order+" · "+(c.active?"attiva":"disattivata"),()=>{menu.d.remove();codeEditor(c)}));
+    menu.f.append(button("NUOVA SIGLA",()=>{menu.d.remove();codeEditor()}),button("CHIUDI",()=>menu.d.remove()));menu.d.showModal();
+   }catch(e){notice.textContent=e.message}
+  }
+  function codeEditor(c){
+   const f=form(c?"Modifica sigla moto":"Nuova sigla moto");
+   f.field("code","Sigla",c?.code).maxLength=80;const order=f.field("sort_order","Ordine",c?.sort_order??0,null,"number");order.min=0;order.max=100000;order.step=1;
+   f.field("active","Stato",c?.active===0?"0":"1",[["1","Attiva"],["0","Disattivata"]]);
+   f.finish(()=>api("motorcycle-codes",{...(c?{id:c.id,version:c.version}:{}),code:f.fields.code.value,sort_order:Number(f.fields.sort_order.value),active:f.fields.active.value==="1"}));
   }
   async function deletedEvents(){
    try{const from=utc(day.value+"T00:00"),to=new Date(Date.parse(from)+31*86400000).toISOString(),data=await api("events?site="+encodeURIComponent(state.site)+"&from="+encodeURIComponent(from)+"&to="+encodeURIComponent(to)+"&deleted=1"),f=form("Eliminati nei prossimi 31 giorni");for(const e of data.events)f.f.append(button("RIPRISTINA "+e.student_name+" "+rome(e.starts_at),()=>{f.d.remove();e.event_type==="ESAME"?editExam(e):edit(e)}));if(!data.events.length)f.f.append(el("p","Nessun appuntamento eliminato in questo intervallo."));f.f.append(button("CHIUDI",()=>f.d.remove()));f.d.showModal()}catch(e){notice.textContent=e.message}
