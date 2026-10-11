@@ -31,7 +31,7 @@ export async function saveEvent(b,c){
  for(const vehicle of assignedVehicles)if(!vehicles.includes(vehicle))vehicles.push(vehicle);
  if(vehicles.length>50||!instructors.length||(exam&&!vehicles.length))fail(400,"Seleziona almeno un istruttore e, per l'esame, un veicolo (massimo 50).");
  const old=b.id?await q("SELECT * FROM calendar_events WHERE id=?",id).first():null;
- if(b.id&&!old)fail(404,"Appuntamento non trovato.");
+ if(b.id&&!old)fail(404,"Appuntamento non trovato.");if(old)site(old.site_id);
  if(old&&old.event_type!==type)fail(400,"Il tipo di un evento esistente non può essere cambiato.");
  const previous=old?(await hydrateEvents([old],all))[0]:null;
  const codes=await all("SELECT id,code,active,version FROM calendar_motorcycle_codes WHERE id IN(SELECT value FROM json_each(?))",JSON.stringify(participants.map(p=>p.motorcycle_code_id).filter(Boolean)));

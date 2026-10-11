@@ -13,9 +13,9 @@ export async function handleCalendar(request,env,session,role,primary){
  if(!["true",true].includes(env.SHARED_CALENDAR_ENABLED))return json({error:"Risorsa non disponibile."},404);
  if(session.purpose!=="NORMAL"||!["ISTRUTTORE","ADMIN","SEGRETERIA"].includes(role))return json({error:"Accesso non consentito."},403);
  if((request.headers.get("origin")&&request.headers.get("origin")!==url.origin)||request.headers.get("sec-fetch-site")==="cross-site"||(method!=="GET"&&request.headers.get("origin")!==url.origin))return json({error:"Richiesta non autorizzata."},403);
- const db=env.DB,user=session.user.id,manage=primary||role==="SEGRETERIA",now=new Date().toISOString();
+ const db=env.DB,user=session.user.id,globalManage=primary||role==="SEGRETERIA",manage=globalManage||role==="ADMIN",requiredSites=new Set(),now=new Date().toISOString();
  const q=(sql,...args)=>db.prepare(sql).bind(...args),all=async(sql,...args)=>(await q(sql,...args).all()).results;
- const batch=async(stmts,guard=null)=>{const checks=[q("INSERT OR REPLACE INTO calendar_write_guard(id,rate_ok) SELECT 1,CASE WHEN count(*)<30 THEN 1 ELSE 0 END FROM calendar_event_audit WHERE actor_id=? AND created_at>?",user,new Date(Date.now()-60000).toISOString())];if(!primary)checks.push(q("INSERT OR REPLACE INTO calendar_write_guard(id,assignment_ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM calendar_operational_state WHERE id=1 AND enabled=1) THEN 1 ELSE 0 END"));if(guard)checks.push(guard);return(await db.batch([...checks,...stmts])).slice(checks.length)};
+ const batch=async(stmts,guard=null)=>{const checks=[q("INSERT OR REPLACE INTO calendar_write_guard(id,rate_ok) SELECT 1,CASE WHEN count(*)<30 THEN 1 ELSE 0 END FROM calendar_event_audit WHERE actor_id=? AND created_at>?",user,new Date(Date.now()-60000).toISOString())];if(!primary)checks.push(q("INSERT OR REPLACE INTO calendar_write_guard(id,assignment_ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM calendar_operational_state WHERE id=1 AND enabled=1) THEN 1 ELSE 0 END"));if(role==="ADMIN"&&!primary)checks.push(q("INSERT OR REPLACE INTO calendar_write_guard(id,assignment_ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM users u WHERE u.id=? AND u.active=1 AND u.role='ADMIN' AND (u.authorization_role IS NULL OR u.authorization_role='ADMIN') AND u.access_profile IS NULL) AND EXISTS(SELECT 1 FROM calendar_user_sites a JOIN calendar_sites z ON z.id=a.site_id WHERE a.user_id=? AND z.active=1) AND NOT EXISTS(SELECT 1 FROM json_each(?) r WHERE NOT EXISTS(SELECT 1 FROM calendar_user_sites a JOIN calendar_sites z ON z.id=a.site_id WHERE a.user_id=? AND a.site_id=r.value AND z.active=1)) THEN 1 ELSE 0 END",user,user,JSON.stringify([...requiredSites]),user));if(guard)checks.push(guard);return(await db.batch([...checks,...stmts])).slice(checks.length)};
  const audit=(type,id,action)=>q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) VALUES(?,?,?,?,?)",user,type,id,action,now);
  try{
   const operational=await q("SELECT o.*,u.name AS administrator FROM calendar_operational_state o LEFT JOIN users u ON u.id=o.updated_by WHERE o.id=1").first();
@@ -30,16 +30,16 @@ export async function handleCalendar(request,env,session,role,primary){
    if(!result[0].meta.changes)fail(409,"Stato modificato da un altro dispositivo. Aggiorna prima di confermare.");
    return json({ok:true});
   }
-  const sites=await all(manage?"SELECT * FROM calendar_sites ORDER BY name,id":"SELECT s.* FROM calendar_sites s JOIN calendar_user_sites a ON a.site_id=s.id WHERE a.user_id=? ORDER BY s.name,s.id",...(manage?[]:[user]));
+  const sites=await all(globalManage?"SELECT * FROM calendar_sites ORDER BY name,id":"SELECT s.* FROM calendar_sites s JOIN calendar_user_sites a ON a.site_id=s.id WHERE a.user_id=?"+(role==="ADMIN"&&!primary?" AND s.active=1":"")+" ORDER BY s.name,s.id",...(globalManage?[]:[user]));
   const ids=sites.map(s=>s.id),scope=ids.length?ids.map(()=>"?").join(","):"NULL";
-  const site=id=>{if(!ids.includes(id))fail(403,"Sede non autorizzata.");return id};
+  const site=id=>{if(!ids.includes(id)||(role==="ADMIN"&&!primary&&!sites.some(s=>s.id===id&&s.active===1)))fail(403,"Sede non autorizzata.");requiredSites.add(id);return id};
   if(method==="GET"){
    const allowed={config:[],sites:[],"motorcycle-codes":[],events:["site","from","to","deleted"],sync:["cursor","updated_since"],vehicles:["site","at","until","category","event"],instructors:["site"],memberships:[],movements:["vehicle"]};
    if(!allowed[route])fail(404,"Risorsa non trovata.");
    if([...url.searchParams.keys()].some(k=>!allowed[route].includes(k)))fail(400,"Parametri non consentiti.");
-   if(route==="config")return json({enabled:true,manage,assign:primary,sites:ids,...(primary?{operational:{enabled:operational.enabled===1,version:operational.version,updated_at:operational.updated_at,administrator:operational.administrator||(operational.updated_by?"Amministratore non più disponibile":null)}}:{})});
+   if(route==="config")return json({enabled:true,manage,manageCatalog:globalManage,assign:primary,sites:ids,...(primary?{operational:{enabled:operational.enabled===1,version:operational.version,updated_at:operational.updated_at,administrator:operational.administrator||(operational.updated_by?"Amministratore non più disponibile":null)}}:{})});
    if(route==="sites")return json({sites});
-   if(route==="motorcycle-codes")return json({codes:manage||ids.length?await all("SELECT id,code,sort_order,active,version FROM calendar_motorcycle_codes ORDER BY sort_order,id"):[]});
+   if(route==="motorcycle-codes")return json({codes:globalManage||ids.length?await all("SELECT id,code,sort_order,active,version FROM calendar_motorcycle_codes ORDER BY sort_order,id"):[]});
    if(route==="memberships"){
     if(!primary)fail(403,"Operazione riservata al principale.");
     return json({memberships:await all("SELECT user_id,site_id FROM calendar_user_sites ORDER BY site_id,user_id"),users:await all("SELECT id,name FROM users WHERE active=1 AND access_profile IS NULL AND ((role='ISTRUTTORE' AND (authorization_role IS NULL OR authorization_role='ISTRUTTORE')) OR (role='ADMIN' AND (authorization_role IS NULL OR authorization_role='ADMIN'))) ORDER BY name,id")});
@@ -74,7 +74,7 @@ export async function handleCalendar(request,env,session,role,primary){
    }
    if(route==="movements"){
     if(!manage)fail(403,"Operazione non consentita.");
-    return json({movements:await all("SELECT * FROM calendar_vehicle_movements WHERE vehicle_id=? ORDER BY effective_at,id",text(url.searchParams.get("vehicle")))});
+    const vehicle=text(url.searchParams.get("vehicle")),v=await q("SELECT site_id FROM calendar_vehicles WHERE id=?",vehicle).first();if(!v)fail(404,"Veicolo non trovato.");site(v.site_id);const movements=await all("SELECT * FROM calendar_vehicle_movements WHERE vehicle_id=? ORDER BY effective_at,id",vehicle);for(const m of movements){site(m.from_site_id);site(m.to_site_id)}return json({movements});
    }
   }
   if(method!=="POST")fail(405,"Operazione non consentita.");
@@ -85,7 +85,7 @@ export async function handleCalendar(request,env,session,role,primary){
   const count=await q("SELECT count(*) AS n FROM calendar_event_audit WHERE actor_id=? AND created_at>?",user,new Date(Date.now()-60000).toISOString()).first();
   if(count.n>=30)fail(429,"Troppe modifiche. Attendi un minuto.");
   if(route==="motorcycle-codes"){
-   strict(b,["id","code","sort_order","active","version"]);
+   if(!globalManage)fail(403,"Gestione catalogo non consentita.");strict(b,["id","code","sort_order","active","version"]);
    const code=text(b.code,80).normalize("NFKC").replace(/\s+/g,"").toUpperCase();
    if(!/^[A-Z0-9-]{1,20}$/.test(code)||!Number.isSafeInteger(b.sort_order)||b.sort_order<0||b.sort_order>100000||typeof b.active!=="boolean")fail(400,"Sigla, ordine o stato non validi.");
    const id=b.id?text(b.id):crypto.randomUUID(),active=b.active?1:0;
@@ -102,7 +102,7 @@ export async function handleCalendar(request,env,session,role,primary){
    await batch([b.assigned?q("INSERT OR IGNORE INTO calendar_user_sites(user_id,site_id) VALUES(?,?)",b.user_id,b.site_id):q("DELETE FROM calendar_user_sites WHERE user_id=? AND site_id=?",b.user_id,b.site_id),audit("membership",b.user_id,b.assigned?"ASSIGN":"REVOKE")]);return json({ok:true});
   }
   if(route==="sites"){
-   strict(b,["id","name","active","version"]);const name=text(b.name),active=b.active===true?1:b.active===false?0:fail(400,"Stato non valido."),id=b.id?site(b.id):crypto.randomUUID();
+   if(!globalManage)fail(403,"Gestione sedi non consentita.");strict(b,["id","name","active","version"]);const name=text(b.name),active=b.active===true?1:b.active===false?0:fail(400,"Stato non valido."),id=b.id?site(b.id):crypto.randomUUID();
    const statement=b.id?q("UPDATE calendar_sites SET name=?,active=?,version=version+1,updated_at=? WHERE id=? AND version=?",name,active,now,id,version(b.version)):q("INSERT INTO calendar_sites(id,name,active,created_at,updated_at) VALUES(?,?,?,?,?)",id,name,active,now,now);
    const result=await batch([statement,q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) SELECT ?,'site',?,?,? WHERE changes()=1",user,id,b.id?"UPDATE":"CREATE",now)]);
    if(!result[0].meta.changes)fail(409,conflict);return json({id});
@@ -114,6 +114,7 @@ export async function handleCalendar(request,env,session,role,primary){
    cats.forEach(c=>text(c,40));site(b.site_id);if(b.usual_site_id)site(b.usual_site_id);
    const mileage=b.mileage??null;if(mileage!==null&&(!Number.isFinite(mileage)||mileage<0))fail(400,"Chilometraggio non valido.");
    const id=b.id?text(b.id):crypto.randomUUID(),old=b.id?await q("SELECT * FROM calendar_vehicles WHERE id=?",id).first():null;
+   if(old)site(old.site_id);
    if(b.id&&(!old||old.site_id!==b.site_id))fail(400,"Per cambiare sede usa SPOSTA VEICOLO.");
    const args=[name,plate,type,JSON.stringify(cats),b.transmission||"",b.usual_site_id||null,b.status,mileage,now];
    const stmt=b.id?q("UPDATE calendar_vehicles SET name=?,plate=?,type=?,categories=?,transmission=?,usual_site_id=?,status=?,mileage=?,updated_at=?,version=version+1 WHERE id=? AND version=?",...args,id,version(b.version)):q("INSERT INTO calendar_vehicles(name,plate,type,categories,transmission,usual_site_id,status,mileage,updated_at,id,site_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",...args,id,b.site_id,now);
@@ -124,11 +125,12 @@ export async function handleCalendar(request,env,session,role,primary){
    strict(b,["vehicle_id","to_site_id","effective_at","mileage","reason","confirm_conflicts","version"]);
    const id=text(b.vehicle_id),to=site(b.to_site_id),at=instant(b.effective_at);
    if(at<now)fail(400,"Il trasferimento non può essere retroattivo.");
-   const v=await q("SELECT * FROM calendar_vehicles WHERE id=?",id).first();if(!v)fail(404,"Veicolo non trovato.");
+   const v=await q("SELECT * FROM calendar_vehicles WHERE id=?",id).first();if(!v)fail(404,"Veicolo non trovato.");site(v.site_id);
    const later=await q("SELECT id FROM calendar_vehicle_movements WHERE vehicle_id=? AND effective_at>=?",id,at).first();if(later)fail(409,"Esiste già un trasferimento successivo. Non modificato.");
-   const last=await q("SELECT to_site_id FROM calendar_vehicle_movements WHERE vehicle_id=? ORDER BY effective_at DESC LIMIT 1",id).first(),from=last?.to_site_id||v.site_id;
+   const last=await q("SELECT to_site_id FROM calendar_vehicle_movements WHERE vehicle_id=? ORDER BY effective_at DESC LIMIT 1",id).first(),from=last?.to_site_id||v.site_id;site(from);
    if(to===from)fail(400,"Scegli una sede diversa.");
    const conflicts=await all("SELECT e.id,e.starts_at,e.ends_at,e.site_id,e.version FROM calendar_events e JOIN calendar_event_vehicles x ON x.event_id=e.id WHERE x.vehicle_id=? AND e.ends_at>? AND e.deleted=0 AND e.status NOT IN('ANNULLATA','ANNULLATO') AND e.site_id<>? ORDER BY e.starts_at,e.id",id,at,to);
+   for(const e of conflicts)site(e.site_id);
    if(conflicts.length&&b.confirm_conflicts!==true)return json({error:"Appuntamenti incompatibili: conferma esplicitamente il trasferimento.",conflicts},409);
    const mileage=b.mileage??null;if(mileage!==null&&(!Number.isFinite(mileage)||mileage<0))fail(400,"Chilometraggio non valido.");
    const movement=crypto.randomUUID();
@@ -146,7 +148,8 @@ export async function handleCalendar(request,env,session,role,primary){
   if(reason.includes("CALENDAR_TRANSFER_CONFLICT"))return json({error:"Sono comparsi nuovi appuntamenti incompatibili. Ricarica prima di confermare."},409);
   if(reason.includes("CALENDAR_CONFLICT"))return json({error:"Conflitto: istruttore, allievo o veicolo già impegnato."},409);
   if(reason.includes("CALENDAR_ASSIGNMENT")&&!primary){const current=await q("SELECT enabled FROM calendar_operational_state WHERE id=1").first();if(current?.enabled!==1)return json({error:"Agenda condivisa temporaneamente sospesa dall’amministratore",code:"CALENDAR_SUSPENDED"},403)}
-  if(reason.includes("CALENDAR_ASSIGNMENT"))return json({error:"Istruttore non assegnato o sede non disponibile."},409);
+  if(reason.includes("CALENDAR_ASSIGNMENT")&&role==="ADMIN"&&!primary)return json({error:"Assegnazione alla sede non più valida. Aggiorna prima di modificare."},403);
+   if(reason.includes("CALENDAR_ASSIGNMENT"))return json({error:"Istruttore non assegnato o sede non disponibile."},409);
   if(reason.includes("CALENDAR_VEHICLE"))return json({error:"Veicolo non disponibile, in un'altra sede o incompatibile."},409);
   return json({error:e.status?e.message:"Calendario non disponibile. Nessun dato precedente è stato sostituito."},e.status||503);
  }

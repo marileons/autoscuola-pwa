@@ -12,8 +12,8 @@
 .shared-calendar .sc-editor{width:min(560px,calc(100vw - 32px))}
 .shared-calendar [role=alert]{color:#a60018}
 @media(max-width:440px){.shared-calendar{padding:10px}.shared-calendar .sc-controls>*{flex-basis:100%}}
-.shared-calendar .sc-exam{border:2px solid #7653bb;background:#f3edff;color:#222}
-.shared-calendar .sc-exam h3{color:#56328c}
+.shared-calendar .sc-exam{}
+
 .shared-calendar fieldset{min-width:0;margin:12px 0;padding:12px;border:1px solid #bbb;border-radius:8px}
 .shared-calendar .sc-choice{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:start;gap:10px;min-height:44px;padding:10px 0;margin:0}
 .shared-calendar .sc-choice input[type="checkbox"],.shared-calendar .sc-choice input[type="radio"]{width:20px;height:20px;min-width:20px;min-height:20px;padding:0;margin:0;position:static;transform:none}
@@ -30,11 +30,11 @@
 .shared-calendar .sc-slot{border:0;border-bottom:1px solid #c5ced7;border-right:1px solid #c5ced7;border-radius:0;background:#fff;color:#355575;min-height:0;padding:0;align-self:stretch}
 .shared-calendar button.sc-slot{min-height:44px;text-align:right;vertical-align:top;padding:8px}
 .shared-calendar button.sc-slot:hover,.shared-calendar button.sc-slot:focus-visible{background:#e9f3ff;outline:2px solid #375b83;outline-offset:-2px}
-.shared-calendar .sc-grid-event{position:relative;z-index:2;min-height:0;align-self:stretch;margin:2px;padding:8px;background:#eef6fc;border-left:5px solid #356593;overflow-wrap:anywhere}
+.shared-calendar .sc-grid-event{position:relative;z-index:2;min-height:0;align-self:stretch;margin:2px;padding:8px;overflow-wrap:anywhere}
 .shared-calendar .sc-grid-event h3,.shared-calendar .sc-grid-event p{margin:3px 0;font-size:16px;line-height:1.3}
 .shared-calendar .sc-grid-event button{padding:6px;min-height:44px}
-.shared-calendar .sc-motorcycle{border-left:5px double #386346;background:#edf6ed}
-.shared-calendar .sc-grid-event.sc-exam{border:2px dashed #7653bb;background:#f3edff}
+.shared-calendar .sc-motorcycle{}
+.shared-calendar .sc-grid-event.sc-exam{}
 .shared-calendar .sc-now{z-index:3;border-top:2px solid #b24635;pointer-events:none}
 .shared-calendar .sc-totals{padding:12px;background:#eef3f8;border:1px solid #a9b5c0;overflow-wrap:anywhere}
 .shared-calendar .sc-totals p{margin:5px 0}
@@ -53,3 +53,5 @@
 .shared-calendar .sc-notifications article{border-top:1px solid #b6c7d6;padding:8px}
 .shared-calendar .sc-notifications button{margin-right:8px}
 @media(max-width:440px){.shared-calendar.sc-main{width:calc(100vw - 12px);max-width:calc(100vw - 12px);padding:8px}.shared-calendar .sc-controls>*{flex-basis:auto}.shared-calendar .sc-controls>input,.shared-calendar .sc-controls>select{flex:1 1 140px}.shared-calendar .sc-grid-scroll{max-height:62dvh}}
+
+.shared-calendar .sc-list.sc-week{display:block}.shared-calendar .sc-week-day{margin:20px 0}.shared-calendar .sc-week-day>h3{margin:12px 0}.shared-calendar .sc-legend{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}.shared-calendar .sc-legend span{display:flex;align-items:center;gap:6px}.shared-calendar .sc-swatch{display:inline-block;width:18px;height:15px}.shared-calendar .sc-card,.shared-calendar .sc-grid-event,.shared-calendar .sc-swatch{background:#FFFFFF;border:1px solid #64748B;border-left:1px solid #64748B;box-shadow:none;color:#172537}.shared-calendar .sc-motorcycle{background:#FFE082;border:1px solid #64748B}.shared-calendar .sc-exam{background:#A5D6A7;border:1px solid #64748B}.shared-calendar .sc-cancelled{background:#D1D5DB;border:1px solid #64748B;position:relative;isolation:isolate}.shared-calendar .sc-cancel-mark{position:absolute;inset:3px;pointer-events:none;z-index:3}.shared-calendar .sc-cancel-diagonal{width:100%;height:100%;position:absolute;inset:0;pointer-events:none}.shared-calendar .sc-cancel-diagonal line{stroke:#172537;stroke-width:1.5;opacity:.45}.shared-calendar .sc-week-day .sc-grid-scroll{max-height:65dvh}@media print{.shared-calendar .sc-card,.shared-calendar .sc-swatch{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
