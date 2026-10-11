@@ -1,5 +1,5 @@
 // Calendar-only API. Loaded lazily by the Worker only with the explicit flag.
-import {hydrateEvents,saveEvent} from "./shared-calendar-events.js";
+import {hydrateEvents,saveEvent,calendarInstructorSQL} from "./shared-calendar-events.js";
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status})};
 const text=(value,max=120,optional=false)=>{if(optional&&(value==null||value===""))return "";if(typeof value!=="string"||!value.trim()||value.length>max)fail(400,"Campo non valido.");return value.trim()};
@@ -46,7 +46,7 @@ export async function handleCalendar(request,env,session,role,primary){
    }
    if(route==="instructors"){
     const id=site(url.searchParams.get("site"));
-    return json({instructors:await all("SELECT u.id,u.name FROM users u JOIN calendar_user_sites a ON a.user_id=u.id WHERE a.site_id=? AND u.active=1 AND u.role='ISTRUTTORE' AND (u.authorization_role IS NULL OR u.authorization_role='ISTRUTTORE') AND u.access_profile IS NULL ORDER BY u.name,u.id",id)});
+    return json({instructors:await all("SELECT u.id,u.name FROM users u WHERE "+calendarInstructorSQL+" AND EXISTS(SELECT 1 FROM calendar_user_sites a JOIN calendar_sites s ON s.id=a.site_id WHERE a.user_id=u.id AND a.site_id=? AND s.active=1) ORDER BY u.name,u.id",id)});
    }
    if(route==="events"){
     const id=site(url.searchParams.get("site")),from=instant(url.searchParams.get("from")),to=instant(url.searchParams.get("to"));
