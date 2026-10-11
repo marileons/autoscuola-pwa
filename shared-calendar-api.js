@@ -34,7 +34,7 @@ export async function handleCalendar(request,env,session,role,primary){
   const ids=sites.map(s=>s.id),scope=ids.length?ids.map(()=>"?").join(","):"NULL";
   const site=id=>{if(!ids.includes(id)||(role==="ADMIN"&&!primary&&!sites.some(s=>s.id===id&&s.active===1)))fail(403,"Sede non autorizzata.");requiredSites.add(id);return id};
   if(method==="GET"){
-   const allowed={config:[],sites:[],"motorcycle-codes":[],events:["site","from","to","deleted"],sync:["cursor","updated_since"],vehicles:["site","at","until","category","event"],instructors:["site"],memberships:[],movements:["vehicle"]};
+   const allowed={config:[],sites:[],"motorcycle-codes":[],events:["site","from","to","deleted"],sync:["cursor","updated_since"],vehicles:["site","at","until","category","type","event"],instructors:["site"],memberships:[],movements:["vehicle"]};
    if(!allowed[route])fail(404,"Risorsa non trovata.");
    if([...url.searchParams.keys()].some(k=>!allowed[route].includes(k)))fail(400,"Parametri non consentiti.");
    if(route==="config")return json({enabled:true,manage,manageCatalog:globalManage,assign:primary,sites:ids,...(primary?{operational:{enabled:operational.enabled===1,version:operational.version,updated_at:operational.updated_at,administrator:operational.administrator||(operational.updated_by?"Amministratore non più disponibile":null)}}:{})});
@@ -66,11 +66,11 @@ export async function handleCalendar(request,env,session,role,primary){
    if(route==="vehicles"){
     const id=site(url.searchParams.get("site")),at=instant(url.searchParams.get("at")||now),until=instant(url.searchParams.get("until")||at);
     const rows=await all("SELECT v.*,COALESCE((SELECT m.to_site_id FROM calendar_vehicle_movements m WHERE m.vehicle_id=v.id AND m.effective_at<=? ORDER BY m.effective_at DESC LIMIT 1),v.site_id) AS current_site_id FROM calendar_vehicles v ORDER BY v.name,v.id",at);
-    const category=url.searchParams.get("category");
+    const category=url.searchParams.get("category"),vehicleType=url.searchParams.get("type");if(vehicleType&&!["Auto","Moto"].includes(vehicleType))fail(400,"Tipo di veicolo non valido.");
     if(until<at)fail(400,"Intervallo non valido.");
     const excluded=url.searchParams.get("event")||"";if(excluded){const row=await q("SELECT site_id FROM calendar_events WHERE id=?",excluded).first();if(!row)fail(404,"Appuntamento non trovato.");site(row.site_id)}
-    const unavailable=new Set(category?(await all("SELECT vehicle_id FROM calendar_vehicle_movements WHERE effective_at>? AND effective_at<? UNION SELECT x.vehicle_id FROM calendar_events e JOIN calendar_event_vehicles x ON x.event_id=e.id WHERE e.deleted=0 AND e.status NOT IN ('ANNULLATA','ANNULLATO') AND e.starts_at<? AND e.ends_at>? AND e.id<>?",at,until,until,at,excluded)).map(x=>x.vehicle_id):[]);
-    return json({vehicles:rows.filter(v=>v.current_site_id===id&&!unavailable.has(v.id)&&(!category||(JSON.parse(v.categories).includes(category)&&["DISPONIBILE","TRASFERIMENTO_PROGRAMMATO"].includes(v.status)))).map(v=>({...v,categories:JSON.parse(v.categories)})),until});
+    const unavailable=new Set(category||vehicleType?(await all("SELECT vehicle_id FROM calendar_vehicle_movements WHERE effective_at>? AND effective_at<? UNION SELECT x.vehicle_id FROM calendar_events e JOIN calendar_event_vehicles x ON x.event_id=e.id WHERE e.deleted=0 AND e.status NOT IN ('ANNULLATA','ANNULLATO') AND e.starts_at<? AND e.ends_at>? AND e.id<>?",at,until,until,at,excluded)).map(x=>x.vehicle_id):[]);
+    return json({vehicles:rows.filter(v=>v.current_site_id===id&&!unavailable.has(v.id)&&(!vehicleType||(v.type===vehicleType&&["DISPONIBILE","TRASFERIMENTO_PROGRAMMATO"].includes(v.status)))&&(!category||(JSON.parse(v.categories).includes(category)&&["DISPONIBILE","TRASFERIMENTO_PROGRAMMATO"].includes(v.status)))).map(v=>({...v,categories:JSON.parse(v.categories)})),until});
    }
    if(route==="movements"){
     if(!manage)fail(403,"Operazione non consentita.");
