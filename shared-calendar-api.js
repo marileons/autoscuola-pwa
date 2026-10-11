@@ -15,9 +15,21 @@ export async function handleCalendar(request,env,session,role,primary){
  if((request.headers.get("origin")&&request.headers.get("origin")!==url.origin)||request.headers.get("sec-fetch-site")==="cross-site"||(method!=="GET"&&request.headers.get("origin")!==url.origin))return json({error:"Richiesta non autorizzata."},403);
  const db=env.DB,user=session.user.id,manage=primary||role==="SEGRETERIA",now=new Date().toISOString();
  const q=(sql,...args)=>db.prepare(sql).bind(...args),all=async(sql,...args)=>(await q(sql,...args).all()).results;
- const batch=async(stmts,guard=null)=>{const checks=[q("INSERT OR REPLACE INTO calendar_write_guard(id,rate_ok) SELECT 1,CASE WHEN count(*)<30 THEN 1 ELSE 0 END FROM calendar_event_audit WHERE actor_id=? AND created_at>?",user,new Date(Date.now()-60000).toISOString())];if(guard)checks.push(guard);return(await db.batch([...checks,...stmts])).slice(checks.length)};
+ const batch=async(stmts,guard=null)=>{const checks=[q("INSERT OR REPLACE INTO calendar_write_guard(id,rate_ok) SELECT 1,CASE WHEN count(*)<30 THEN 1 ELSE 0 END FROM calendar_event_audit WHERE actor_id=? AND created_at>?",user,new Date(Date.now()-60000).toISOString())];if(!primary)checks.push(q("INSERT OR REPLACE INTO calendar_write_guard(id,assignment_ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM calendar_operational_state WHERE id=1 AND enabled=1) THEN 1 ELSE 0 END"));if(guard)checks.push(guard);return(await db.batch([...checks,...stmts])).slice(checks.length)};
  const audit=(type,id,action)=>q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) VALUES(?,?,?,?,?)",user,type,id,action,now);
  try{
+  const operational=await q("SELECT o.*,u.name AS administrator FROM calendar_operational_state o LEFT JOIN users u ON u.id=o.updated_by WHERE o.id=1").first();
+  if(!operational)fail(503,"Stato operativo Agenda non disponibile. Riprova senza modificare dati.");
+  if(!primary&&operational.enabled!==1)return json({error:"Agenda condivisa temporaneamente sospesa dall’amministratore",code:"CALENDAR_SUSPENDED"},403);
+  if(route==="config"&&method==="POST"){
+   if(!primary)fail(403,"Operazione riservata al principale.");if(url.search)fail(400,"Parametri non consentiti.");
+   const raw=await request.text();if(raw.length>512)fail(413,"Richiesta troppo grande.");let body;try{body=JSON.parse(raw)}catch{fail(400,"Richiesta non valida.")}
+   strict(body,["enabled","version"]);if(typeof body.enabled!=="boolean")fail(400,"Stato non valido.");version(body.version);
+   const result=await batch([q("UPDATE calendar_operational_state SET enabled=?,version=version+1,updated_at=?,updated_by=? WHERE id=1 AND version=?",body.enabled?1:0,now,user,body.version),
+    q("INSERT INTO user_management_audit(id,occurred_at,actor_user_id,action,outcome,reason_code,request_id,actor_user_ref,actor_name) SELECT ?,?,?,?,'SUCCESS','CALENDAR_OPERATIONAL_SWITCH',?,?,? WHERE changes()=1",crypto.randomUUID(),now,user,body.enabled?"ENABLE_SHARED_CALENDAR_USERS":"SUSPEND_SHARED_CALENDAR_USERS",crypto.randomUUID(),user,session.user.name||null)]);
+   if(!result[0].meta.changes)fail(409,"Stato modificato da un altro dispositivo. Aggiorna prima di confermare.");
+   return json({ok:true});
+  }
   const sites=await all(manage?"SELECT * FROM calendar_sites ORDER BY name,id":"SELECT s.* FROM calendar_sites s JOIN calendar_user_sites a ON a.site_id=s.id WHERE a.user_id=? ORDER BY s.name,s.id",...(manage?[]:[user]));
   const ids=sites.map(s=>s.id),scope=ids.length?ids.map(()=>"?").join(","):"NULL";
   const site=id=>{if(!ids.includes(id))fail(403,"Sede non autorizzata.");return id};
@@ -25,7 +37,7 @@ export async function handleCalendar(request,env,session,role,primary){
    const allowed={config:[],sites:[],"motorcycle-codes":[],events:["site","from","to","deleted"],sync:["cursor","updated_since"],vehicles:["site","at","until","category","event"],instructors:["site"],memberships:[],movements:["vehicle"]};
    if(!allowed[route])fail(404,"Risorsa non trovata.");
    if([...url.searchParams.keys()].some(k=>!allowed[route].includes(k)))fail(400,"Parametri non consentiti.");
-   if(route==="config")return json({enabled:true,manage,assign:primary,sites:ids});
+   if(route==="config")return json({enabled:true,manage,assign:primary,sites:ids,...(primary?{operational:{enabled:operational.enabled===1,version:operational.version,updated_at:operational.updated_at,administrator:operational.administrator||(operational.updated_by?"Amministratore non più disponibile":null)}}:{})});
    if(route==="sites")return json({sites});
    if(route==="motorcycle-codes")return json({codes:manage||ids.length?await all("SELECT id,code,sort_order,active,version FROM calendar_motorcycle_codes ORDER BY sort_order,id"):[]});
    if(route==="memberships"){
@@ -133,6 +145,7 @@ export async function handleCalendar(request,env,session,role,primary){
   if(reason.includes("CALENDAR_RATE"))return json({error:"Troppe modifiche. Attendi un minuto."},429);
   if(reason.includes("CALENDAR_TRANSFER_CONFLICT"))return json({error:"Sono comparsi nuovi appuntamenti incompatibili. Ricarica prima di confermare."},409);
   if(reason.includes("CALENDAR_CONFLICT"))return json({error:"Conflitto: istruttore, allievo o veicolo già impegnato."},409);
+  if(reason.includes("CALENDAR_ASSIGNMENT")&&!primary){const current=await q("SELECT enabled FROM calendar_operational_state WHERE id=1").first();if(current?.enabled!==1)return json({error:"Agenda condivisa temporaneamente sospesa dall’amministratore",code:"CALENDAR_SUSPENDED"},403)}
   if(reason.includes("CALENDAR_ASSIGNMENT"))return json({error:"Istruttore non assegnato o sede non disponibile."},409);
   if(reason.includes("CALENDAR_VEHICLE"))return json({error:"Veicolo non disponibile, in un'altra sede o incompatibile."},409);
   return json({error:e.status?e.message:"Calendario non disponibile. Nessun dato precedente è stato sostituito."},e.status||503);

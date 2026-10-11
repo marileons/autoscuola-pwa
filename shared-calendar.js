@@ -60,6 +60,16 @@
   return{open(html){if(Date.now()<blockedUntil)return false;blockedUntil=Date.now()+1200;cleanup();const url=win.URL.createObjectURL(new win.Blob([html],{type:"text/html;charset=utf-8"}));let opened=null;try{opened=win.open(url,"_blank")}catch{}documents.push({url,window:opened});show(url,opened?"Documento HTML stampabile pronto. Usa STAMPA / SALVA PDF nel documento.":"Apertura automatica non disponibile. Premi APRI DOCUMENTO STAMPABILE.");return true},cleanup};
  }
 
+
+ function compactStudentName(surname,initial=""){
+  const last=String(surname??"").normalize("NFC").trim().replace(/\s+/g," "),first=String(initial??"").normalize("NFC").trim();
+  if(!last||last.length>100||!/^\p{L}[\p{L}\p{M}]*(?:[ '’\-][\p{L}\p{M}]+)*$/u.test(last))throw Error("Inserisci un cognome valido, senza numeri.");
+  if(first&&!/^\p{L}\p{M}*\.?$/u.test(first))throw Error("Inserisci una sola iniziale del nome, con o senza punto.");
+  return last.toLocaleUpperCase("it-IT")+(first?" "+first.replace(/\.$/,"").toLocaleUpperCase("it-IT")+".":"");
+ }
+ function sameSurname(name,surname){const value=String(name||"").normalize("NFC").trim().replace(/\s+/g," ").toLocaleUpperCase("it-IT").replace(/ \p{L}\p{M}*\.$/u,""),last=compactStudentName(surname);return value===last||(" "+value+" ").includes(" "+last+" ")}
+ function surnameWarning(events,date,surname,initial="",additional=[]){if(initial.trim())return "";const names=[...additional,...events.filter(e=>!cancelled(e)&&onDate(e,date)).flatMap(e=>(e.participants||[{name:e.student_name}]).map(p=>p.name))];return names.some(n=>sameSurname(n,surname))?"Esiste già un allievo con questo cognome. Inserisci l’iniziale del nome per distinguerlo.":""}
+
  function mount(user){
   if(user?.sharedCalendarEnabled!==true)return;
   if(instance?.account===user.id)return;
@@ -82,36 +92,36 @@
    const controller=new AbortController();state.requests.add(controller);const timer=setTimeout(()=>controller.abort(),15000);
    try{
     const r=await fetch("/api/calendar/"+path,{method:body?"POST":"GET",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined,signal:controller.signal,credentials:"same-origin"});
-    const data=await r.json();if(!r.ok){if([401,403,404].includes(r.status)){state.config=null;state.denied=true;list.replaceChildren();tools.replaceChildren()}throw Object.assign(Error(data.error||"Calendario non disponibile."),{status:r.status,data})}return data;
+    const data=await r.json();if(!r.ok){if([401,403,404].includes(r.status)){state.suspended=data.code==="CALENDAR_SUSPENDED";state.verified=false;state.config=null;state.denied=true;clock.stop();render()}throw Object.assign(Error(data.error||"Calendario non disponibile."),{status:r.status,data})}return data;
    }finally{clearTimeout(timer);state.requests.delete(controller)}
   }
   async function sync(){
    if(!state.alive||!state.active||state.busy||state.acknowledging||document.hidden)return;
-   if(!navigator.onLine){notice.textContent="OFFLINE - ultima sincronizzazione "+(state.snapshot?.syncedAt?new Date(state.snapshot.syncedAt).toLocaleTimeString("it-IT"):"non disponibile");render();return}
+   if(!navigator.onLine){if(!state.config?.assign)state.verified=false;notice.textContent="OFFLINE - ultima sincronizzazione "+(state.snapshot?.syncedAt?new Date(state.snapshot.syncedAt).toLocaleTimeString("it-IT"):"non disponibile");render();return}
    state.busy=true;notice.textContent="AGGIORNAMENTO IN CORSO";
    try{
-    const cfg=await api("config");if(!state.alive)return;state.config=cfg;state.denied=false;
+    const cfg=await api("config");if(!state.alive)return;state.config=cfg;state.denied=false;state.suspended=false;
     let previous=state.snapshot||await cache.load(user.id);
     if(JSON.stringify([...previous.scope].sort())!==JSON.stringify([...cfg.sites].sort()))previous={...previous,events:[],scope:cfg.sites,cursor:0};
     const pages=[];let cursor=previous.cursor,more=true;
     while(more){const page=await api("sync?cursor="+cursor);if(!state.alive)return;if(page.more&&page.cursor<=cursor)throw Error("Cursore non avanzato.");pages.push(page);cursor=page.cursor;more=page.more}
-    const next=root.SharedCalendarStore.changes(previous,pages,root.SharedCalendarStore.merge(previous,pages,user.id),user.role);const instructors={};for(const site of next.scope){const data=await api("instructors?site="+encodeURIComponent(site));instructors[site]=data.instructors}next.instructors=instructors;if(!state.alive)return;await cache.save(next);if(!state.alive)return;state.snapshot=next;state.instructors=next.instructors;notice.textContent="SINCRONIZZATO - "+new Date(next.syncedAt).toLocaleTimeString("it-IT");
-   }catch(e){if(!state.alive)return;notice.textContent=(navigator.onLine?"ERRORE DI SINCRONIZZAZIONE: ":"OFFLINE - ")+e.message+" Ultima copia valida conservata."}
+    const next=root.SharedCalendarStore.changes(previous,pages,root.SharedCalendarStore.merge(previous,pages,user.id),user.role);const instructors={};for(const site of next.scope){const data=await api("instructors?site="+encodeURIComponent(site));instructors[site]=data.instructors}next.instructors=instructors;next.operationalSuspended=false;if(!state.alive)return;await cache.save(next);if(!state.alive)return;state.snapshot=next;state.instructors=next.instructors;state.verified=true;clock.update();notice.textContent="SINCRONIZZATO - "+new Date(next.syncedAt).toLocaleTimeString("it-IT");
+   }catch(e){if(!state.alive)return;if(!state.config?.assign)state.verified=false;if(state.suspended){clock.stop();if(state.snapshot){const held={...state.snapshot,operationalSuspended:true};try{await cache.save(held);state.snapshot=held}catch{}}}notice.textContent=(navigator.onLine?"ERRORE DI SINCRONIZZAZIONE: ":"OFFLINE - ")+e.message+" Ultima copia valida conservata."}
    finally{state.busy=false;if(state.alive)render()}
   }
-  const clock=root.SharedCalendarStore.scheduler({active:()=>state.alive&&state.active,visible:()=>!document.hidden,run:sync});state.clock=clock;
-  const visibility=()=>{clock.update();if(!document.hidden&&state.active)void sync()};document.addEventListener("visibilitychange",visibility);state.visibility=visibility;
+  const clock=root.SharedCalendarStore.scheduler({active:()=>state.alive&&state.active&&!state.suspended,visible:()=>!document.hidden,run:sync});state.clock=clock;
+  const visibility=()=>{clock.update();if(!document.hidden&&state.active&&!state.suspended)void sync()};document.addEventListener("visibilitychange",visibility);state.visibility=visibility;
   const online=()=>{if(state.active)void sync()};root.addEventListener("online",online);root.addEventListener("offline",online);state.online=online;
-  async function open(){state.active=true;day.value=rome(Date.now()).slice(0,10);state.mode=1;dialog.showModal();try{state.snapshot=await cache.load(user.id);if(!state.alive)return;state.instructors=state.snapshot.instructors||{};render()}catch{notice.textContent="Copia locale non leggibile. Nessun archivio esistente è stato modificato."}clock.update();void sync()}
+  async function open(){state.active=true;state.verified=false;day.value=rome(Date.now()).slice(0,10);state.mode=1;dialog.showModal();try{state.snapshot=await cache.load(user.id);if(!state.alive)return;state.instructors=state.snapshot.instructors||{};state.suspended=state.snapshot.operationalSuspended===true;render()}catch{notice.textContent="Copia locale non leggibile. Nessun archivio esistente è stato modificato."}clock.update();void sync()}
   function close(){state.active=false;clock.stop();for(const c of state.requests)c.abort();dialog.close()}
   dialog.addEventListener("cancel",e=>{e.preventDefault();close()});
   state.buttons=[];for(const id of ["home","secretaryHome"]){const home=document.getElementById(id);if(home){const b=button("AGENDA CONDIVISA",open);b.className="full";b.dataset.sharedCalendar="";home.append(b);state.buttons.push(b)}}
   function render(){
    state.gridObserver?.disconnect();alerts.replaceChildren();
-   if(state.denied){printOutput.replaceChildren();list.replaceChildren();tools.replaceChildren();notice.textContent="Accesso al calendario non disponibile. I dati locali non vengono mostrati.";return}if(!state.snapshot)return;
+   controls.hidden=false;weekHeading.hidden=false;if(state.denied||(!state.verified&&!state.config?.assign)||(!navigator.onLine&&!state.config?.assign)){printOutput.replaceChildren();list.replaceChildren();controls.hidden=true;weekHeading.hidden=true;tools.replaceChildren(button("INDIETRO",close),button("VERIFICA ACCESSO",()=>sync()));for(const d of dialog.querySelectorAll(".sc-editor[open]"))d.close();notice.textContent=state.suspended?"Agenda condivisa temporaneamente sospesa dall’amministratore":(!navigator.onLine?"OFFLINE — ":"")+"Accesso non verificato: connettiti e premi VERIFICA ACCESSO. La copia locale è conservata, non è un archivio vuoto.";return}if(!state.snapshot)return;
    renderNotifications();const snapshot=state.snapshot,selected=state.site||selector.value;
    selector.replaceChildren();for(const s of snapshot.sites){const o=el("option",s.name+(s.active?"":" (disattivata)"));o.value=s.id;selector.append(o)}selector.value=snapshot.scope.includes(selected)?selected:(snapshot.scope[0]||"");state.site=selector.value;
-   tools.replaceChildren();tools.append(button("GESTIONE AGENDA",()=>{state.advanced=!state.advanced;render()}));const advanced=el("div",null,"sc-controls sc-management");advanced.hidden=!state.advanced;tools.append(advanced);advanced.append(button("AGGIORNA",()=>sync()));if(state.config?.manage){for(const [label,fn]of [["NUOVO APPUNTAMENTO",()=>edit()],["NUOVA GUIDA MOTO",()=>editExam(null,true)],["NUOVO ESAME",()=>editExam()],["SIGLE MOTO",motorcycleCodes],["SEDI",sites],["VEICOLI",vehicles],["APPUNTAMENTI ELIMINATI",deletedEvents]]){const b=button(label,fn);b.disabled=!navigator.onLine;advanced.append(b)}}if(state.config?.assign){const b=button("ASSEGNAZIONI SEDI",memberships);b.disabled=!navigator.onLine;advanced.append(b)}
+   tools.replaceChildren();if(state.config?.assign&&state.config.operational){const op=state.config.operational,b=button(op.enabled?"AGENDA UTENTI ATTIVA":"AGENDA UTENTI SOSPESA",async()=>{if(state.saving||!navigator.onLine||!confirm(op.enabled?"Sospendere l’Agenda per tutti gli utenti tranne il principale?":"Riattivare l’Agenda per gli utenti autorizzati?"))return;state.saving=true;b.disabled=true;try{await api("config",{enabled:!op.enabled,version:op.version});await sync()}catch(err){notice.textContent=err.message}finally{state.saving=false;b.disabled=false}});b.disabled=!navigator.onLine;tools.append(b,el("p",op.updated_at?"Ultima modifica: "+rome(op.updated_at).replace("T"," ")+" · "+op.administrator:"Agenda utenti attiva: impostazione iniziale."))}tools.append(button("GESTIONE AGENDA",()=>{state.advanced=!state.advanced;render()}));const advanced=el("div",null,"sc-controls sc-management");advanced.hidden=!state.advanced;tools.append(advanced);advanced.append(button("AGGIORNA",()=>sync()));if(state.config?.manage){for(const [label,fn]of [["NUOVO APPUNTAMENTO",()=>edit()],["NUOVA GUIDA MOTO",()=>editExam(null,true)],["NUOVO ESAME",()=>editExam()],["SIGLE MOTO",motorcycleCodes],["SEDI",sites],["VEICOLI",vehicles],["APPUNTAMENTI ELIMINATI",deletedEvents]]){const b=button(label,fn);b.disabled=!navigator.onLine;advanced.append(b)}}if(state.config?.assign){const b=button("ASSEGNAZIONI SEDI",memberships);b.disabled=!navigator.onLine;advanced.append(b)}
    printOutput.hidden=state.mode!==7;if(state.mode===7){const option=el("label","Includi eventi annullati nella stampa ","sc-print-option"),check=el("input");check.type="checkbox";check.checked=state.printCancelled===true;check.onchange=()=>{state.printCancelled=check.checked};option.append(check);tools.append(option,button("STAMPA / SALVA PDF",printWeek));}
    if(!day.value)return;week.value=isoWeek(day.value).value;weekHeading.textContent=weekLabel(day.value);list.classList.toggle("sc-daily",state.mode===1);list.replaceChildren();const from=state.mode===7?isoWeek(day.value).monday:day.value,to=addDays(from,state.mode);
    const entries=snapshot.events.filter(e=>e.site_id===state.site&&rome(e.ends_at)>from+"T00:00"&&rome(e.starts_at).slice(0,10)<to&&Object.entries(state.filter).every(([k,v])=>(k==="vehicles"?(e.vehicles||[]).map(x=>x.name).join(" "):k==="instructor_name"?(e.instructors||[]).map(x=>x.name).join(" "):String(e[k]||"")).toLocaleLowerCase("it").includes(v))).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)||a.id.localeCompare(b.id));
@@ -186,8 +196,16 @@
    if(!state.config?.manage||!navigator.onLine||state.opening)return;
    state.opening=true;const f=form("Inserimento rapido"),date=day.value,site=state.site;
    f.f.append(el("p",date+" · "+String(Math.floor(minute/60)).padStart(2,"0")+":"+(minute%60?"30":"00")+" · "+person.name));
-   f.field("student_name","Nome allievo");f.field("type","Tipo","auto",[["auto","Auto"],["moto","Moto"],["exam","Esame"]]);f.field("duration","Durata (minuti)","60",[["30","30 minuti"],["60","1 ora"],["90","1 ora 30 minuti"],["120","2 ore"],["180","3 ore"],["240","4 ore"]]);
-   const next=el("button","CONTINUA");next.type="submit";const closeQuick=()=>{state.opening=false;f.d.remove()};f.f.append(f.err,next,button("ANNULLA",closeQuick));f.d.addEventListener("cancel",closeQuick);f.f.onsubmit=event=>{event.preventDefault();if(!navigator.onLine||!state.config?.manage)return;try{const seed={...quickSeed(date,minute,person.id,site,Number(f.fields.duration.value)),student_name:f.fields.student_name.value.trim()};if(!seed.student_name)throw Error("Inserisci il nome dell'allievo.");const type=f.fields.type.value;closeQuick();type==="auto"?edit(null,seed):editExam(null,type==="moto",seed)}catch(e){f.err.textContent=e.message}};f.d.showModal();
+   const local=root.SharedCalendar.localStudents?.()||[];
+   f.field("surname","Cognome");f.field("initial","Iniziale nome (facoltativa)");
+   const selection=f.field("local_id","Allievo locale (facoltativo)","",[["","Inserimento manuale"],...local.map(s=>[s.id,[s.lastName,s.firstName].filter(Boolean).join(" ")])]);
+   selection.onchange=()=>{const s=local.find(s=>s.id===selection.value);if(s){f.fields.surname.value=s.lastName||"";f.fields.initial.value=Array.from((s.firstName||"").normalize("NFC").trim())[0]||""}warn()};
+   const warn=()=>{try{f.err.textContent=surnameWarning(state.snapshot.events,date,f.fields.surname.value,f.fields.initial.value)}catch{f.err.textContent=""}};
+   f.fields.surname.oninput=()=>{selection.value="";warn()};f.fields.initial.oninput=warn;
+   f.field("student_name","Nominativo completo per esame");f.fields.student_name.parentElement.hidden=true;
+   f.field("type","Tipo","auto",[["auto","Auto"],["moto","Moto"],["exam","Esame"]]);f.fields.type.onchange=()=>{const exam=f.fields.type.value==="exam";f.fields.student_name.parentElement.hidden=!exam;f.fields.surname.parentElement.hidden=exam;f.fields.initial.parentElement.hidden=exam;selection.parentElement.hidden=exam};
+   f.field("duration","Durata (minuti)","60",[["30","30 minuti"],["60","1 ora"],["90","1 ora 30 minuti"],["120","2 ore"],["180","3 ore"],["240","4 ore"]]);
+   const next=el("button","CONTINUA");next.type="submit";const closeQuick=()=>{state.opening=false;f.d.remove()};f.f.append(f.err,next,button("ANNULLA",closeQuick));f.d.addEventListener("cancel",closeQuick);f.f.onsubmit=event=>{event.preventDefault();if(!navigator.onLine||!state.config?.manage)return;try{const type=f.fields.type.value,seed={...quickSeed(date,minute,person.id,site,Number(f.fields.duration.value)),student_name:type==="exam"?f.fields.student_name.value.trim():compactStudentName(f.fields.surname.value,f.fields.initial.value),student_id:selection.value||null,compact:type!=="exam",surname:f.fields.surname.value,initial:f.fields.initial.value};if(!seed.student_name)throw Error("Inserisci il nominativo dell’allievo.");const warning=type==="exam"?"":surnameWarning(state.snapshot.events,date,f.fields.surname.value,f.fields.initial.value);if(warning&&!confirm(warning+"\nContinuare comunque?"))return;closeQuick();type==="auto"?edit(null,seed):editExam(null,type==="moto",seed)}catch(e){f.err.textContent=e.message}};f.d.showModal();
   }
   function simplify(f,visible,seed){
    const hidden=[];for(const [key,input]of Object.entries(f.fields))if(!visible.includes(key)){input.parentElement.hidden=true;hidden.push(input.parentElement)}
@@ -222,7 +240,7 @@
     x("site_id","Sede",id,state.snapshot.sites.filter(s=>s.active||s.id===id).map(s=>[s.id,s.name]));
     x("starts_at","Inizio (Europe/Rome)",e?rome(e.starts_at):seed?.starts_at||day.value+"T09:00",null,"datetime-local");
     x("ends_at","Fine (Europe/Rome)",e?rome(e.ends_at):seed?.ends_at||day.value+"T10:00",null,"datetime-local");
-    x("student_name","Nome allievo",e?.student_name||seed?.student_name);x("student_id","ID allievo (facoltativo)",e?.student_id);
+    x("student_name","Nome allievo",e?.student_name||seed?.student_name);x("student_id","ID allievo (facoltativo)",e?.student_id||seed?.student_id);
     x("category","Categoria/percorso",e?.category||"auto");
     x("instructor_id","Istruttore",e?.instructor_id||seed?.instructor_id,people.instructors.map(p=>[p.id,p.name]));
     x("vehicle_id","Veicolo facoltativo",e?.vehicle_id,[["","Nessuno"],...v.vehicles.filter(z=>["DISPONIBILE","TRASFERIMENTO_PROGRAMMATO"].includes(z.status)).map(z=>[z.id,z.name])]);
@@ -238,7 +256,7 @@
     void refreshOptions();
     if(e&&!e.deleted)f.f.append(button("ELIMINA APPUNTAMENTO",async()=>{if(!navigator.onLine||state.saving||!confirm("Eliminare logicamente questo appuntamento? Lo storico rimane."))return;state.saving=true;try{await api("events",payload(e,true));f.d.remove();await sync()}catch(err){f.err.textContent=err.message}finally{state.saving=false}}));
     function payload(old,deleted=false){const b=Object.fromEntries(Object.entries(f.fields).map(([k,i])=>[k,i.value]));b.starts_at=utc(b.starts_at);b.ends_at=utc(b.ends_at);if(old){b.id=old.id;b.version=old.version}b.deleted=deleted;return b}
-    f.finish(()=>api("events",payload(e)));if(seed)simplify(f,["student_name","vehicle_id"],seed);
+    if(seed?.compact)f.fields.student_name.readOnly=true;f.finish(()=>api("events",payload(e)));if(seed)simplify(f,["student_name","vehicle_id"],seed);
    }catch(e){notice.textContent=e.message}
   }
   function examDetails(e){
@@ -289,16 +307,22 @@
      for(const item of codeOptions){const historical=item.id===p.motorcycle_code_id&&p.motorcycle_code_snapshot;const option=el("option",historical?historical+(catalog.codes.find(c=>c.id===item.id)?.active?" (storica)":" (storica, disattivata)"):item.code);option.value=item.id;code.append(option)}code.value=p.motorcycle_code_id||"";
      name.value=p.name||"";id.value=p.id||"";name.maxLength=120;id.maxLength=120;n.append(name);i.append(id);c.append(code);v.append(vehicle);
      const data={row,name,id,code,vehicle,initialVehicle:p.vehicle_id||null};vehicle.onchange=()=>data.initialVehicle=vehicle.value;rows.push(data);fillVehicle(data);
+     if(motorcycle&&seed?.compact){
+      const surname=el("input"),initial=el("input"),sl=el("label","Cognome"),il=el("label","Iniziale nome (facoltativa)"),warning=el("p");surname.value=p.surname||"";initial.value=p.initial||"";sl.append(surname);il.append(initial);row.append(sl,il,warning);n.hidden=true;i.hidden=true;
+      const local=root.SharedCalendar.localStudents?.()||[],pick=el("select"),pl=el("label","Allievo locale (facoltativo)");for(const s of [{id:"",lastName:"Inserimento manuale"},...local]){const o=el("option",[s.lastName,s.firstName].filter(Boolean).join(" "));o.value=s.id;pick.append(o)}pick.value=p.id||"";pl.append(pick);row.append(pl);
+      const warn=()=>{try{warning.textContent=surnameWarning(state.snapshot.events,f.fields.starts_at.value.slice(0,10),surname.value,initial.value,rows.filter(r=>r!==data).map(r=>r.readName?r.readName():r.name.value))}catch{warning.textContent=""}};
+      pick.onchange=()=>{const s=local.find(s=>s.id===pick.value);id.value=s?.id||"";if(s){surname.value=s.lastName||"";initial.value=Array.from((s.firstName||"").normalize("NFC").trim())[0]||""}warn()};surname.oninput=()=>{id.value="";pick.value="";warn()};initial.oninput=warn;data.readName=()=>compactStudentName(surname.value,initial.value);data.warning=()=>surnameWarning(state.snapshot.events,f.fields.starts_at.value.slice(0,10),surname.value,initial.value,rows.filter(r=>r!==data).map(r=>r.readName?r.readName():r.name.value));
+     }
      row.append(n,i,c,v,button("RIMUOVI ALLIEVO",()=>{rows.splice(rows.indexOf(data),1);row.remove()}));participants.append(row);
     }
-    for(const p of e?.participants||[{name:seed?.student_name}])participant(motorcycle&&e?.participants.length===1&&p.vehicle_id===undefined?{...p,vehicle_id:e.vehicle_id}:p);
+    for(const p of e?.participants||[{name:seed?.student_name,id:seed?.student_id,surname:seed?.surname,initial:seed?.initial}])participant(motorcycle&&e?.participants.length===1&&p.vehicle_id===undefined?{...p,vehicle_id:e.vehicle_id}:p);
     f.f.append(button("AGGIUNGI ALLIEVO",()=>participant()));
     x("note","Nota organizzativa (massimo 200 caratteri)",e?.note).maxLength=200;
     x("status","Stato",e?.status||(motorcycle?"PROGRAMMATA":"PROGRAMMATO"),(motorcycle?["PROGRAMMATA","CONFERMATA","ANNULLATA","ASSENTE","SVOLTA"]:["PROGRAMMATO","CONFERMATO","ANNULLATO","CONCLUSO"]).map(s=>[s,s]));
     f.f.append(el("p",motorcycle?"Un unico evento con un solo istruttore. Le guide svolte sul dispositivo restano individuali.":"Un solo evento per tutta la seduta. Nessun esito viene sincronizzato con gli ESAMI locali."));
-    const payload=(deleted=false)=>({...Object.fromEntries(Object.entries(f.fields).map(([k,i])=>[k,i.value])),event_type:motorcycle?"GUIDA":"ESAME",starts_at:utc(f.fields.starts_at.value),ends_at:utc(f.fields.ends_at.value),...(motorcycle?{instructor_id:[...chosen.instructors][0]||""}:{instructors:[...chosen.instructors],vehicles:[...chosen.vehicles]}),participants:rows.map(p=>({id:p.id.value||null,name:p.name.value,motorcycle_code_id:p.code.value||null,vehicle_id:p.vehicle.value||null})),deleted,...(e?{id:e.id,version:e.version}:{})});
+    const payload=(deleted=false)=>({...Object.fromEntries(Object.entries(f.fields).map(([k,i])=>[k,i.value])),event_type:motorcycle?"GUIDA":"ESAME",starts_at:utc(f.fields.starts_at.value),ends_at:utc(f.fields.ends_at.value),...(motorcycle?{instructor_id:[...chosen.instructors][0]||""}:{instructors:[...chosen.instructors],vehicles:[...chosen.vehicles]}),participants:rows.map(p=>({id:p.id.value||null,name:p.readName?p.readName():p.name.value,motorcycle_code_id:p.code.value||null,vehicle_id:p.vehicle.value||null})),deleted,...(e?{id:e.id,version:e.version}:{})});
     if(e&&!e.deleted)f.f.append(button("ELIMINA APPUNTAMENTO",async()=>{if(state.saving||!navigator.onLine||!confirm("Eliminare logicamente questa seduta?"))return;state.saving=true;try{await api("events",payload(true));f.d.remove();await sync()}catch(err){f.err.textContent=err.message}finally{state.saving=false}}));
-    f.finish(()=>api("events",payload()));if(seed)simplify(f,[],seed);void resources();
+    f.finish(()=>{for(const row of rows)if(row.warning?.()&&!confirm(row.warning()+"\nContinuare comunque?"))throw Error("Salvataggio annullato: verifica l’iniziale.");return api("events",payload())});if(seed)simplify(f,[],seed);void resources();
    }catch(err){notice.textContent=err.message}
   }
   async function motorcycleCodes(){
@@ -337,7 +361,8 @@
   state.cache=cache;
  }
  function dispose(){if(!instance)return;const s=instance;s.alive=false;s.active=false;s.clock?.stop();s.gridObserver?.disconnect();for(const c of s.requests)c.abort();document.removeEventListener("visibilitychange",s.visibility);root.removeEventListener("online",s.online);root.removeEventListener("offline",s.online);s.dialog?.remove();s.buttons?.forEach(b=>b.remove());void s.cache?.close();instance=null}
- root.SharedCalendar={mount,dispose,utc,rome,addDays,isoWeek,weekDate,weekLabel,slots,placement,quickSeed,totals,durationLabel,weeklyDocument,printOpener,
+ root.SharedCalendar={mount,dispose,utc,rome,addDays,isoWeek,weekDate,weekLabel,slots,placement,quickSeed,totals,durationLabel,weeklyDocument,printOpener,compactStudentName,sameSurname,surnameWarning,
+  localStudents:()=>typeof state!=="undefined"?state.students.map(s=>({id:s.id,firstName:s.firstName,lastName:s.lastName})):[],
   localStudent:id=>typeof state!=="undefined"&&id?state.students.find(s=>s.id===id):null,
   openLocalStudent:(id,lesson)=>{if(typeof openStudent==="function"){openStudent(id);if(lesson&&typeof newLesson==="function")newLesson()}}
  };
