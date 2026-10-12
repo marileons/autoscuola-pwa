@@ -1,7 +1,8 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");
 const {fixture,event,root}=require("./shared-calendar-support.js"),store=require("../shared-calendar-store.js");
-const exam=(x={})=>({event_type:"ESAME",site_id:"a",starts_at:"2090-01-10T09:00:00.000Z",ends_at:"2090-01-10T11:00:00.000Z",category:"auto",meeting_point:"LOCALITÀ FITTIZIA",examiner:"ESAMINATORE FITTIZIO",instructors:["i1","i2"],vehicles:["v","v2"],participants:[{id:"p1",name:"ALLIEVO UNO"},{id:"p2",name:"ALLIEVO DUE"}],note:"Solo organizzazione",status:"PROGRAMMATO",...x});
+const {typedExam}=require("./shared-calendar-test-events.js");
+const exam=(x={})=>typedExam({event_type:"ESAME",site_id:"a",starts_at:"2090-01-10T09:00:00.000Z",ends_at:"2090-01-10T11:00:00.000Z",category:"auto",meeting_point:"LOCALITÀ FITTIZIA",examiner:"ESAMINATORE FITTIZIO",instructors:["i1","i2"],vehicles:["v","v2"],participants:[{id:"p1",name:"ALLIEVO UNO"},{id:"p2",name:"ALLIEVO DUE"}],note:"Solo organizzazione",status:"PROGRAMMATO",...x});
 async function run(fn){const f=await fixture();try{f.db.exec("INSERT INTO calendar_vehicles(id,name,type,categories,site_id,status,created_at,updated_at) SELECT 'v2','SECONDA AUTO',type,categories,site_id,status,created_at,updated_at FROM calendar_vehicles WHERE id='v'; INSERT INTO calendar_vehicles(id,name,type,categories,site_id,status,created_at,updated_at) SELECT 'vb','AUTO SEDE B',type,categories,'b',status,created_at,updated_at FROM calendar_vehicles WHERE id='v';");await fn(f)}finally{f.close()}}
 async function create(f,b=exam()){const r=await f.call("secretary","events",b);assert.equal(r.status,200,await r.clone().text());return(await r.json()).id}
 test("ESAME unico con più allievi, istruttori e veicoli; ordine e fotografie",()=>run(async f=>{
@@ -26,8 +27,8 @@ test("annullamento seduta libera tutte le risorse, CONCLUSO mantiene lo storico"
  const second=await create(f);assert.equal((await f.call("secretary","events",exam({id:second,version:1,status:"CONCLUSO"}))).status,200);
  assert.equal(f.db.prepare("SELECT status FROM calendar_events WHERE id=?").get(second).status,"CONCLUSO");
 }));
-test("ESAME lettura assegnata e nessuna scrittura da istruttore/ADMIN secondario",()=>run(async f=>{
- await create(f);for(const user of ["i1","admin"]){assert.equal((await f.call(user,"events",exam())).status,403);assert.equal((await(await f.call(user,"sync")).json()).events[0].participants.length,2)}
+test("ESAME lettura assegnata e istruttore sola lettura, ADMIN secondario rispetta i conflitti",()=>run(async f=>{
+ await create(f);for(const user of ["i1","admin"]){assert.equal((await f.call(user,"events",exam())).status,user==="i1"?403:409);assert.equal((await(await f.call(user,"sync")).json()).events[0].participants.length,2)}
  for(const user of ["manager","blocked","invalid"])assert.notEqual((await f.call(user,"sync")).status,200);
 }));
 test("ESAME incremento, cache offline, riapertura e tombstone preservano liste complete",()=>run(async f=>{

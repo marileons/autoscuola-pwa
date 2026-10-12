@@ -1,8 +1,9 @@
+const {modernExamCalls}=require("./shared-calendar-test-events.js");
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process"),{DatabaseSync}=require("node:sqlite");
 const {fixture,event,root}=require("./shared-calendar-support.js"),store=require("../shared-calendar-store.js");
 const moto=(extra={})=>({event_type:"GUIDA",site_id:"a",starts_at:"2090-01-10T09:00:00.000Z",ends_at:"2090-01-10T10:00:00.000Z",category:"moto",instructor_id:"i1",participants:[{id:"p1",name:"ROSSI FITTIZIO",motorcycle_code_id:"moto-code-sh",vehicle_id:"m1"},{id:"p2",name:"BIANCHI FITTIZIO",motorcycle_code_id:"moto-code-k2",vehicle_id:"m2"}],status:"PROGRAMMATA",...extra});
-async function run(fn){const f=await fixture();try{
+async function run(fn){const f=modernExamCalls(await fixture());try{
  for(const [id,site]of [["m1","a"],["m2","a"],["mb","b"]])f.db.prepare("INSERT INTO calendar_vehicles(id,name,type,categories,site_id,status,created_at,updated_at) VALUES(?,?,'Moto','[\"moto\",\"corso-moto\"]',?,'DISPONIBILE','2026-01-01','2026-01-01')").run(id,"MOTO FITTIZIA "+id,site);
  await fn(f);
 }finally{f.close()}}
@@ -77,7 +78,7 @@ test("guide AUTO restano singole, payload privilegiati e snapshot contraffatti r
  assert.equal((await f.call("secretary","motorcycle-codes",{code:"X",sort_order:0,active:true,role:"ADMIN"})).status,400);
 }));
 test("permessi API catalogo, guide multiple e flag restano fail-closed",()=>run(async f=>{
- for(const who of ["i1","admin","manager"]){assert.equal((await f.call(who,"motorcycle-codes",{code:"X",sort_order:0,active:true})).status,403);assert.equal((await f.call(who,"events",moto())).status,403)}
+ for(const who of ["i1","admin","manager"]){assert.equal((await f.call(who,"motorcycle-codes",{code:"X",sort_order:0,active:true})).status,403);assert.equal((await f.call(who,"events",moto())).status,who==="admin"?200:403)}
  for(const who of [null,"blocked","invalid"])assert.equal((await f.call(who,"motorcycle-codes")).status,401);
  assert.equal((await f.call("i1","motorcycle-codes",null,{purpose:"PASSWORD_CHANGE"})).status,403);
  f.db.exec("DELETE FROM calendar_user_sites WHERE user_id='admin'");assert.deepEqual((await(await f.call("admin","motorcycle-codes")).json()).codes,[]);

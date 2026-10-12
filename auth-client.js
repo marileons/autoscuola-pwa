@@ -254,7 +254,7 @@
     if(currentUser?.sharedCalendarEnabled===true && applicationLoaded){
       try {
         await loadScript("shared-calendar-store.js?v=1");
-        await loadScript("shared-calendar.js?v=1");
+        await loadScript("shared-calendar.js?v=coordination-1");
         window.SharedCalendar.mount(currentUser);
       } catch {
         window.SharedCalendar?.dispose?.();

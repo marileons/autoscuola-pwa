@@ -1,3 +1,4 @@
+import {coordinationStatements,availabilityGuard} from "./shared-calendar-coordination.js";
 // Organizational sessions only. This module never reads local exams or outcomes.
 // Scheduling eligibility only; site assignment and access permissions stay separate.
 export const calendarInstructorSQL="u.active=1 AND u.access_profile IS NULL AND ((u.role='ISTRUTTORE' AND (u.authorization_role IS NULL OR u.authorization_role='ISTRUTTORE') AND u.is_primary_admin=0) OR (u.role='ADMIN' AND (u.authorization_role IS NULL OR u.authorization_role='ADMIN')))";
@@ -14,8 +15,9 @@ export async function hydrateEvents(rows,all){
 export async function saveEvent(b,c){
  const {q,all,batch,site,user,now,text,instant,strict,version,fail,conflict}=c;
  strict(b,["id","version","event_type","site_id","starts_at","ends_at","student_id","student_name","category","instructor_id","vehicle_id","instructors","vehicles","participants","exam_type","instructor_vehicles","meeting_point","examiner","note","status","deleted"]);
+ if(typeof b.note==="string"&&/[<>]/.test(b.note))fail(400,"Inserisci soltanto testo semplice nella nota organizzativa.");
  const type=b.event_type||"GUIDA";if(!["GUIDA","ESAME"].includes(type))fail(400,"Tipo evento non valido.");
- const exam=type==="ESAME",states=exam?["PROGRAMMATO","CONFERMATO","ANNULLATO","CONCLUSO"]:["PROGRAMMATA","CONFERMATA","ANNULLATA","ASSENTE","SVOLTA"];
+ const exam=type==="ESAME",states=exam?["PROGRAMMATO","CONFERMATO","ANNULLATO","CONCLUSO","ASSENTE"]:["PROGRAMMATA","CONFERMATA","ANNULLATA","ASSENTE","SVOLTA"];
  if(!states.includes(b.status)||(b.deleted!==undefined&&typeof b.deleted!=="boolean"))fail(400,"Stato organizzativo non valido.");
  if(exam&&["student_id","student_name","instructor_id","vehicle_id"].some(k=>k in b))fail(400,"Usa gli elenchi di risorse per la seduta d'esame.");
  const examType=b.exam_type??null;
@@ -82,7 +84,7 @@ export async function saveEvent(b,c){
   if(overlap.length)fail(409,overlap.some(x=>participants.some(p=>p.vehicle_id===x.vehicle_id))?"La moto selezionata è già impegnata nello stesso orario.":"L’auto selezionata è già impegnata nello stesso orario.");
  }
  const current="EXISTS(SELECT 1 FROM calendar_events WHERE id=? AND write_token=?)";
- const operations=[stmt];
+ const operations=[stmt,availabilityGuard(q,{id,starts_at:start,ends_at:end,instructors,vehicles,event_type:type,site_id:sid,cancelled:deleted||["ANNULLATA","ANNULLATO"].includes(b.status)})];
  // Recheck the catalog inside the same transaction. Existing snapshots are kept;
  // concurrent renames/deactivations reject new assignments, never silently change them.
  operations.push(q("INSERT OR REPLACE INTO calendar_motorcycle_write_guard(id,codes_ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM json_each(?) p WHERE json_extract(p.value,'$.motorcycle_code_id') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM calendar_motorcycle_codes c WHERE c.id=json_extract(p.value,'$.motorcycle_code_id') AND ((c.active=1 AND c.version=json_extract(p.value,'$.code_version') AND c.code=json_extract(p.value,'$.motorcycle_code_snapshot')) OR EXISTS(SELECT 1 FROM calendar_participant_motorcycles h WHERE h.event_id=? AND h.participant_key=json_extract(p.value,'$.key') AND h.code_id=c.id AND h.code_snapshot=json_extract(p.value,'$.motorcycle_code_snapshot'))))) THEN 0 ELSE 1 END",JSON.stringify(participants),id));
@@ -100,6 +102,7 @@ export async function saveEvent(b,c){
  }
  const action=deleted?"DELETE":!old?"CREATE":(old.deleted?"RESTORE_":"UPDATE_")+b.status+(JSON.stringify(previous.instructors)!==JSON.stringify(t)?"_INSTRUCTOR":"")+(JSON.stringify(previous.vehicles)!==JSON.stringify(v)?"_VEHICLE":"");
  operations.push(q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) SELECT ?,'event',?,?,? WHERE "+current,user,id,action,now,id,token));
+ operations.push(...coordinationStatements(c,{id,token,previous,next:{site_id:sid,starts_at:start,ends_at:end,event_type:type,exam_type:examType,category,participants,instructors:t,vehicles:v,instructor_vehicles:pairSnapshots,meeting_point:exam?text(b.meeting_point,160,!!examType):"",examiner:text(b.examiner,120,true),note:text(b.note,200,true),status:b.status,deleted},version:old?old.version+1:1,series:c.series}));
  const result=await batch(operations,guard);if(!result[0].meta.changes)fail(409,conflict);
  return{id};
 }

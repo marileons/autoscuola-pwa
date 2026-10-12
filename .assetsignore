@@ -11,3 +11,6 @@ shared-calendar-api.js
 shared-calendar-events.js
 wrangler.toml
 *.patch
+
+shared-calendar-coordination.js
+shared-calendar-coordination-rollout.md
