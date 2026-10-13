@@ -1,0 +1,5 @@
+-- Additive only. No existing user or site is assigned or designated.
+CREATE TABLE calendar_central_secretary(id INTEGER PRIMARY KEY CHECK(id=1),user_id TEXT REFERENCES users(id),version INTEGER NOT NULL CHECK(version>=1),updated_by TEXT NOT NULL REFERENCES users(id),updated_at TEXT NOT NULL);
+CREATE TABLE calendar_vehicle_transfers(id TEXT PRIMARY KEY,vehicle_id TEXT NOT NULL REFERENCES calendar_vehicles(id),from_site_id TEXT NOT NULL REFERENCES calendar_sites(id),to_site_id TEXT NOT NULL REFERENCES calendar_sites(id),starts_at TEXT NOT NULL,ends_at TEXT,reason TEXT NOT NULL DEFAULT '',deleted INTEGER NOT NULL DEFAULT 0 CHECK(deleted IN(0,1)),version INTEGER NOT NULL DEFAULT 1,updated_by TEXT NOT NULL REFERENCES users(id),updated_at TEXT NOT NULL,CHECK(ends_at IS NULL OR starts_at<ends_at),CHECK(from_site_id<>to_site_id));
+CREATE INDEX calendar_vehicle_transfer_period ON calendar_vehicle_transfers(vehicle_id,starts_at,ends_at,deleted);
+CREATE TABLE calendar_vehicle_movement_revocations(movement_id TEXT PRIMARY KEY REFERENCES calendar_vehicle_movements(id),actor_id TEXT NOT NULL REFERENCES users(id),created_at TEXT NOT NULL);

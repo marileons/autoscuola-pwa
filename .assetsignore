@@ -14,3 +14,8 @@ wrangler.toml
 
 shared-calendar-coordination.js
 shared-calendar-coordination-rollout.md
+
+shared-calendar-central-secretary.js
+shared-calendar-central-secretary-rollout.md
+
+shared-calendar-central-secretary-transition.cjs

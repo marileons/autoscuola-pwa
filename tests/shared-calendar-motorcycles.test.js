@@ -10,18 +10,18 @@ async function run(fn){const f=modernExamCalls(await fixture());try{
 const catalog=async f=>(await(await f.call("secretary","motorcycle-codes")).json()).codes;
 async function create(f,b=moto()){const r=await f.call("secretary","events",b);assert.equal(r.status,200,await r.clone().text());return(await r.json()).id}
 const read=async(f,id)=>(await(await f.call("i1","sync")).json()).events.find(e=>e.id===id);
-const changeCode=async(f,id,extra={})=>{const c=(await catalog(f)).find(c=>c.id===id);return f.call("secretary","motorcycle-codes",{id,version:c.version,code:c.code,sort_order:c.sort_order,active:!!c.active,...extra})};
+const changeCode=async(f,id,extra={})=>{const c=(await catalog(f)).find(c=>c.id===id);return f.call("principal","motorcycle-codes",{id,version:c.version,code:c.code,sort_order:c.sort_order,active:!!c.active,...extra})};
 test("catalogo iniziale ordinato, duplicati case/spazi e disattivati rifiutati",()=>run(async f=>{
  assert.deepEqual((await catalog(f)).map(c=>c.code),["C","M","S","SN","SH","GSX","K2","K"]);
- for(const code of ["sh"," SH ","s h","\tS\nH"])assert.equal((await f.call("secretary","motorcycle-codes",{code,sort_order:0,active:true})).status,409);
+ for(const code of ["sh"," SH ","s h","\tS\nH"])assert.equal((await f.call("principal","motorcycle-codes",{code,sort_order:0,active:true})).status,409);
  assert.equal((await changeCode(f,"moto-code-sh",{active:false})).status,200);
- assert.equal((await f.call("secretary","motorcycle-codes",{code:"SH",sort_order:1,active:true})).status,409);
+ assert.equal((await f.call("principal","motorcycle-codes",{code:"SH",sort_order:1,active:true})).status,409);
 }));
 test("creazione rinomina ordine attivazione e CAS del catalogo",()=>run(async f=>{
  const r=await f.call("principal","motorcycle-codes",{code:" z9 ",sort_order:0,active:true});assert.equal(r.status,200);const id=(await r.json()).id;
  assert.equal((await catalog(f))[0].code,"Z9");assert.equal((await changeCode(f,id,{code:"Z10",sort_order:99,active:false})).status,200);
  assert.equal((await catalog(f)).at(-1).code,"Z10");
- assert.equal((await f.call("secretary","motorcycle-codes",{id,version:1,code:"STALE",sort_order:0,active:true})).status,409);
+ assert.equal((await f.call("principal","motorcycle-codes",{id,version:1,code:"STALE",sort_order:0,active:true})).status,409);
  assert.equal((await changeCode(f,id,{active:true})).status,200);
 }));
 test("una guida moto due allievi, sigle diverse e due veicoli: un solo evento",()=>run(async f=>{
@@ -75,7 +75,7 @@ test("ESAME con sigla e veicolo individuale conserva gli esiti esclusivamente lo
 test("guide AUTO restano singole, payload privilegiati e snapshot contraffatti rifiutati",()=>run(async f=>{
  assert.equal((await f.call("secretary","events",event({participants:moto().participants}))).status,400);
  for(const p of [{...moto().participants[0],motorcycle_code_snapshot:"FALSO"},{...moto().participants[0],role:"ADMIN"}])assert.equal((await f.call("secretary","events",moto({participants:[p]}))).status,400);
- assert.equal((await f.call("secretary","motorcycle-codes",{code:"X",sort_order:0,active:true,role:"ADMIN"})).status,400);
+ assert.equal((await f.call("principal","motorcycle-codes",{code:"X",sort_order:0,active:true,role:"ADMIN"})).status,400);
 }));
 test("permessi API catalogo, guide multiple e flag restano fail-closed",()=>run(async f=>{
  for(const who of ["i1","admin","manager"]){assert.equal((await f.call(who,"motorcycle-codes",{code:"X",sort_order:0,active:true})).status,403);assert.equal((await f.call(who,"events",moto())).status,who==="admin"?200:403)}

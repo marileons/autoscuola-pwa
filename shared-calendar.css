@@ -68,3 +68,5 @@
 @media(max-width:900px){.sc-vehicle-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}.sc-vehicle-actions button{margin:0}}@media(max-width:480px){.sc-vehicle-actions{grid-template-columns:1fr}.sc-vehicles-modal{padding:12px}.sc-vehicles-modal form>button{display:block;width:100%;margin:8px 0}}
 
 .sc-vehicles-modal button:not(.sc-vehicle-action){background:#526273;color:#fff}.sc-vehicles-modal button[type=submit]{background:#146779}.sc-vehicle-danger{background:#a52e32!important}
+
+.sc-central-badge{display:inline-block;padding:6px 12px;border-radius:16px;background:#e0f2fe;color:#075985;font-size:.85rem;font-weight:700}.sc-central-banner{padding:12px;border:1px solid #94a3b8;border-radius:10px;background:#f1f5f9;color:#334155}.sc-central-warning{padding:8px;background:#fff7ed;color:#9a3412;border-radius:8px}.sc-central-fleet form>label{display:block;margin:10px 0}.sc-central-fleet input,.sc-central-fleet select{width:100%;box-sizing:border-box}.sc-vehicle-badge[data-state="TEMPORANEAMENTE FUORI SEDE"],.sc-vehicle-badge[data-state=IN_TRASFERIMENTO]{background:#dbeafe;color:#1e40af}
