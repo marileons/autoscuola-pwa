@@ -70,3 +70,35 @@
 .sc-vehicles-modal button:not(.sc-vehicle-action){background:#526273;color:#fff}.sc-vehicles-modal button[type=submit]{background:#146779}.sc-vehicle-danger{background:#a52e32!important}
 
 .sc-central-badge{display:inline-block;padding:6px 12px;border-radius:16px;background:#e0f2fe;color:#075985;font-size:.85rem;font-weight:700}.sc-central-banner{padding:12px;border:1px solid #94a3b8;border-radius:10px;background:#f1f5f9;color:#334155}.sc-central-warning{padding:8px;background:#fff7ed;color:#9a3412;border-radius:8px}.sc-central-fleet form>label{display:block;margin:10px 0}.sc-central-fleet input,.sc-central-fleet select{width:100%;box-sizing:border-box}.sc-vehicle-badge[data-state="TEMPORANEAMENTE FUORI SEDE"],.sc-vehicle-badge[data-state=IN_TRASFERIMENTO]{background:#dbeafe;color:#1e40af}
+
+/* Agenda action families: preserve all appointment backgrounds and grid slots. */
+.shared-calendar .sc-toolbar-group{display:flex;flex-wrap:wrap;align-items:center;align-content:start;gap:8px;padding:12px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;min-width:0;max-width:100%}
+.shared-calendar .sc-group-title{flex:0 0 100%;font-size:.82rem;font-weight:700;letter-spacing:.025em;color:#334155}
+.shared-calendar .sc-controls>.sc-toolbar-group{flex:1 1 290px;margin:0}
+.shared-calendar .sc-controls>.sc-navigation{flex:1 1 100%}
+.shared-calendar .sc-toolbar-group>button{flex:0 1 auto;margin:0}
+.shared-calendar .sc-toolbar-group>input,.shared-calendar .sc-toolbar-group>select{width:auto;flex:0 1 180px}
+.shared-calendar .sc-toolbar-group>label{flex:1 1 150px}
+.shared-calendar .sc-toolbar-group>.sc-management{flex-basis:100%;margin:0;padding:0}
+.shared-calendar button[data-sc-family]:not(.sc-slot){display:inline-flex;align-items:center;justify-content:center;gap:6px;width:auto;min-height:44px;padding:10px 14px;line-height:1.3;font-weight:650;text-align:center;border:1px solid transparent;border-radius:9px;box-shadow:none;white-space:normal;overflow-wrap:anywhere;background:var(--sc-button-bg,#334155)!important;color:var(--sc-button-fg,#fff)!important;cursor:pointer}
+.shared-calendar button[data-sc-family=navigation]{--sc-button-bg:#1d4ed8}
+.shared-calendar button[data-sc-family=create]{--sc-button-bg:#166534}
+.shared-calendar button[data-sc-family=vehicles]{--sc-button-bg:#6d28d9}
+.shared-calendar button[data-sc-family=print]{--sc-button-bg:#0369a1}
+.shared-calendar button[data-sc-family=notifications]{--sc-button-bg:#92400e}
+.shared-calendar button[data-sc-family=management]{--sc-button-bg:#334155}
+.shared-calendar button[data-sc-family=danger]{--sc-button-bg:#b91c1c}
+.shared-calendar button[data-sc-family]:not(.sc-slot):hover:not(:disabled){filter:brightness(.92)}
+.shared-calendar button[data-sc-family]:not(.sc-slot):active:not(:disabled){filter:brightness(.8)}
+.shared-calendar button[data-sc-family]:not(.sc-slot):focus-visible,.shared-calendar .sc-print-output a:focus-visible{outline:3px solid #0f172a;outline-offset:3px;box-shadow:0 0 0 2px #fff}
+.shared-calendar button[data-sc-family]:not(.sc-slot):disabled{--sc-button-bg:#e2e8f0;--sc-button-fg:#475569;opacity:1;cursor:not-allowed;filter:none}
+.shared-calendar button[data-sc-family][aria-busy=true]{cursor:progress}
+.shared-calendar .sc-tools-danger{border-color:#fca5a5;background:#fff7f7}
+.shared-calendar .sc-print-output a{color:#075985;font-weight:650}
+.shared-calendar .sc-editor form>button{margin:8px 8px 0 0}
+@media(max-width:900px){.shared-calendar .sc-toolbar-group>button{flex:1 1 calc(50% - 8px)}.shared-calendar .sc-toolbar-group>input,.shared-calendar .sc-toolbar-group>select{flex:1 1 160px}.shared-calendar .sc-controls>.sc-toolbar-group{flex-basis:100%}}
+@media(max-width:480px){.shared-calendar .sc-toolbar-group{padding:10px}.shared-calendar .sc-toolbar-group>button{flex-basis:100%}.shared-calendar .sc-toolbar-group>input,.shared-calendar .sc-toolbar-group>select{flex-basis:100%;width:100%}.shared-calendar .sc-editor form>button{width:100%;margin:8px 0 0}}
+
+.shared-calendar .sc-main-tools{align-items:flex-start}.shared-calendar .sc-main-tools>p{flex:1 1 100%;margin:4px 0}.shared-calendar .sc-main-tools>.sc-management{flex:1 1 100%;margin:0}.shared-calendar .sc-main-tools .sc-management{align-items:flex-start}
+
+.shared-calendar .sc-editor form>button[data-sc-family]:not(.sc-slot){margin:10px 8px 0 0}@media(max-width:480px){.shared-calendar .sc-editor form>button[data-sc-family]:not(.sc-slot){display:flex;width:100%;margin:10px 0 0}}

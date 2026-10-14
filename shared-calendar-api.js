@@ -49,7 +49,7 @@ export async function handleCalendar(request,env,session,role,primary){
    const allowed={config:[],sites:[],"motorcycle-codes":[],events:["site","from","to","deleted"],sync:["cursor","updated_since"],vehicles:["site","at","until","category","type","event"],instructors:["site"],memberships:[],movements:["vehicle"]};
    if(!allowed[route])fail(404,"Risorsa non trovata.");
    if([...url.searchParams.keys()].some(k=>!allowed[route].includes(k)))fail(400,"Parametri non consentiti.");
-   if(route==="config")return json({enabled:true,coordination:true,manage,central:!!central,vehicleManage:primary||!!central||manage,writeSites:writeIds,manageCatalog:globalManage,assign:primary,sites:ids,...(primary?{operational:{enabled:operational.enabled===1,version:operational.version,updated_at:operational.updated_at,administrator:operational.administrator||(operational.updated_by?"Amministratore non più disponibile":null)}}:{})});
+   if(route==="config")return json({enabled:true,coordination:true,manage,central:!!central,vehicleManage:primary||!!central||manage,fleetManage:primary||!!central,writeSites:writeIds,manageCatalog:globalManage,assign:primary,sites:ids,...(primary?{operational:{enabled:operational.enabled===1,version:operational.version,updated_at:operational.updated_at,administrator:operational.administrator||(operational.updated_by?"Amministratore non più disponibile":null)}}:{})});
    if(route==="sites")return json({sites});
    if(route==="motorcycle-codes")return json({codes:globalManage||ids.length?await all("SELECT id,code,sort_order,active,version FROM calendar_motorcycle_codes ORDER BY sort_order,id"):[]});
    if(route==="memberships"){
@@ -77,7 +77,8 @@ export async function handleCalendar(request,env,session,role,primary){
    }
    if(route==="vehicles"){
     const id=site(url.searchParams.get("site")),at=instant(url.searchParams.get("at")||now),until=instant(url.searchParams.get("until")||at);
-    const rows=await all("SELECT v.*,"+vehicleLocationSQL("v","clock.at")+" AS current_site_id FROM calendar_vehicles v CROSS JOIN(SELECT ? AS at) clock ORDER BY v.name,v.id",at);
+    if(new Set(url.searchParams.keys()).size!==[...url.searchParams.keys()].length)fail(400,"Parametri duplicati non consentiti.");
+    const rows=await all("SELECT v.*,"+vehicleLocationSQL("v","clock.at")+" AS current_site_id FROM calendar_vehicles v CROSS JOIN(SELECT ? AS at) clock WHERE "+vehicleLocationSQL("v","clock.at")+"=? ORDER BY v.name,v.id",at,id);
     const category=url.searchParams.get("category"),vehicleType=url.searchParams.get("type");if(vehicleType&&!["Auto","Moto"].includes(vehicleType))fail(400,"Tipo di veicolo non valido.");
     if(until<at)fail(400,"Intervallo non valido.");
     const excluded=url.searchParams.get("event")||"";if(excluded){const row=await q("SELECT site_id FROM calendar_events WHERE id=?",excluded).first();if(!row)fail(404,"Appuntamento non trovato.");site(row.site_id)}
@@ -128,13 +129,14 @@ export async function handleCalendar(request,env,session,role,primary){
    cats.forEach(c=>text(c,40));if(b.usual_site_id)site(b.usual_site_id);
    const mileage=b.mileage??null;if(mileage!==null&&(!Number.isFinite(mileage)||mileage<0))fail(400,"Chilometraggio non valido.");
    const id=b.id?text(b.id):crypto.randomUUID(),old=b.id?await q("SELECT * FROM calendar_vehicles WHERE id=?",id).first():null;
-   if(old){const located=await q("SELECT "+vehicleLocationSQL("v","clock.at")+" AS site FROM calendar_vehicles v CROSS JOIN(SELECT ? AS at) clock WHERE v.id=?",now,id).first();site(located.site)}else site(b.site_id);
+   let currentVehicleSite=null;if(old){const located=await q("SELECT "+vehicleLocationSQL("v","clock.at")+" AS site FROM calendar_vehicles v CROSS JOIN(SELECT ? AS at) clock WHERE v.id=?",now,id).first();currentVehicleSite=site(located.site)}else site(b.site_id);
    if(b.id&&(!old||old.site_id!==b.site_id))fail(400,"Per cambiare sede usa SPOSTA VEICOLO.");
    const args=[name,plate,type,JSON.stringify(cats),b.transmission||"",b.usual_site_id||null,b.status,mileage,now];
    const stmt=b.id?q("UPDATE calendar_vehicles SET name=?,plate=?,type=?,categories=?,transmission=?,usual_site_id=?,status=?,mileage=?,updated_at=?,version=version+1 WHERE id=? AND version=?",...args,id,version(b.version)):q("INSERT INTO calendar_vehicles(name,plate,type,categories,transmission,usual_site_id,status,mileage,updated_at,id,site_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",...args,id,b.site_id,now);
    const plateGuard=q("INSERT OR REPLACE INTO calendar_write_guard(id,vehicle_ok) SELECT 1,CASE WHEN ?='' OR ?='DISMESSO' OR NOT EXISTS(SELECT 1 FROM calendar_vehicles WHERE id<>? AND status<>'DISMESSO' AND upper(replace(trim(plate),' ',''))=?) THEN 1 ELSE 0 END",plate,b.status,id,plate);
    if(plate&&b.status!=="DISMESSO"&&(await all("SELECT id FROM calendar_vehicles WHERE id<>? AND status<>'DISMESSO' AND upper(replace(trim(plate),' ',''))=?",id,plate)).length)fail(409,"Esiste già un veicolo attivo con questa targa.");
-   const result=await batch([plateGuard,stmt,q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) SELECT ?,'vehicle',?,?,? WHERE changes()=1",user,id,b.id?"UPDATE":"CREATE",now)]);
+   const vehicleScopeGuard=old&&!primary&&!central?q("INSERT OR REPLACE INTO calendar_coordination_guard(id,ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM calendar_vehicles v CROSS JOIN(SELECT ? AS at) clock WHERE v.id=? AND v.version=? AND "+vehicleLocationSQL("v","clock.at")+"=?) THEN 1 ELSE 0 END",now,id,version(b.version),currentVehicleSite):null;
+   const result=await batch([plateGuard,stmt,q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) SELECT ?,'vehicle',?,?,? WHERE changes()=1",user,id,b.id?"UPDATE":"CREATE",now)],vehicleScopeGuard);
    if(!result[1].meta.changes)fail(409,conflict);return json({id});
   }
   if(route==="movements"){
