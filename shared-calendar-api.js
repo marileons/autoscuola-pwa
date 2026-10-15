@@ -44,6 +44,7 @@ export async function handleCalendar(request,env,session,role,primary){
   const ids=sites.map(s=>s.id),scope=ids.length?ids.map(()=>"?").join(","):"NULL";
   const site=id=>{if(method==="POST"&&role==="SEGRETERIA"&&!vehicleOperation&&!writeIds.includes(id))fail(403,"CONSULTAZIONE CENTRALE IN SOLA LETTURA");if(!ids.includes(id)||(role==="ADMIN"&&!primary&&!sites.some(s=>s.id===id&&s.active===1)))fail(403,"Sede non autorizzata.");requiredSites.add(id);return id};
   const vehicleSite=id=>{if(!primary&&!central)return site(id);if(!ids.includes(id))fail(403,"Sede non autorizzata.");requiredSites.add(id);return id};
+  if(role==="ISTRUTTORE"&&["vehicles","vehicle-availability","movements","motorcycle-codes"].includes(route))fail(403,"Il parco veicoli non è disponibile per il profilo Istruttore.");
   if(route.startsWith("central/"))return json(await handleCentral(request,{q,all,batch,site,vehicleSite,user,now,text,instant,strict,version,fail,conflict,manage,primary,central,role,ids,writeIds,session,hydrateEvents,saveEvent,onCapacity:data=>capacityContext=data}));
   if(route.startsWith("coordination/"))return json(await handleCoordination(request,{q,all,batch,site,user,now,text,instant,strict,version,fail,conflict,manage,primary,central,writeIds,role,ids,session,hydrateEvents,saveEvent,onCapacity:data=>capacityContext=data}));
   if(method==="GET"){
@@ -59,12 +60,12 @@ export async function handleCalendar(request,env,session,role,primary){
    }
    if(route==="instructors"){
     const id=site(url.searchParams.get("site"));
-    return json({instructors:await all("SELECT u.id,u.name FROM users u WHERE "+calendarInstructorSQL+" AND EXISTS(SELECT 1 FROM calendar_user_sites a JOIN calendar_sites s ON s.id=a.site_id WHERE a.user_id=u.id AND a.site_id=? AND s.active=1) ORDER BY u.name,u.id",id)});
+    return json({instructors:await all("SELECT u.id,u.name FROM users u WHERE "+calendarInstructorSQL+" AND EXISTS(SELECT 1 FROM calendar_user_sites a JOIN calendar_sites s ON s.id=a.site_id WHERE a.user_id=u.id AND a.site_id=? AND s.active=1)"+(role==="ISTRUTTORE"?" AND u.id=?":"")+" ORDER BY u.name,u.id",id,...(role==="ISTRUTTORE"?[user]:[]))});
    }
    if(route==="events"){
     const id=site(url.searchParams.get("site")),from=instant(url.searchParams.get("from")),to=instant(url.searchParams.get("to"));
     if(to<=from||Date.parse(to)-Date.parse(from)>32*86400000)fail(400,"Intervallo massimo: 31 giorni.");
-    return json({events:await hydrateEvents(await all("SELECT e.* FROM calendar_events e WHERE e.site_id=? AND e.deleted=? AND e.starts_at<? AND e.ends_at>? ORDER BY e.starts_at,e.id",id,url.searchParams.get("deleted")==="1"&&manage?1:0,to,from),all)});
+    return json({events:await hydrateEvents(await all("SELECT e.* FROM calendar_events e WHERE e.site_id=? AND e.deleted=? AND e.starts_at<? AND e.ends_at>?"+(role==="ISTRUTTORE"?" AND EXISTS(SELECT 1 FROM calendar_event_instructors own WHERE own.event_id=e.id AND own.user_id=?)":"")+" ORDER BY e.starts_at,e.id",id,url.searchParams.get("deleted")==="1"&&manage?1:0,to,from,...(role==="ISTRUTTORE"?[user]:[])),all)});
    }
    if(route==="sync"){
     const cursor=Number(url.searchParams.get("cursor")||0);
@@ -72,8 +73,8 @@ export async function handleCalendar(request,env,session,role,primary){
     const since=url.searchParams.has("updated_since")?instant(url.searchParams.get("updated_since")):"";
     // A global monotonic sequence avoids timestamp ties; current rows are sent,
     // not obsolete versions. Last successful cursor advances only on commit.
-    const rows=await all("SELECT e.*,(SELECT MAX(a.seq) FROM calendar_event_audit a WHERE a.entity_type='event' AND a.entity_id=e.id) AS change_seq FROM calendar_events e WHERE e.site_id IN ("+scope+") AND change_seq>? AND e.updated_at>=? ORDER BY change_seq,e.id LIMIT 200",...ids,cursor,since);
-    const visibleIds=(await all("SELECT id FROM calendar_events WHERE site_id IN ("+scope+") AND deleted=0",...ids)).map(e=>e.id);
+    const rows=await all("SELECT e.*,(SELECT MAX(a.seq) FROM calendar_event_audit a WHERE a.entity_type='event' AND a.entity_id=e.id) AS change_seq FROM calendar_events e WHERE e.site_id IN ("+scope+") AND change_seq>? AND e.updated_at>=?"+(role==="ISTRUTTORE"?" AND EXISTS(SELECT 1 FROM calendar_event_instructors own WHERE own.event_id=e.id AND own.user_id=?)":"")+" ORDER BY change_seq,e.id LIMIT 200",...ids,cursor,since,...(role==="ISTRUTTORE"?[user]:[]));
+    const visibleIds=(await all("SELECT id FROM calendar_events WHERE site_id IN ("+scope+") AND deleted=0"+(role==="ISTRUTTORE"?" AND EXISTS(SELECT 1 FROM calendar_event_instructors own WHERE own.event_id=calendar_events.id AND own.user_id=?)":""),...ids,...(role==="ISTRUTTORE"?[user]:[]))).map(e=>e.id);
     return json({visibleIds,events:await hydrateEvents(rows,all),cursor:rows.length?rows.at(-1).change_seq:cursor,more:rows.length===200,sites,scope:ids});
    }
    if(route==="vehicle-availability"){
