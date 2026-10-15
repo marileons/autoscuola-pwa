@@ -1,0 +1,52 @@
+import {vehicleLocationSQL,vehicleBoundarySQL} from './shared-calendar-central-secretary.js';
+export const operationalCode=value=>{if(value==null||value==='')return null;const code=String(value).trim().toUpperCase();if(!/^[A-Z0-9-]{1,12}$/.test(code))throw Object.assign(Error('La sigla operativa deve contenere da 1 a 12 lettere, numeri o trattini, senza spazi.'),{status:400});return code};
+const active="e.deleted=0 AND e.status NOT IN('ANNULLATA','ANNULLATO')";
+// Every resource/time boundary matters, not only an appointment's starting slot.
+function capacityCTE(){return `WITH scope AS(SELECT ? sid,? start,? finish,? excluded),points(at) AS(
+ SELECT start FROM scope UNION SELECT e.starts_at FROM calendar_events e,scope s WHERE e.starts_at>s.start AND e.starts_at<s.finish
+ UNION SELECT e.ends_at FROM calendar_events e,scope s WHERE e.ends_at>s.start AND e.ends_at<s.finish
+ UNION SELECT a.starts_at FROM calendar_resource_availability a,scope s WHERE a.starts_at>s.start AND a.starts_at<s.finish
+ UNION SELECT a.ends_at FROM calendar_resource_availability a,scope s WHERE a.ends_at>s.start AND a.ends_at<s.finish
+ UNION SELECT t.starts_at FROM calendar_vehicle_transfers t,scope s WHERE t.starts_at>s.start AND t.starts_at<s.finish
+ UNION SELECT t.ends_at FROM calendar_vehicle_transfers t,scope s WHERE t.ends_at>s.start AND t.ends_at<s.finish
+ UNION SELECT m.effective_at FROM calendar_vehicle_movements m,scope s WHERE m.effective_at>s.start AND m.effective_at<s.finish),
+ groups(code,type) AS(SELECT DISTINCT v.operational_code,v.type FROM calendar_vehicles v WHERE v.operational_code IS NOT NULL UNION SELECT DISTINCT r.code_snapshot,r.vehicle_type FROM calendar_event_operational_resources r WHERE r.code_snapshot IS NOT NULL),
+ measured AS(SELECT p.at,g.code,g.type,
+ (SELECT count(*) FROM calendar_vehicles v,scope s WHERE v.operational_code=g.code AND v.type=g.type AND v.status IN('DISPONIBILE','TRASFERIMENTO_PROGRAMMATO') AND ${vehicleLocationSQL('v','p.at')}=s.sid
+ AND NOT EXISTS(SELECT 1 FROM calendar_resource_availability a WHERE a.kind='vehicle' AND a.resource_id=v.id AND a.deleted=0 AND a.reason IN('MANUTENZIONE','GUASTO','TEMPORANEAMENTE FUORI SEDE','PRENOTATO PER ESAME') AND a.starts_at<=p.at AND a.ends_at>p.at)) total,
+ (SELECT count(*) FROM calendar_vehicles v,scope s WHERE v.operational_code=g.code AND v.type=g.type AND v.status IN('DISPONIBILE','TRASFERIMENTO_PROGRAMMATO') AND ${vehicleLocationSQL('v','p.at')}=s.sid
+ AND NOT EXISTS(SELECT 1 FROM calendar_resource_availability a WHERE a.kind='vehicle' AND a.resource_id=v.id AND a.deleted=0 AND a.reason IN('MANUTENZIONE','GUASTO','TEMPORANEAMENTE FUORI SEDE','PRENOTATO PER ESAME') AND a.starts_at<=p.at AND a.ends_at>p.at)
+ AND NOT EXISTS(SELECT 1 FROM calendar_events e JOIN calendar_event_vehicles x ON x.event_id=e.id WHERE x.vehicle_id=v.id AND e.id<>s.excluded AND ${active} AND e.starts_at<=p.at AND e.ends_at>p.at)) available,
+ (SELECT count(*) FROM calendar_event_operational_resources r JOIN calendar_events e ON e.id=r.event_id,scope s WHERE e.id<>s.excluded AND r.vehicle_id IS NULL AND r.code_snapshot=g.code AND r.vehicle_type=g.type AND e.site_id=s.sid AND ${active} AND e.starts_at<=p.at AND e.ends_at>p.at) requested
+ FROM points p CROSS JOIN groups g),
+ free AS(SELECT m.at,m.code,m.type,m.total,m.available,m.requested known_requested,
+ CASE WHEN m.total>0 THEN (SELECT COALESCE(sum(max(0,
+ CASE WHEN m.type='Moto' AND (lower(e.category) IN('moto','corso-moto','am','a1','a2','a') OR EXISTS(SELECT 1 FROM calendar_exam_details d WHERE d.event_id=e.id AND d.exam_type='MOTO')) THEN (SELECT count(*) FROM calendar_event_participants p WHERE p.event_id=e.id)
+ WHEN m.type='Auto' AND e.event_type='GUIDA' AND lower(e.category) NOT IN('moto','corso-moto','am','a1','a2','a') THEN 1
+ WHEN m.type='Auto' AND EXISTS(SELECT 1 FROM calendar_exam_details d WHERE d.event_id=e.id AND d.exam_type='AUTO') THEN (SELECT count(*) FROM calendar_event_instructors i WHERE i.event_id=e.id) ELSE 0 END
+ -(SELECT count(DISTINCT x.vehicle_id) FROM calendar_event_vehicles x JOIN calendar_vehicles v ON v.id=x.vehicle_id WHERE x.event_id=e.id AND v.type=m.type)
+ -(SELECT count(*) FROM calendar_event_operational_resources r WHERE r.event_id=e.id AND r.vehicle_id IS NULL AND r.vehicle_type=m.type))),0) FROM calendar_events e,scope s WHERE e.id<>s.excluded AND e.site_id=s.sid AND ${active} AND e.starts_at<=m.at AND e.ends_at>m.at) ELSE 0 END unclassified
+ FROM measured m),
+ totals AS(SELECT *,known_requested+unclassified requested FROM free) `}
+export function operationalCapacityGuard(q,{site_id,starts_at,ends_at}){return q(capacityCTE()+"INSERT OR REPLACE INTO calendar_operational_capacity_guard(id,ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM totals WHERE requested>available) THEN 0 ELSE 1 END",site_id,starts_at,ends_at,'')}
+export async function operationalAvailability(all,{site_id,starts_at,ends_at,exclude=''}){
+ const rows=await all(`SELECT v.*,${vehicleLocationSQL('v','clock.at')} current_site_id FROM calendar_vehicles v CROSS JOIN(SELECT ? at) clock WHERE ${vehicleLocationSQL('v','clock.at')}=? OR COALESCE(v.usual_site_id,v.site_id)=? ORDER BY v.operational_code,v.name,v.id`,starts_at,site_id,site_id);
+ const occupied=await all(`SELECT DISTINCT x.vehicle_id,e.starts_at,e.ends_at FROM calendar_events e JOIN calendar_event_vehicles x ON x.event_id=e.id WHERE ${active} AND e.id<>? AND e.starts_at<? AND e.ends_at>?`,exclude,ends_at,starts_at);
+ const demands=await all(`SELECT r.code_snapshot code,r.vehicle_type type,e.starts_at,e.ends_at FROM calendar_event_operational_resources r JOIN calendar_events e ON e.id=r.event_id WHERE r.vehicle_id IS NULL AND e.site_id=? AND ${active} AND e.id<>? AND e.starts_at<? AND e.ends_at>?`,site_id,exclude,ends_at,starts_at);
+ const blocks=await all("SELECT resource_id,starts_at,ends_at,reason FROM calendar_resource_availability WHERE kind='vehicle' AND deleted=0 AND starts_at<? AND ends_at>? AND reason IN('MANUTENZIONE','GUASTO','TEMPORANEAMENTE FUORI SEDE','PRENOTATO PER ESAME')",ends_at,starts_at);
+ const crossing=new Set((await all(`SELECT v.id FROM calendar_vehicles v WHERE ${vehicleBoundarySQL('v.id','?','?')}`,starts_at,ends_at,starts_at,ends_at,starts_at,ends_at)).map(v=>v.id));
+ const statistics=await all(capacityCTE()+"SELECT code,type,MIN(total) total,MIN(available-requested) remaining,MAX(known_requested) anonymous,MAX(unclassified) unclassified FROM totals GROUP BY code,type",site_id,starts_at,ends_at,exclude);
+ const groups=[];for(const key of new Set([...rows.filter(v=>v.operational_code).map(v=>v.operational_code+'|'+v.type),...demands.map(d=>d.code+'|'+d.type)])){
+  const[code,type]=key.split('|'),vehicles=rows.filter(v=>v.operational_code===code&&v.type===type),usable=vehicles.filter(v=>v.current_site_id===site_id&&['DISPONIBILE','TRASFERIMENTO_PROGRAMMATO'].includes(v.status)&&!crossing.has(v.id)&&!blocks.some(b=>b.resource_id===v.id)),busy=usable.filter(v=>occupied.some(x=>x.vehicle_id===v.id)),times=[starts_at,...demands.flatMap(d=>[d.starts_at,d.ends_at]).filter(t=>t>starts_at&&t<ends_at)];
+  const stat=statistics.find(x=>x.code===code&&x.type===type),total=stat?.total??0,anonymous=stat?.anonymous??0,unclassified=stat?.unclassified??0,available=Math.max(0,stat?.remaining??0);
+  groups.push({code,type,description:[...new Set(vehicles.map(v=>v.name))].join(', '),total,occupied:Math.max(0,total-available),anonymous,unclassified,available,tone:!total?'unavailable':available>=2?'available':available===1?'limited':'empty',vehicles:vehicles.map(v=>({id:v.id,name:v.name,plate:v.plate,type:v.type,code:v.operational_code,status:v.current_site_id!==site_id?'FUORI SEDE':crossing.has(v.id)?'TRASFERIMENTO NELLA FASCIA':blocks.find(b=>b.resource_id===v.id)?.reason||(!['DISPONIBILE','TRASFERIMENTO_PROGRAMMATO'].includes(v.status)?v.status:occupied.some(x=>x.vehicle_id===v.id)?'OCCUPATO':'DISPONIBILE'),occupancy:occupied.filter(x=>x.vehicle_id===v.id).map(x=>({starts_at:x.starts_at,ends_at:x.ends_at}))}))});
+ }
+ return{site_id,starts_at,ends_at,groups,configured:rows.some(v=>v.operational_code)};
+}
+export function operationalResources({requests,cars,previous,strict,fail,participants=[],guideVehicle=null}){
+ if(requests!==undefined&&(!Array.isArray(requests)||requests.length>100))fail(400,'Richieste mezzi non valide.');
+ const result=[];for(const r of requests||[]){strict(r,['key','code','type','vehicle_id']);if(typeof r.key!=='string'||!r.key||r.key.length>120||!['Auto','Moto'].includes(r.type))fail(400,'Richiesta mezzo non valida.');const code=operationalCode(r.code);if(!code&&!r.vehicle_id)fail(400,'Seleziona la sigla operativa.');if(!r.vehicle_id&&((r.key==='guide'&&guideVehicle)||(r.key.startsWith('participant:')&&participants[Number(r.key.split(':')[1])]?.vehicle_id)))continue;if(r.vehicle_id&&!cars.some(v=>v.id===r.vehicle_id)&&previous?.operational_resources?.some(x=>x.key===r.key&&x.vehicle_id===r.vehicle_id))continue;if(r.vehicle_id&&!cars.some(v=>v.id===r.vehicle_id))fail(400,'Associa il veicolo fisico all’appuntamento.');if(r.vehicle_id&&cars.find(v=>v.id===r.vehicle_id)?.type!==r.type)fail(400,'Tipo non compatibile con il veicolo fisico.');const prior=previous?.operational_resources?.find(x=>x.key===r.key&&x.vehicle_id===(r.vehicle_id||null)&&x.code===code);if(r.vehicle_id&&!prior&&code!==operationalCode(cars.find(v=>v.id===r.vehicle_id)?.operational_code))fail(400,'La sigla non corrisponde al veicolo selezionato. Aggiorna le risorse.');result.push({key:r.key,code:prior?prior.code:code,type:r.type,vehicle_id:r.vehicle_id||null})}
+ for(const car of cars)if(!result.some(r=>r.vehicle_id===car.id)){const old=previous?.operational_resources?.find(r=>r.vehicle_id===car.id);result.push({key:'vehicle:'+car.id,code:old?old.code:previous?.vehicles?.some(v=>v.id===car.id)?null:car.operational_code||null,type:car.type,vehicle_id:car.id})}
+ if(new Set(result.map(r=>r.key)).size!==result.length||new Set(result.filter(r=>r.vehicle_id).map(r=>r.vehicle_id)).size!==result.filter(r=>r.vehicle_id).length)fail(400,'Richiesta mezzo duplicata.');
+ return result;
+}
