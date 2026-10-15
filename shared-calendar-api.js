@@ -185,6 +185,7 @@ export async function handleCalendar(request,env,session,role,primary){
   if(reason.includes("CALENDAR_ASSIGNMENT")&&role==="ADMIN"&&!primary)return json({error:"Assegnazione alla sede non più valida. Aggiorna prima di modificare."},403);
    if(reason.includes("CALENDAR_ASSIGNMENT"))return json({error:"Istruttore non assegnato o sede non disponibile."},409);
   if(reason.includes("CALENDAR_VEHICLE"))return json({error:route==="vehicles"?"Targa già assegnata a un veicolo attivo. Verifica prima di salvare.":"VEICOLO NON DISPONIBILE IN QUESTA SEDE o nell’orario scelto."},409);
+  if(route==="vehicle-availability"&&!e.status)return json({error:"Disponibilità mezzi temporaneamente non disponibile. Riprova il caricamento.",code:"VEHICLE_AVAILABILITY_UNAVAILABLE"},503);
   return json({...(e.conflicts?{conflicts:e.conflicts}:{}),error:e.status?e.message:"Calendario non disponibile. Nessun dato precedente è stato sostituito."},e.status||503);
  }
 }

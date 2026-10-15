@@ -2,14 +2,12 @@ import {vehicleLocationSQL,vehicleBoundarySQL} from './shared-calendar-central-s
 export const operationalCode=value=>{if(value==null||value==='')return null;const code=String(value).trim().toUpperCase();if(!/^[A-Z0-9-]{1,12}$/.test(code))throw Object.assign(Error('La sigla operativa deve contenere da 1 a 12 lettere, numeri o trattini, senza spazi.'),{status:400});return code};
 const active="e.deleted=0 AND e.status NOT IN('ANNULLATA','ANNULLATO')";
 // Every resource/time boundary matters, not only an appointment's starting slot.
-function capacityCTE(){return `WITH scope AS(SELECT ? sid,? start,? finish,? excluded),points(at) AS(
- SELECT start FROM scope UNION SELECT e.starts_at FROM calendar_events e,scope s WHERE e.starts_at>s.start AND e.starts_at<s.finish
- UNION SELECT e.ends_at FROM calendar_events e,scope s WHERE e.ends_at>s.start AND e.ends_at<s.finish
- UNION SELECT a.starts_at FROM calendar_resource_availability a,scope s WHERE a.starts_at>s.start AND a.starts_at<s.finish
- UNION SELECT a.ends_at FROM calendar_resource_availability a,scope s WHERE a.ends_at>s.start AND a.ends_at<s.finish
- UNION SELECT t.starts_at FROM calendar_vehicle_transfers t,scope s WHERE t.starts_at>s.start AND t.starts_at<s.finish
- UNION SELECT t.ends_at FROM calendar_vehicle_transfers t,scope s WHERE t.ends_at>s.start AND t.ends_at<s.finish
- UNION SELECT m.effective_at FROM calendar_vehicle_movements m,scope s WHERE m.effective_at>s.start AND m.effective_at<s.finish),
+// Split the eight-term UNION chain: it exceeds D1 compound-SELECT limits, unlike desktop SQLite.
+function capacityCTE(){return `WITH scope AS(SELECT ? sid,? start,? finish,? excluded),
+ event_points(at) AS(SELECT e.starts_at FROM calendar_events e,scope s WHERE e.starts_at>s.start AND e.starts_at<s.finish UNION SELECT e.ends_at FROM calendar_events e,scope s WHERE e.ends_at>s.start AND e.ends_at<s.finish),
+ availability_points(at) AS(SELECT a.starts_at FROM calendar_resource_availability a,scope s WHERE a.starts_at>s.start AND a.starts_at<s.finish UNION SELECT a.ends_at FROM calendar_resource_availability a,scope s WHERE a.ends_at>s.start AND a.ends_at<s.finish),
+ transfer_points(at) AS(SELECT t.starts_at FROM calendar_vehicle_transfers t,scope s WHERE t.starts_at>s.start AND t.starts_at<s.finish UNION SELECT t.ends_at FROM calendar_vehicle_transfers t,scope s WHERE t.ends_at>s.start AND t.ends_at<s.finish),
+ points(at) AS(SELECT start FROM scope UNION SELECT at FROM event_points UNION SELECT at FROM availability_points UNION SELECT at FROM transfer_points UNION SELECT m.effective_at FROM calendar_vehicle_movements m,scope s WHERE m.effective_at>s.start AND m.effective_at<s.finish),
  groups(code,type) AS(SELECT DISTINCT v.operational_code,v.type FROM calendar_vehicles v WHERE v.operational_code IS NOT NULL UNION SELECT DISTINCT r.code_snapshot,r.vehicle_type FROM calendar_event_operational_resources r WHERE r.code_snapshot IS NOT NULL),
  measured AS(SELECT p.at,g.code,g.type,
  (SELECT count(*) FROM calendar_vehicles v,scope s WHERE v.operational_code=g.code AND v.type=g.type AND v.status IN('DISPONIBILE','TRASFERIMENTO_PROGRAMMATO') AND ${vehicleLocationSQL('v','p.at')}=s.sid
