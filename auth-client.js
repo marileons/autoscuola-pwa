@@ -239,8 +239,8 @@
       await loadScript("lesson-drafts.js?v=1.21-lesson-drafts-v1");
       await loadScript("lesson-activities.js?v=1.21-activities-v1");
       if(currentUser?.role!=="SEGRETERIA"){
-        await loadScript("lesson-notes-voice.js?v=2026-10-16-manual-pause-v4");
-        if(window.LessonNotesVoice?.version!=="2026-10-16-manual-pause-v4")throw new Error("Controller vocale non aggiornato. Ricarica l’app.");
+        await loadScript("lesson-notes-voice.js?v=2026-10-16-session-candidate-v5");
+        if(window.LessonNotesVoice?.version!=="2026-10-16-session-candidate-v5")throw new Error("Controller vocale non aggiornato. Ricarica l’app.");
       }
       if(currentUser?.role!=="SEGRETERIA")await loadScript("lesson-gps.js?v=1.21-gps-v1");
       await loadScript("student-report-print.js?v=1.21-student-report-print-v1");
