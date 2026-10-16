@@ -1,122 +1,108 @@
 "use strict";
 (function(root){
- const owners=new WeakMap();
- function create({Recognition,input,button,status,interim,isActive,context,persist=()=>{},document:doc=root.document,window:win=root,setTimer=root.setTimeout.bind(root),clearTimer=root.clearTimeout.bind(root),now=Date.now}){
+ const VERSION='2026-10-16-manual-pause-v4';
+ if(root.LessonNotesVoice?.version===VERSION){if(typeof module!=='undefined')module.exports=root.LessonNotesVoice;return}
+ root.LessonNotesVoice?.disposeAll?.();
+ const owners=new WeakMap(),controllers=new Set();let active=null;
+ const words=text=>Array.from(text.matchAll(/[\p{L}\p{N}][\p{L}\p{M}\p{N}'’]*/gu),m=>({key:m[0].normalize('NFC').toLocaleLowerCase('it-IT').replaceAll('’',"'"),start:m.index,end:m.index+m[0].length}));
+ const joined=(left,right)=>left+(left&&right&&!/\s$/.test(left)?' ':'')+right;
+ function extendsPhrase(text,base){const a=words(base),b=words(text);return a.length>0&&b.length>a.length&&a.every((w,i)=>w.key===b[i].key)}
+ // Rebuild this event's snapshot; do not append events to a textarea or retain
+ // slot identities after Android replaces/reset its result list.
+ function snapshot(list,resultIndex,previous=[]){
+  const records=Array.from(list,(result,i)=>{const row={text:String(result?.[0]?.transcript||'').trim(),final:Boolean(result?.isFinal)};return i<resultIndex&&previous[i]?.text===row.text&&previous[i]?.final===row.final?previous[i]:row});
+  const visible=[],finals=[];let provisional='';
+  function add(parts,text){
+   if(!text)return;
+   const whole=parts.join(' '),last=parts.at(-1);
+   if(whole&&extendsPhrase(text,whole))parts.splice(0,parts.length,text);
+   else if(last&&extendsPhrase(text,last))parts[parts.length-1]=text;
+   else parts.push(text);
+  }
+  for(const {text,final} of records){add(visible,text);if(final)add(finals,text);else provisional=joined(provisional,text)}
+  return{visible:visible.join(' '),final:finals.join(' '),interim:provisional,records};
+ }
+ function create({Recognition,input,button,status,interim,isActive,context,persist=()=>{},document:doc=root.document,window:win=root}){
   owners.get(input)?.dispose();
-  let wanted=false,session=null,timer=null,epoch=0,identity=null,failures=0,fastEnds=0,carry=null,rebase=null,disposed=false;
-  const say=(label,text='')=>{status.textContent=label+(text?' - '+text:'');button.textContent=wanted?'STOP MICROFONO':'ATTIVA ASCOLTO CONTINUO';button.setAttribute('aria-pressed',String(wanted));};
+  let wanted=false,session=null,epoch=0,cycleId=0,identity=null,disposed=false,phase='idle';
+  let manualBase='',voiceFinal='',voiceInterim='',visibleVoice='',rendered='',renderedSuffix='',lastSaved=input.value;
+  const say=(label,text='')=>{
+   status.textContent=label+(text?' - '+text:'');
+   button.textContent=phase==='listening'?'⏹ FERMA':phase==='paused'?'▶ RIPRENDI DETTATURA':'🎤 AVVIA DETTATURA';
+   button.setAttribute('aria-pressed',String(wanted));button.setAttribute('data-voice-state',phase);button.classList?.add('notes-voice-control');
+  };
   const valid=()=>wanted&&isActive()&&!doc.hidden&&context()===identity;
   const detach=recognition=>{recognition.onstart=null;recognition.onend=null;recognition.onresult=null;recognition.onerror=null;};
-  function stop(label='MICROFONO DISATTIVATO',text=''){
-   wanted=false;epoch++;carry=null;rebase=null;
-   if(timer!==null)clearTimer(timer);timer=null;
+  function save(){if(context()===identity&&lastSaved!==input.value){lastSaved=input.value;persist()}}
+  function stop(label='',text=''){
+   // The visible snapshot is already in the field. Consolidate it once, without
+   // copying either a provisional string or the last event into it again.
+   if(wanted){save();phase='paused'}wanted=false;epoch++;if(active===api)active=null;
    const old=session;session=null;if(old){detach(old);try{old.abort()}catch{}}
-   interim.textContent='';say(label,text);
+   voiceFinal='';voiceInterim='';visibleVoice='';interim.textContent='';say(label||(phase==='paused'?'DETTATURA IN PAUSA':'MICROFONO NON ATTIVO'),text);
   }
-  function restart(normal){
-   if(!valid()){stop();return}
-   if(!normal&&++failures>3){stop('MICROFONO NON DISPONIBILE','Servizio interrotto. Premi il microfono per riprovare.');return}
-   say('RIPRESA DELL’ASCOLTO');const tag=epoch;
-   timer=setTimer(()=>{timer=null;if(tag===epoch&&valid())listen();else stop()},normal?500:Math.min(4000,500*2**failures));
+  function manualChange(){
+   if(!wanted){lastSaved=input.value;persist();return}
+   if(context()!==identity){stop();return}
+   const value=input.value;
+   if(!renderedSuffix){manualBase=value;rendered=value;save();return}
+   if(value.endsWith(renderedSuffix)){
+    manualBase=value.slice(0,-renderedSuffix.length);rendered=value;save();return;
+   }
+   // An edit inside/replacing the voice portion is ambiguous. Keep the exact
+   // user text and stop instead of trying to reconstruct and overwrite it.
+   stop('DETTATURA IN PAUSA','Nota modificata manualmente. Testo conservato; premi RIPRENDI DETTATURA.');
+  }
+  function render(){
+   if(input.value!==rendered){manualChange();if(!wanted)return}
+   const addition=visibleVoice?(manualBase&&!/\s$/.test(manualBase)?' ':'')+visibleVoice:'';
+   const limit=Number.isInteger(input.maxLength)&&input.maxLength>=0?input.maxLength:Infinity;
+   renderedSuffix=addition.slice(0,Math.max(0,limit-manualBase.length));
+   rendered=manualBase+renderedSuffix;input.value=rendered;
+   interim.textContent=voiceInterim?'Testo provvisorio: '+voiceInterim:'';
+   // Do not checkpoint provisional words as final. STOP/onend confirms the best
+   // currently visible snapshot, including a remaining provisional result.
+   if(voiceFinal===visibleVoice&&!voiceInterim)save();
   }
   function listen(){
    if(!valid()){stop();return}if(session)return;
-   const tag=epoch,boundary=carry;carry=null;
-   let recognition,started=now(),recoverable=false,first=true,heardInterim=false;
-   // Indices belong to this recognition session only. Never deduplicate the saved note.
-   const results=new Map(),chunks=[];
-   let canonical='',baseline=input.value,baselineTranscript='',lastWritten=input.value;
-   const extendsText=(text,previous)=>previous&&text.length>previous.length&&text.startsWith(previous)&&/^\s/.test(text.slice(previous.length));
-   const join=()=>chunks.map(chunk=>chunk.text).join(' ');
-   const anchor=()=>{baseline=input.value;baselineTranscript=canonical;lastWritten=input.value;};
-   rebase=anchor;
-   function render(next){
-    // Manual edits become the new protected baseline, including edits to dictated words.
-    if(input.value!==lastWritten)anchor();
-    canonical=next;
-    const suffix=!baselineTranscript?canonical:canonical===baselineTranscript?'':extendsText(canonical,baselineTranscript)?canonical.slice(baselineTranscript.length).trimStart():'';
-    const addition=suffix?(baseline&&!/\s$/.test(baseline)?' ':'')+suffix:'';
-    const limit=Number.isInteger(input.maxLength)&&input.maxLength>=0?input.maxLength:Infinity;
-    const value=baseline+addition.slice(0,Math.max(0,limit-baseline.length));
-    if(input.value!==value){input.value=value;lastWritten=value;persist()}
-   }
-   function final(index,text){
-    const previous=results.get(index);
-    if(previous?.final){
-     if(!extendsText(text,previous.text))return;
-     // Some Android engines extend a final slot rather than creating a new one.
-     if(previous.chunk&&extendsText(text,previous.chunk.text))previous.chunk.text=text;
-     previous.text=text;return;
-    }
-    const replay=first&&!heardInterim&&boundary&&boundary.value===input.value&&text===boundary.text;
-    first=false;
-    let chunk;
-    const last=chunks.at(-1),whole=join();
-    if(last&&!previous?.separate&&extendsText(text,whole)){
-     chunk={text};chunks.splice(0,chunks.length,chunk);
-     for(const entry of results.values())if(entry.final)entry.chunk=chunk;
-    }else if(last&&!previous?.separate&&extendsText(text,last.text)){
-     chunk=last;chunk.text=text;
-    }else{chunk={text};chunks.push(chunk)}
-    results.set(index,{final:true,text,chunk});
-    // A replay is eligible only at the automatic restart boundary, without fresh
-    // interim speech. An intentional repetition in a new slot remains untouched.
-    if(replay)baselineTranscript=text;
-   }
+   const tag=epoch,id=++cycleId;let recognition,records=[];
    try{
     recognition=new Recognition();session=recognition;recognition.lang='it-IT';recognition.continuous=true;recognition.interimResults=true;
-    const current=()=>tag===epoch&&session===recognition;
+    const current=()=>tag===epoch&&id===cycleId&&session===recognition;
     recognition.onstart=()=>{if(current()&&valid())say('ASCOLTO ATTIVO')};
     recognition.onresult=event=>{
      if(!current())return;if(!valid()){stop();return}
-     const list=event.results;
-     const start=Number.isInteger(event.resultIndex)&&event.resultIndex>=0?event.resultIndex:0;
-     for(const [index,entry] of results)if(index>=list.length&&!entry.final)results.delete(index);
-     for(let i=start;i<list.length;i++){
-      const result=list[i],text=String(result[0]?.transcript||'').trim();
-      if(result.isFinal){if(text){final(i,text);failures=0;fastEnds=0}}
-      else if(!results.get(i)?.final){
-       const previous=results.get(i),last=chunks.at(-1);
-       // A new interim segment starting afresh marks intentional new speech,
-       // even when its final words overlap the preceding dictated phrase.
-       const separate=previous?.separate??Boolean(text&&last&&!extendsText(text,last.text)&&!extendsText(text,join()));
-       results.set(i,{final:false,text,separate});if(text)heardInterim=true;
-      }
-     }
-     render(join());
-     const temporary=[...results].sort(([a],[b])=>a-b).filter(([,entry])=>!entry.final&&entry.text).map(([,entry])=>entry.text).join(' ');
-     interim.textContent=temporary?'Testo provvisorio: '+temporary:'';
+     // resultIndex is only a hint: Android can reset it while replacing the
+     // entire cumulative list. Always rebuild all available results in order.
+     const list=event.results||[],index=Number.isInteger(event.resultIndex)&&event.resultIndex>=0?event.resultIndex:0;
+     const next=snapshot(list,index,records);records=next.records;
+     voiceFinal=next.final;voiceInterim=next.interim;visibleVoice=next.visible;render();
     };
     recognition.onerror=event=>{
      if(!current())return;if(!valid()){stop();return}
      const error=event.error;
-     if(['not-allowed','service-not-allowed'].includes(error)){stop('PERMESSO NEGATO','Abilita il microfono nelle impostazioni del browser.');return}
-     if(['audio-capture','language-not-supported','bad-grammar'].includes(error)){stop('MICROFONO NON DISPONIBILE','Controlla microfono e supporto del browser.');return}
-     if(['no-speech','network'].includes(error)){recoverable=true;return}
-     stop('MICROFONO DISATTIVATO','Ascolto interrotto. Per riprendere premi il microfono.');
+     if(['not-allowed','service-not-allowed'].includes(error)){stop('DETTATURA IN PAUSA','Permesso negato. Abilita il microfono nelle impostazioni del browser.');return}
+     if(['audio-capture','language-not-supported','bad-grammar'].includes(error)){stop('DETTATURA IN PAUSA','Microfono non disponibile. Controlla il supporto del browser.');return}
+     stop('DETTATURA IN PAUSA',error==='network'?'Servizio vocale interrotto. Premi RIPRENDI DETTATURA.':'Ascolto interrotto. Premi RIPRENDI DETTATURA.');
     };
-    recognition.onend=()=>{
-     if(!current())return;
-     detach(recognition);session=null;rebase=null;interim.textContent='';
-     if(!valid()){stop();return}
-     const last=chunks.at(-1);carry=last?{text:last.text,value:input.value}:boundary;
-     fastEnds=now()-started<1000?fastEnds+1:0;
-     if(fastEnds>4){stop('MICROFONO NON DISPONIBILE','Il browser non mantiene l’ascolto. Puoi usare la dettatura della tastiera.');return}
-     restart(!recoverable);
-    };
-    recognition.start();say('ASCOLTO ATTIVO');
-   }catch{stop('MICROFONO NON DISPONIBILE','Usa la dettatura della tastiera oppure premi il microfono per riprovare.');}
+    recognition.onend=()=>{if(current())stop('DETTATURA IN PAUSA')};
+    recognition.start();if(current()&&valid())say('ASCOLTO ATTIVO');
+   }catch{stop('DETTATURA IN PAUSA','Microfono non disponibile. Usa la dettatura della tastiera o premi RIPRENDI DETTATURA.');}
   }
   function start(){
    if(disposed||wanted)return;
-   if(!Recognition){stop('MICROFONO NON DISPONIBILE','Il browser non supporta il riconoscimento vocale. Usa il microfono della tastiera.');return}
+   if(!Recognition){stop('MICROFONO NON ATTIVO','Il browser non supporta il riconoscimento vocale. Usa il microfono della tastiera.');return}
    if(!isActive()||doc.hidden){stop();return}
-   wanted=true;identity=context();failures=0;fastEnds=0;carry=null;epoch++;listen();
+   active?.stop();active=api;
+   manualBase=input.value;voiceFinal='';voiceInterim='';visibleVoice='';rendered=input.value;renderedSuffix='';lastSaved=input.value;
+   wanted=true;phase='listening';identity=context();epoch++;listen();
   }
-  const hidden=()=>{if(doc.hidden)stop('MICROFONO DISATTIVATO','Ascolto interrotto. Premi il microfono per riprendere.')},blur=()=>stop('MICROFONO DISATTIVATO','Ascolto interrotto. Premi il microfono per riprendere.'),manual=()=>{rebase?.();interim.textContent='';persist()};
-  doc.addEventListener('visibilitychange',hidden);win.addEventListener('pagehide',blur);win.addEventListener('blur',blur);input.addEventListener('input',manual);say(Recognition?'MICROFONO DISATTIVATO':'MICROFONO NON DISPONIBILE');
-  const api={start,stop,toggle:()=>wanted?stop():start(),get active(){return wanted},dispose(){stop();disposed=true;doc.removeEventListener('visibilitychange',hidden);win.removeEventListener('pagehide',blur);win.removeEventListener('blur',blur);input.removeEventListener('input',manual);if(owners.get(input)===api)owners.delete(input)}};
-  owners.set(input,api);return api;
+  const hidden=()=>{if(doc.hidden&&wanted)stop('DETTATURA IN PAUSA','Ascolto interrotto. Premi RIPRENDI DETTATURA.')},blur=()=>{if(wanted)stop('DETTATURA IN PAUSA','Ascolto interrotto. Premi RIPRENDI DETTATURA.')};
+  doc.addEventListener('visibilitychange',hidden);win.addEventListener('pagehide',blur);win.addEventListener('blur',blur);input.addEventListener('input',manualChange);say('MICROFONO NON ATTIVO',Recognition?'':'Riconoscimento vocale non disponibile.');
+  const api={version:VERSION,start,stop,toggle:()=>wanted?stop():start(),get active(){return wanted},get state(){return phase},dispose(){stop();disposed=true;doc.removeEventListener('visibilitychange',hidden);win.removeEventListener('pagehide',blur);win.removeEventListener('blur',blur);input.removeEventListener('input',manualChange);controllers.delete(api);if(owners.get(input)===api)owners.delete(input)}};
+  owners.set(input,api);controllers.add(api);return api;
  }
- const api={create};if(typeof module!=='undefined')module.exports=api;root.LessonNotesVoice=api;
+ const api={version:VERSION,create,stopAll(){for(const controller of controllers)controller.stop()},disposeAll(){for(const controller of [...controllers])controller.dispose()}};
+ if(typeof module!=='undefined')module.exports=api;root.LessonNotesVoice=api;
 })(typeof window!=='undefined'?window:globalThis);

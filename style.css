@@ -382,3 +382,10 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 #drivingErrorsPanel .driving-error-category-heading{text-transform:uppercase;font-weight:800;color:#ffe3a0;line-height:1.5}
 #drivingErrorsPanel .driving-error-specific-option span,#drivingErrorsPanel .driving-error-specific-list li{text-transform:uppercase;font-weight:400;line-height:1.5}
 .driving-error-search-empty{padding:12px;border:1px solid #e6b957;border-radius:10px;color:#ffe3a0!important}
+
+/* Shared voice controls: user-driven start, stop and resume; no floating overlay. */
+#voice.notes-voice-control,#voiceExaminer.notes-voice-control,.driving-error-voice button.notes-voice-control{min-height:48px;max-width:100%;width:fit-content;padding:12px 18px;border:1px solid #0e7490;border-radius:12px;background:#0e7490;color:#fff;font-size:16px;line-height:1.4;font-weight:700;white-space:normal;overflow-wrap:anywhere;text-align:center;touch-action:manipulation;position:static}
+#voice.notes-voice-control[data-voice-state="listening"],#voiceExaminer.notes-voice-control[data-voice-state="listening"],.driving-error-voice button.notes-voice-control[data-voice-state="listening"]{background:#991b1b;border-color:#991b1b}
+#voice.notes-voice-control[data-voice-state="paused"],#voiceExaminer.notes-voice-control[data-voice-state="paused"],.driving-error-voice button.notes-voice-control[data-voice-state="paused"]{background:#5b21b6;border-color:#5b21b6}
+#voice.notes-voice-control:focus-visible,#voiceExaminer.notes-voice-control:focus-visible,.driving-error-voice button.notes-voice-control:focus-visible{outline:3px solid #fde68a;outline-offset:3px}
+#voice.notes-voice-control:active,#voiceExaminer.notes-voice-control:active,.driving-error-voice button.notes-voice-control:active{filter:brightness(.9)}
