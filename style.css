@@ -343,7 +343,6 @@ header.app-header img.main-logo{width:min(calc(100% - 20px),460px)!important;max
 @keyframes backup-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.backup-preparing::after{animation:none}}
 
-#voice{min-height:48px;padding:12px 18px;border:1px solid #075985;background:#075985;color:#fff}#voice[aria-pressed=true]{background:#991b1b;border-color:#991b1b}#voice:focus-visible{outline:3px solid #0f172a;outline-offset:3px}#lessonVoiceStatus{font-weight:700}#lessonVoiceInterim{padding:8px;border-left:3px solid #64748b;white-space:pre-wrap}
 
 /* Full-viewport dark canvas, including standalone safe areas; keep forms centered. */
 html{min-height:100%;background:#14242e;color-scheme:dark}
@@ -355,9 +354,6 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 .driving-errors-pending:empty{display:none}
 #appShell #lesson .driving-error-classify{min-height:48px;padding:12px 14px;border:1px solid #e6b957;background:#49370f;color:#ffe3a0;font-size:1rem;line-height:1.35;white-space:normal;touch-action:manipulation}
 #appShell #lesson .driving-error-classify:focus-visible{outline:3px solid #ffe3a0;outline-offset:3px}
-.driving-error-voice{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
-.driving-error-voice button{min-height:48px;width:fit-content;max-width:100%;white-space:normal;touch-action:manipulation}
-.driving-error-voice p{overflow-wrap:anywhere;font-size:.92rem}
 @media print{html,body,#appShell{background:#fff;color-scheme:light}}
 
 /* Classification presentation only: keep stored labels and actions unchanged. */
@@ -383,9 +379,11 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 #drivingErrorsPanel .driving-error-specific-option span,#drivingErrorsPanel .driving-error-specific-list li{text-transform:uppercase;font-weight:400;line-height:1.5}
 .driving-error-search-empty{padding:12px;border:1px solid #e6b957;border-radius:10px;color:#ffe3a0!important}
 
-/* Shared voice controls: user-driven start, stop and resume; no floating overlay. */
-#voice.notes-voice-control,#voiceExaminer.notes-voice-control,.driving-error-voice button.notes-voice-control{min-height:48px;max-width:100%;width:fit-content;padding:12px 18px;border:1px solid #0e7490;border-radius:12px;background:#0e7490;color:#fff;font-size:16px;line-height:1.4;font-weight:700;white-space:normal;overflow-wrap:anywhere;text-align:center;touch-action:manipulation;position:static}
-#voice.notes-voice-control[data-voice-state="listening"],#voiceExaminer.notes-voice-control[data-voice-state="listening"],.driving-error-voice button.notes-voice-control[data-voice-state="listening"]{background:#991b1b;border-color:#991b1b}
-#voice.notes-voice-control[data-voice-state="paused"],#voiceExaminer.notes-voice-control[data-voice-state="paused"],.driving-error-voice button.notes-voice-control[data-voice-state="paused"]{background:#5b21b6;border-color:#5b21b6}
-#voice.notes-voice-control:focus-visible,#voiceExaminer.notes-voice-control:focus-visible,.driving-error-voice button.notes-voice-control:focus-visible{outline:3px solid #fde68a;outline-offset:3px}
-#voice.notes-voice-control:active,#voiceExaminer.notes-voice-control:active,.driving-error-voice button.notes-voice-control:active{filter:brightness(.9)}
+
+/* Native keyboard dictation uses ordinary note fields, without app microphone controls. */
+.native-dictation-hint{margin:6px 0 0;color:#b8cad4;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+#lessonNotes,#examinerNotes,.driving-error-note{font-size:16px;min-width:0;max-width:100%;scroll-margin-block:16px}
+/* Presentation only: labels, identifiers, snapshots and status classes stay unchanged. */
+#lesson .lesson-activities-card>h2,#lessonChecklist .activity-section>summary{text-transform:uppercase;font-weight:800;color:#f1f4f5}
+#lessonChecklist .state-row>span{text-transform:uppercase;font-weight:400;line-height:1.5;min-width:0;overflow-wrap:anywhere}
+#lessonChecklist .state-row{grid-template-columns:auto minmax(0,1fr);gap:12px}
