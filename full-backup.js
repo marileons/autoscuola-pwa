@@ -44,13 +44,15 @@
     byId("fullBackupMessage").classList.add("hidden");
   }
 
+  let lastProgressPhase="",lastProgressPercent=-1,lastProgressAt=0;
   function showProgress(phase,loaded=0,total=0){
     const box=byId("fullBackupProgress"),bar=byId("fullBackupProgressBar"),text=byId("fullBackupProgressText");
-    box.classList.remove("hidden");
-    const percent=total>0?Math.min(100,Math.round(loaded/total*100)):0;
+    const percent=total>0?Math.min(100,Math.round(loaded/total*100)):0,now=Date.now();
+    if(phase===lastProgressPhase&&percent===lastProgressPercent&&now-lastProgressAt<100)return;
+    lastProgressPhase=phase;lastProgressPercent=percent;lastProgressAt=now;box.classList.remove("hidden");
     bar.value=percent;text.textContent=`${phase}${total>0?` · ${percent}%`:""}`;
   }
-  function hideProgress(){byId("fullBackupProgress")?.classList.add("hidden")}
+  function hideProgress(){byId("fullBackupProgress")?.classList.add("hidden");lastProgressPhase="";lastProgressPercent=-1}
   function idlePause(){return new Promise(resolve=>setTimeout(resolve,0))}
 
   function formatBytes(bytes){
@@ -423,7 +425,7 @@
 
   async function createBackupFile(payload,fileName){
     window.AgendaAuth?.recordEvent?.("backup_encode");
-    const result=await window.AgendaFullBackupStream.createLegacyFile(payload,payload.documentKeys,readDocumentByKey,fileName,{onProgress:(phase,done,total)=>showMessage(`${phase}: ${done}/${total}…`)});
+    const result=await window.AgendaFullBackupStream.createLegacyFile(payload,payload.documentKeys,readDocumentByKey,fileName,{onProgress:(phase,done,total,detail)=>showProgress(phase,done+(detail?.totalBytes?detail.loadedBytes/detail.totalBytes:0),total)});
     return result.file;
   }
 
@@ -640,12 +642,14 @@
     button.disabled=true;
     button.setAttribute("aria-busy","true");
     button.classList.add("backup-preparing");
-    showMessage("Preparazione backup completo in corso…");
+    showMessage("Preparazione backup completo in corso… Attendi senza premere di nuovo.");
+    showProgress("Raccolta archivio allievi",0,0);
     window.AgendaAuth?.recordEvent?.("backup_collect");
     try{
       // Allow visible feedback before serialization; hidden tabs also progress.
       await new Promise(resolve=>{const timer=window.setTimeout(resolve,100);window.requestAnimationFrame(()=>window.setTimeout(()=>{clearTimeout(timer);resolve()},0))});
       const payload=await createBackupPayload();
+      showProgress("Preparazione documenti",0,payload.documentKeys.length);
       const timestamp=new Date().toISOString().replace(/[:.]/g,"-");
       const file=await createBackupFile(payload,`AgendaIstruttori_BackupCompleto_${timestamp}.${BACKUP_EXTENSION}`);
       showMessage(`Backup completo creato: ${payload.metadata.students} allievi, ${payload.metadata.documents} documenti, circa ${formatBytes(file.size)}.`);
@@ -653,12 +657,13 @@
       window.AgendaAuth?.recordEvent?.("backup_ready");
     }catch(error){
       window.AgendaAuth?.recordEvent?.("backup_failed");
-      showMessage("Non è stato possibile creare il backup completo. I dati sono invariati; riprova dal pulsante Backup completo.",true);
+      showMessage(error?.code?error.message:error?.name==="QuotaExceededError"?"Spazio o memoria insufficienti per creare il backup. I dati originali sono invariati.":"Non è stato possibile creare il backup completo. I dati sono invariati; riprova dal pulsante Backup completo.",true);
     }finally{
       exportInProgress=false;
       button.disabled=false;
       button.removeAttribute("aria-busy");
       button.classList.remove("backup-preparing");
+      hideProgress();
     }
   }
 
@@ -675,7 +680,7 @@
     try{
       const parsed=await window.AgendaFullBackupStream.parseLegacyBackup(file,{
         signal:restoreAbortController?.signal,
-        onHeader:header=>{validateBackupHeader(header);payload=header;showProgress("Lettura e validazione",0,file.size)},
+        onHeader:header=>{validateBackupHeader(header);payload=header;showProgress("Lettura e validazione",file.size,file.size)},
         onProgress:progress=>showProgress(progress.phase==="reading"?"Lettura file":"Validazione documenti",progress.loaded,progress.total),
         onDocumentStart:async item=>{currentDocument=validateDocumentMetadata(item);currentChunk=0;if(ids.has(currentDocument.id))throw new Error("Il backup contiene documenti duplicati.");ids.add(currentDocument.id)},
         onDocumentChunk:async(item,bytes)=>{if(!currentDocument||item.id!==currentDocument.id)throw new Error("Sequenza documento non valida.");await putStagingChunk(currentDocument.id,currentChunk++,bytes)},
