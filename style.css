@@ -359,3 +359,14 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 .driving-error-voice button{min-height:48px;width:fit-content;max-width:100%;white-space:normal;touch-action:manipulation}
 .driving-error-voice p{overflow-wrap:anywhere;font-size:.92rem}
 @media print{html,body,#appShell{background:#fff;color-scheme:light}}
+
+/* Classification presentation only: keep stored labels and actions unchanged. */
+#appShell #lesson .driving-error-card select.driving-error-category{display:block;min-width:0;max-width:100%;min-height:56px;padding:12px 32px 12px 16px;border:1px solid #e6b957;border-radius:12px;background:#49370f;color:#ffe3a0;font-size:18px;font-weight:800;line-height:1.5;text-align:center;text-align-last:center;text-transform:uppercase;touch-action:manipulation}
+#appShell #lesson .driving-error-card select.driving-error-category option{background:#49370f;color:#ffe3a0;font-size:18px;font-weight:700;text-transform:uppercase}
+.driving-error-category-heading{text-transform:uppercase;overflow-wrap:anywhere}
+#appShell #lesson .driving-error-card select.driving-error-category:focus-visible{outline:3px solid #ffe3a0;outline-offset:3px}
+#appShell #lesson .driving-error-card .driving-error-actions button.driving-error-classify{display:flex;align-items:center;justify-content:center;text-align:center}
+.driving-errors-pending{min-height:48px;justify-content:center;text-align:center}
+.driving-error-card,.driving-error-card>label{min-width:0}
+.driving-error-card .driving-error-actions{column-gap:20px;row-gap:16px}
+#appShell #lesson .driving-error-card .driving-error-actions button.delete-error{border:2px solid #e05a66;background:#8e202d;color:#fff}
