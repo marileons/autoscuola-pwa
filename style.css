@@ -370,3 +370,15 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 .driving-error-card,.driving-error-card>label{min-width:0}
 .driving-error-card .driving-error-actions{column-gap:20px;row-gap:16px}
 #appShell #lesson .driving-error-card .driving-error-actions button.delete-error{border:2px solid #e05a66;background:#8e202d;color:#fff}
+
+/* Ephemeral local error search; checkbox values and saved descriptions stay original. */
+.driving-error-search-tools{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
+#appShell #lesson .driving-error-card input.driving-error-search{min-height:52px;min-width:0;width:100%;max-width:100%;font-size:16px;line-height:1.5;background:#0f1a22;color:#f2f5f6;border:1px solid #7e98a5}
+#appShell #lesson .driving-error-card input.driving-error-search::placeholder{color:#bdcbd1;opacity:1}
+.driving-error-search-clear{min-height:48px;width:fit-content;max-width:100%;white-space:normal}
+.driving-error-card .driving-error-specifics{display:block;max-height:420px;max-height:min(46vh,420px);overflow-y:auto;overscroll-behavior:contain;min-width:0}
+.driving-error-search-group{min-width:0;padding:8px 0;border-bottom:1px solid #655b44}
+.driving-error-search-group:last-child{border-bottom:0}
+#drivingErrorsPanel .driving-error-category-heading{text-transform:uppercase;font-weight:800;color:#ffe3a0;line-height:1.5}
+#drivingErrorsPanel .driving-error-specific-option span,#drivingErrorsPanel .driving-error-specific-list li{text-transform:uppercase;font-weight:400;line-height:1.5}
+.driving-error-search-empty{padding:12px;border:1px solid #e6b957;border-radius:10px;color:#ffe3a0!important}
