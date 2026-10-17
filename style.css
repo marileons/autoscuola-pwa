@@ -387,3 +387,13 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 #lesson .lesson-activities-card>h2,#lessonChecklist .activity-section>summary{text-transform:uppercase;font-weight:800;color:#f1f4f5}
 #lessonChecklist .state-row>span{text-transform:uppercase;font-weight:400;line-height:1.5;min-width:0;overflow-wrap:anywhere}
 #lessonChecklist .state-row{grid-template-columns:auto minmax(0,1fr);gap:12px}
+
+/* Additional local lesson exchange, separate from existing student transfers. */
+.lesson-transfer-commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid #546c79}
+.lt-button{min-height:48px;padding:12px 16px;border-radius:12px;border:1px solid #24869a;background:#075e70;color:#fff;font-size:16px;line-height:1.4;white-space:normal;overflow-wrap:anywhere;touch-action:manipulation}
+.lt-button.secondary{background:#293b49;color:#f2f5f6;border-color:#758d9b}.lt-button:disabled{opacity:.5;cursor:wait}.lt-button:focus-visible{outline:3px solid #f8d97c;outline-offset:3px}
+.lt-dialog{box-sizing:border-box;width:min(880px,calc(100% - 24px));max-height:calc(100dvh - 32px);padding:20px;background:#172b36;color:#f2f5f6;border:1px solid #78909b;border-radius:18px;overflow:auto}.lt-dialog::backdrop{background:#07141dbb}
+.lt-body{display:grid;gap:16px;min-width:0}.lt-body h2,.lt-body p{margin:0;overflow-wrap:anywhere}.lt-body label{display:grid;gap:8px;min-width:0}.lt-body input,.lt-body select{font-size:16px;max-width:100%;min-width:0}.lt-body input[type=checkbox]{width:auto;justify-self:start;min-height:24px}.lt-body progress{width:100%}.lt-actions,.lt-date-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.lt-detail{max-height:35dvh;overflow:auto;overflow-wrap:anywhere}.lt-message{padding:12px;background:#203f4b;border-radius:10px}.lt-filters{display:grid;gap:12px}.lt-dialog [hidden],.lesson-transfer-commands[hidden]{display:none!important}
+@media(max-width:560px){.lt-actions,.lt-date-range{grid-template-columns:1fr}.lt-dialog{padding:14px}.lt-body{gap:12px}}
+
+.lt-body label.lt-checkbox{display:flex;align-items:center;gap:10px;line-height:1.5}.lt-body label.lt-checkbox input{flex:0 0 24px;margin:0}.lt-filter-description{font-size:14px;line-height:1.5;color:#c6d8e2}

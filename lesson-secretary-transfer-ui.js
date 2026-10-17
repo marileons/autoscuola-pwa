@@ -1,0 +1,59 @@
+"use strict";
+(function(root){
+ if(root.LessonSecretaryTransferUI)return;
+ const core=root.LessonSecretaryTransfer,bridge=()=>root.LessonSecretaryTransferBridge;
+ let epoch=0,dialog=null;
+ const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
+ function reset(){epoch++;dialog?.remove();dialog=null;const host=document.getElementById('lessonTransferCommands');if(host){host.replaceChildren();host.hidden=true}}
+ function error(e){return e?.name==='QuotaExceededError'?'Spazio locale insufficiente. Nessun trasferimento confermato.':e.message||'Operazione non riuscita. I dati precedenti sono conservati.'}
+ function download(file){const url=URL.createObjectURL(file),a=el('a');a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+ function fileOf(data,name,extension){return new File([JSON.stringify(data)],name+extension,{type:'application/json'})}
+ function namePart(value){return String(value||'Istruttore').replace(/[^\p{L}\p{N}_-]+/gu,'_').slice(0,65)}
+ function summary(packet){return `${packet.instructor.name} · ${packet.range.from} - ${packet.range.to} · ${packet.lessonCount} lezioni · ${packet.studentCount} allievi · formato ${packet.version} · integrità verificata`}
+ async function mount(){
+  reset();const tag=epoch,host=document.getElementById('lessonTransferCommands'),user=bridge()?.user();if(!host||!user)return;
+  const action=(text,kind)=>{const b=el('button',text,'lt-button');b.type='button';b.onclick=()=>open(kind);host.append(b)};
+  if(core.canExport(user))action('TRASFERISCI LEZIONI IN SEGRETERIA','export');
+  if(core.canImport(user)){try{const {scope}=await bridge().authority();if(tag!==epoch)return;if(user.capabilities?.managePrivilegedUsers===true||scope.central||scope.sites?.length)action('IMPORTA LEZIONI ISTRUTTORE','import')}catch{}}
+  if(tag===epoch)host.hidden=!host.children.length;
+ }
+ function open(mode){
+  if(dialog?.isConnected){dialog.focus();return}
+  const user=bridge().user();if(!(mode==='export'?core.canExport(user):core.canImport(user)))return;
+  const tag=epoch,account=user.id,d=el('dialog',undefined,'lt-dialog'),body=el('div',undefined,'lt-body'),message=el('p','', 'lt-message'),progress=el('progress'),detail=el('div',undefined,'lt-detail'),actions=el('div',undefined,'lt-actions');
+  let busy=false,prepared=null,preview=null,lastSelection=null,applied=null,receiptFile=null;
+  dialog=d;d.setAttribute('aria-label',mode==='export'?'Trasferisci lezioni in Segreteria':'Importa lezioni istruttore');message.setAttribute('role','status');progress.hidden=true;progress.max=100;
+  const ensure=()=>{if(tag!==epoch||!d.isConnected||bridge().user()?.id!==account)throw Error('Sessione cambiata. Operazione interrotta.');const u=bridge().user();if(!(mode==='export'?core.canExport(u):core.canImport(u)))throw Error('Profilo non autorizzato.')};
+  const adapter={read:()=>bridge().read(),write:async(next,expected)=>{ensure();return bridge().write(next,expected,account)},estimate:()=>bridge().estimate()};
+  const run=fn=>core.gate(async()=>{if(busy)return;busy=true;progress.hidden=false;progress.removeAttribute('value');d.querySelectorAll('button,input,select').forEach(e=>e.disabled=true);try{ensure();await fn();ensure();progress.value=100}catch(e){if(d.isConnected)message.textContent=error(e)}finally{busy=false;if(d.isConnected){d.querySelectorAll('button,input,select').forEach(e=>e.disabled=false);updateButtons()}}});
+  const button=(text,fn,parent=actions,cls='')=>{const b=el('button',text,'lt-button '+cls);b.type='button';b.onclick=run(fn);parent.append(b);return b};
+  const close=el('button','CHIUDI','lt-button secondary');close.type='button';close.onclick=()=>{if(!busy){d.remove();dialog=null}};d.addEventListener('cancel',event=>{if(busy)event.preventDefault()});
+  body.append(el('h2',mode==='export'?'TRASFERISCI LEZIONI IN SEGRETERIA':'IMPORTA LEZIONI ISTRUTTORE'),el('p','File locale: nessun invio automatico al server. Condividi soltanto con la persona autorizzata.'),message,progress);
+  let createButton,shareButton,saveButton,manualButton,applyButton,receiptSave,receiptShare;
+  function updateButtons(){if(createButton)createButton.disabled=!lastSelection?.count;if(shareButton)shareButton.disabled=!prepared;if(saveButton)saveButton.disabled=!prepared;if(manualButton)manualButton.disabled=!prepared;if(applyButton)applyButton.disabled=!preview||!!applied;if(receiptSave)receiptSave.disabled=!receiptFile;if(receiptShare)receiptShare.disabled=!receiptFile}
+  function rows(operations){detail.replaceChildren();const list=el('ul');for(const op of operations.slice(0,150))list.append(el('li',op));detail.append(list);if(operations.length>150)detail.append(el('p','Mostrate le prime 150 voci. Il riepilogo comprende tutte le lezioni.'))}
+  async function acknowledge(receipt){const before=await adapter.read(),next=await core.acknowledge(before,receipt,bridge().user());ensure();if(next.accepted||next.reviewed)await adapter.write(next.students,before);message.textContent=`Confermate ${next.accepted} versioni; ${next.reviewed} da verificare. Le modifiche successive restano da trasferire.`}
+  if(mode==='export'){
+   const filters=el('div',undefined,'lt-filters'),label=el('label','Lezioni da includere'),select=el('select');
+   for(const [value,text]of [['pending','TUTTE LE LEZIONI NON ANCORA TRASFERITE'],['today','LEZIONI DI OGGI'],['yesterday','LEZIONI DI IERI'],['week','ULTIMI 7 GIORNI'],['range','INTERVALLO PERSONALIZZATO']]){const o=el('option',value==='pending'?'TUTTE LE NON TRASFERITE':text);o.value=value;o.dataset.description=text;select.append(o)}const filterDescription=el('p','TUTTE LE LEZIONI NON ANCORA TRASFERITE','lt-filter-description');label.append(select);filters.append(label,filterDescription);
+   const dates=el('div',undefined,'lt-date-range'),from=el('input'),to=el('input');from.type=to.type='date';const fromLabel=el('label','Dal'),toLabel=el('label','Al');fromLabel.append(from);toLabel.append(to);dates.append(fromLabel,toLabel);dates.hidden=true;filters.append(dates);
+   const advanced=el('details'),title=el('summary','OPZIONI AVANZATE'),include=el('input'),includeLabel=el('label','INCLUDI ANCHE LEZIONI GIÀ TRASFERITE','lt-checkbox');include.type='checkbox';includeLabel.prepend(include);advanced.append(title,includeLabel);filters.append(advanced);body.append(filters);
+   const refresh=run(async()=>{prepared=null;lastSelection=null;const students=await adapter.read();lastSelection=await core.select(students,bridge().user(),{mode:select.value,from:from.value,to:to.value,includeTransferred:include.checked});ensure();message.textContent=lastSelection.count?`${lastSelection.count} lezioni · ${lastSelection.studentCount} allievi · ${lastSelection.from} - ${lastSelection.to} · ${lastSelection.updates} aggiornamenti`:'NESSUNA LEZIONE DA TRASFERIRE';rows([...lastSelection.selected.map(e=>`${[e.student.lastName,e.student.firstName].filter(Boolean).join(' ')} · ${new Date(e.data.createdAt).toLocaleString('it-IT')} · ${e.state}`),...lastSelection.excluded.map(e=>`${e.name}: DA VERIFICARE - ${e.reason}`)])});
+   select.onchange=()=>{dates.hidden=select.value!=='range';filterDescription.textContent=select.selectedOptions[0].dataset.description;void refresh()};include.onchange=from.onchange=to.onchange=()=>void refresh();
+   createButton=button('CREA PACCHETTO',async()=>{message.textContent='Preparazione del pacchetto…';const before=await adapter.read(),created=await core.create(before,bridge().user(),{mode:select.value,from:from.value,to:to.value,includeTransferred:include.checked});ensure();const packet=created.packet,file=fileOf(packet,`Lezioni_${namePart(packet.instructor.name)}_${packet.range.from}_${packet.range.to}`,'.agenda-lezioni');const next=await core.recordCreated(before,packet);ensure();await adapter.write(next,before);prepared={packet,file};message.textContent=summary(packet)+` · ${file.size.toLocaleString('it-IT')} byte · ${created.choice.excluded.length} escluse. File pronto: nessuna lezione ancora confermata come trasferita.`});
+   shareButton=button('CONDIVIDI PACCHETTO',async()=>{if(!prepared)return;const result=await core.deliver(prepared.file,true,navigator,download);message.textContent=result==='cancelled'?'Condivisione annullata. File pronto conservato; stato invariato.':result==='downloaded'?'Condivisione non supportata: download dello stesso file avviato. Nessuna conferma automatica.':'Condivisione completata. Attendi la ricevuta o usa la conferma manuale.'});
+   saveButton=button('SCARICA / SALVA FILE',async()=>{if(prepared){await core.deliver(prepared.file,false,navigator,download);message.textContent='Download dello stesso pacchetto avviato. Nessuna conferma automatica.'}},actions,'secondary');
+   manualButton=button('HO CONSEGNATO IL FILE ALLA SEGRETERIA',async()=>{if(!prepared)return;if(!confirm('Questa conferma NON dimostra che la Segreteria abbia importato il file. Confermi la consegna delle sole versioni incluse nel pacchetto pronto?'))return;await acknowledge(await core.manualReceipt(prepared.packet))},actions,'secondary');
+   const receiptInput=el('input'),receiptLabel=el('label','APRI RICEVUTA DI IMPORTAZIONE');receiptInput.type='file';receiptInput.accept='.agenda-ricevuta,application/json';receiptLabel.append(receiptInput);body.append(receiptLabel);receiptInput.onchange=run(async()=>{if(receiptInput.files[0])await acknowledge(await core.parse(receiptInput.files[0],true));receiptInput.value=''});
+   body.append(detail,actions,close);d.append(body);document.body.append(d);d.showModal();void refresh();
+  }else{
+   const input=el('input'),label=el('label','SCEGLI PACCHETTO .agenda-lezioni');input.type='file';input.accept='.agenda-lezioni,application/json';label.append(input);body.append(label);
+   input.onchange=run(async()=>{preview=null;applied=null;receiptFile=null;if(!input.files[0])return;const packet=await core.parse(input.files[0]),authority=await bridge().authority();ensure();preview=await core.plan(await adapter.read(),packet,authority.user,authority.scope);message.textContent=summary(packet)+' · sedi: '+packet.students.map(s=>s.site.name||'Non indicata').filter((v,i,a)=>a.indexOf(v)===i).join(', ')+' · file non firmato: verifica il mittente.';rows(preview.operations.map(e=>`${packet.students.find(s=>s.id===e.studentId)?.lastName||'Allievo'} · ${e.action==='created'?'NUOVA':e.action==='updated'?'AGGIORNAMENTO':e.action==='unchanged'?'GIÀ PRESENTE':'DA VERIFICARE'}${e.reason?' - '+e.reason:''}`))});
+   applyButton=button('CONFERMA IMPORTAZIONE',async()=>{if(!preview||applied)return;if(!confirm('Importare soltanto le lezioni nuove o aggiornabili? I record DA VERIFICARE resteranno esclusi.'))return;applied=await core.apply(preview,adapter,()=>bridge().authority());ensure();receiptFile=fileOf(applied.receipt,`Ricevuta_${preview.packet.packetId}`,'.agenda-ricevuta');const c=applied.counts;message.textContent=`${c.created} nuove · ${c.updated} aggiornate · ${c.unchanged} già presenti · ${c.conflicts} conflitti · ${c.missing} allievi assenti · ${c.denied} non autorizzate · 0 errori. Ricevuta pronta.`});
+   receiptSave=button('SALVA / SCARICA RICEVUTA',async()=>{if(receiptFile)await core.deliver(receiptFile,false,navigator,download)},actions,'secondary');
+   receiptShare=button('CONDIVIDI RICEVUTA',async()=>{if(receiptFile){const result=await core.deliver(receiptFile,true,navigator,download);if(result==='cancelled')message.textContent+=' Condivisione ricevuta annullata; importazione già completata.'}},actions,'secondary');
+   body.append(detail,actions,close);d.append(body);document.body.append(d);d.showModal();updateButtons();
+  }
+ }
+ root.LessonSecretaryTransferUI={mount,reset};root.addEventListener('pagehide',reset);
+})(window);

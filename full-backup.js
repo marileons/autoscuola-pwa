@@ -102,7 +102,7 @@
       if(!Array.isArray(student.lessons)||!Array.isArray(student.checklist))throw new Error("Scheda allievo incompleta nel backup.");
       if(Object.hasOwn(student,"drivingLicense"))window.StudentLicense.normalize(student.drivingLicense,{strict:true});
       const lessonIds=new Set();
-      for(const lesson of student.lessons){if(!lesson||typeof lesson!=="object"||typeof lesson.id!=="string"||!lesson.id||lessonIds.has(lesson.id)||!Array.isArray(lesson.route)||!Array.isArray(lesson.checklist)||!Array.isArray(lesson.errors||[]))throw new Error("Guida duplicata o non valida nel backup.");lessonIds.add(lesson.id)}
+      for(const lesson of student.lessons){if(!lesson||typeof lesson!=="object"||typeof lesson.id!=="string"||!lesson.id||lessonIds.has(lesson.id)||!Array.isArray(lesson.route)||!Array.isArray(lesson.checklist)||!Array.isArray(lesson.errors||[]))throw new Error("Guida duplicata o non valida nel backup.");if(Object.hasOwn(lesson,"secretaryTransfer")){if(!window.LessonSecretaryTransfer)throw Error("Validazione trasferimenti non disponibile.");window.LessonSecretaryTransfer.metadata(lesson.secretaryTransfer)}lessonIds.add(lesson.id)}
       studentIds.add(student.id);
     }
     const examinerIds=new Set();
@@ -720,6 +720,7 @@
           for(const key of ["activityBaseline","activitySnapshot","lessonActivities"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key].map(item=>({id:String(item.id),label:String(item.label),status:String(item.status)}));
           for(const key of ["instructorId","instructorName","completedDraftSignature"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key];
           if(typeof lesson?.duration==="string"&&lesson.duration.trim())canonicalLesson.duration=lesson.duration.trim();
+          if(Object.hasOwn(lesson,"secretaryTransfer"))canonicalLesson.secretaryTransfer=window.LessonSecretaryTransfer.metadata(lesson.secretaryTransfer);
           return canonicalLesson;
         })
       };

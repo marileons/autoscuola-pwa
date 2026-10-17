@@ -44,7 +44,7 @@ export default {
       const session = await requireSession(request, env);
       if (session.response) return session.response;
       const role=effectiveRole(session.user);
-      const secretaryAssets=new Set(["/student-license.js","/student-license-store.js","/student-archive-store.js","/lesson-drafts.js","/lesson-activities.js","/student-report-print.js","/driving-errors.js","/student-multi-actions.js","/student-multi-import.js","/exams.js","/app.js","/documents.js","/r10-features.js","/ui-icons.svg"]);
+      const secretaryAssets=new Set(["/student-license.js","/student-license-store.js","/student-archive-store.js","/lesson-drafts.js","/lesson-activities.js","/lesson-secretary-transfer.js","/lesson-secretary-transfer-ui.js","/student-report-print.js","/driving-errors.js","/student-multi-actions.js","/student-multi-import.js","/exams.js","/app.js","/documents.js","/r10-features.js","/ui-icons.svg"]);
       if (session.purpose !== "NORMAL" || role === "USER_MANAGER" || (role === "SEGRETERIA" && !secretaryAssets.has(url.pathname))) return json({ error: "Risorsa non autorizzata." }, 403);
       return env.ASSETS.fetch(request);
     }
