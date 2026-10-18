@@ -156,3 +156,7 @@
 .sc-warm-agenda .sc-modern-header{border:0;box-shadow:0 3px 10px #2036400A}.sc-warm-agenda .sc-slot{box-shadow:none;background-image:none;border-radius:0}.sc-warm-agenda .sc-print-option{flex-direction:row;align-items:center;justify-content:flex-start;gap:9px}.sc-warm-agenda .sc-print-option input{width:20px;min-height:20px;margin:0}
 
 .shared-calendar.sc-warm-agenda .sc-modern-header button.sc-program-toggle{--sc-button-bg:#79537F;--sc-button-fg:#FFF}
+
+/* Shared exam label: no changes to event colours or participant data. */
+.shared-calendar .sc-exam-heading{display:block;flex:0 0 auto;margin:0 0 5px;font-family:Segoe UI,Arial,sans-serif;font-size:13px;font-weight:750;line-height:1.3;color:#17351C;text-transform:uppercase;white-space:normal;overflow-wrap:anywhere;max-width:100%}
+.shared-calendar .sc-compact-card.sc-exam{display:flex;flex-direction:column;justify-content:flex-start}
