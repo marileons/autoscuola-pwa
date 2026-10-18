@@ -18,7 +18,7 @@ export async function hydrateEvents(rows,all){
 }
 export async function saveEvent(b,c){
  const {q,all,batch,site,user,now,text,instant,strict,version,fail,conflict}=c;
- strict(b,["id","version","event_type","site_id","starts_at","ends_at","student_id","student_name","category","instructor_id","vehicle_id","instructors","vehicles","participants","exam_type","instructor_vehicles","meeting_point","examiner","note","status","deleted","operational_resources"]);
+ strict(b,["id","version","event_type","site_id","starts_at","ends_at","student_id","student_name","category","instructor_id","vehicle_id","instructors","vehicles","participants","exam_type","exam_purpose","instructor_vehicles","meeting_point","examiner","note","status","deleted","operational_resources"]);
  if(typeof b.note==="string"&&/[<>]/.test(b.note))fail(400,"Inserisci soltanto testo semplice nella nota organizzativa.");
  const type=b.event_type||"GUIDA";if(!["GUIDA","ESAME"].includes(type))fail(400,"Tipo evento non valido.");
  const exam=type==="ESAME",states=exam?["PROGRAMMATO","CONFERMATO","ANNULLATO","CONCLUSO","ASSENTE"]:["PROGRAMMATA","CONFERMATA","ANNULLATA","ASSENTE","SVOLTA"];
@@ -28,7 +28,7 @@ export async function saveEvent(b,c){
  if(examType!==null&&(!exam||!["AUTO","MOTO"].includes(examType)))fail(400,"Seleziona il tipo di esame.");
  if(!exam&&(b.instructor_vehicles!==undefined||b.exam_type!==undefined))fail(400,"I campi dell’esame non sono ammessi nelle guide.");
  if(exam&&!examType&&!b.id)fail(400,"Seleziona il tipo di esame.");
- const id=b.id?text(b.id):crypto.randomUUID(),start=instant(b.starts_at),end=instant(b.ends_at),sid=site(b.site_id),category=examType?examType.toLowerCase():text(b.category,40);
+ const id=b.id?text(b.id):crypto.randomUUID(),start=instant(b.starts_at),end=instant(b.ends_at),sid=site(b.site_id,type),category=examType?examType.toLowerCase():text(b.category,40);
  const motorcycle=!exam&&["moto","corso-moto","am","a1","a2","a"].includes(category.toLowerCase());
  if(!exam&&["instructors","vehicles","meeting_point","examiner",...(!motorcycle?["participants"]:[])].some(k=>k in b))fail(400,"Le guide AUTO prevedono un solo allievo; i campi multipli sono riservati a MOTO ed ESAME.");
  if(motorcycle&&b.participants&&["student_id","student_name","vehicle_id"].some(k=>k in b))fail(400,"Inserisci allievi e veicoli nelle singole righe partecipante.");
@@ -55,9 +55,12 @@ export async function saveEvent(b,c){
  for(const vehicle of assignedVehicles)if(!vehicles.includes(vehicle))vehicles.push(vehicle);
  if(!instructors.length)fail(400,"Seleziona almeno un istruttore.");if(vehicles.length>50||(exam&&!examType&&!vehicles.length))fail(400,"Seleziona i veicoli della seduta storica (massimo 50).");
  const old=b.id?await q("SELECT * FROM calendar_events WHERE id=?",id).first():null;
- if(b.id&&!old)fail(404,"Appuntamento non trovato.");if(old)site(old.site_id);
+ if(b.id&&!old)fail(404,"Appuntamento non trovato.");if(old)site(old.site_id,old.event_type);
  if(old&&old.event_type!==type)fail(400,"Il tipo di un evento esistente non può essere cambiato.");
  if(exam&&!examType&&!old)fail(400,"Seleziona il tipo di esame.");
+ const purpose=b.exam_purpose===undefined?(exam?(old?.exam_purpose??(old?null:"conseguimento")):null):b.exam_purpose;
+ if(purpose!==null&&(!exam||!["conseguimento","esame-revisione","esame-esperimento"].includes(purpose)))fail(400,"Seleziona un tipo di prova valido.");
+ if(!exam&&b.exam_purpose!==undefined)fail(400,"Il tipo di prova è riservato agli esami.");
  const previous=old?(await hydrateEvents([old],all))[0]:null;
  if(previous?.exam_type&&!examType)fail(400,"Seleziona il tipo di esame.");
  const codes=await all("SELECT id,code,active,version FROM calendar_motorcycle_codes WHERE id IN(SELECT value FROM json_each(?))",JSON.stringify(participants.map(p=>p.motorcycle_code_id).filter(Boolean)));
@@ -103,7 +106,7 @@ export async function saveEvent(b,c){
  }
  const compatibility=examType==="MOTO"?participants.filter(p=>p.depart_from_school&&!previous?.participants.some(x=>x.name===p.name&&x.vehicle_id===p.vehicle_id&&x.depart_from_school&&x.motorcycle_code_id===p.motorcycle_code_id)):[];
  const current="EXISTS(SELECT 1 FROM calendar_events WHERE id=? AND write_token=?)";
- const operations=[stmt,availabilityGuard(q,{id,starts_at:start,ends_at:end,instructors,vehicles:reservable,event_type:type,site_id:sid,cancelled:deleted||["ANNULLATA","ANNULLATO"].includes(b.status)})];
+ const operations=[stmt,q("UPDATE calendar_events SET exam_purpose=? WHERE id=? AND write_token=?",purpose,id,token),availabilityGuard(q,{id,starts_at:start,ends_at:end,instructors,vehicles:reservable,event_type:type,site_id:sid,cancelled:deleted||["ANNULLATA","ANNULLATO"].includes(b.status)})];
  if(compatibility.length)operations.push(q("INSERT OR REPLACE INTO calendar_motorcycle_write_guard(id,codes_ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM json_each(?) p WHERE NOT EXISTS(SELECT 1 FROM calendar_vehicles v WHERE v.id=json_extract(p.value,'$.vehicle_id') AND v.type='Moto' AND v.operational_code=json_extract(p.value,'$.motorcycle_code_snapshot'))) THEN 0 ELSE 1 END",JSON.stringify(compatibility)));
  // Recheck the catalog inside the same transaction. Existing snapshots are kept;
  // concurrent renames/deactivations reject new assignments, never silently change them.
@@ -125,7 +128,7 @@ export async function saveEvent(b,c){
  if(!deleted&&!['ANNULLATA','ANNULLATO'].includes(b.status))operations.push(operationalCapacityGuard(q,{site_id:sid,starts_at:start,ends_at:end}));
  const action=deleted?"DELETE":!old?"CREATE":(old.deleted?"RESTORE_":"UPDATE_")+b.status+(JSON.stringify(previous.instructors)!==JSON.stringify(t)?"_INSTRUCTOR":"")+(JSON.stringify(previous.vehicles)!==JSON.stringify(v)?"_VEHICLE":"");
  operations.push(q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) SELECT ?,'event',?,?,? WHERE "+current,user,id,action,now,id,token));
- operations.push(...coordinationStatements(c,{id,token,previous,next:{site_id:sid,starts_at:start,ends_at:end,event_type:type,exam_type:examType,category,participants,instructors:t,vehicles:v,operational_resources:operational,instructor_vehicles:pairSnapshots,meeting_point:exam?text(b.meeting_point,160,!!examType):"",examiner:text(b.examiner,120,true),note:text(b.note,200,true),status:b.status,deleted},version:old?old.version+1:1,series:c.series}));
+ operations.push(...coordinationStatements(c,{id,token,previous,next:{site_id:sid,starts_at:start,ends_at:end,event_type:type,exam_type:examType,exam_purpose:purpose,category,participants,instructors:t,vehicles:v,operational_resources:operational,instructor_vehicles:pairSnapshots,meeting_point:exam?text(b.meeting_point,160,!!examType):"",examiner:text(b.examiner,120,true),note:text(b.note,200,true),status:b.status,deleted},version:old?old.version+1:1,series:c.series}));
  c.onCapacity?.({id,site_id:sid,starts_at:start,ends_at:end,resources:operational});
  const result=await batch(operations,guard);if(!result[0].meta.changes)fail(409,conflict);
  return{id};
