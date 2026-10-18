@@ -2,7 +2,7 @@ import {operationalCode,operationalAvailability} from "./shared-calendar-operati
 import {centralIdentity,handleCentral,secretarySQL,vehicleLocationSQL,vehicleBoundarySQL,vehicleReservationSQL} from "./shared-calendar-central-secretary.js";
 // Calendar-only API. Loaded lazily by the Worker only with the explicit flag.
 import {hydrateEvents,saveEvent,calendarInstructorSQL} from "./shared-calendar-events.js";
-import {handleCoordination,refreshPrograms} from "./shared-calendar-coordination.js";
+import {handleCoordination,refreshPrograms,agendaUpdateSummary} from "./shared-calendar-coordination.js";
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status})};
 const text=(value,max=120,optional=false)=>{if(optional&&(value==null||value===""))return "";if(typeof value!=="string"||!value.trim()||value.length>max)fail(400,"Campo non valido.");return value.trim()};
@@ -71,11 +71,12 @@ export async function handleCalendar(request,env,session,role,primary){
     const cursor=Number(url.searchParams.get("cursor")||0);
     if(!Number.isSafeInteger(cursor)||cursor<0)fail(400,"Cursore non valido.");
     const since=url.searchParams.has("updated_since")?instant(url.searchParams.get("updated_since")):"";
+    const agendaUpdate=role==="ISTRUTTORE"?await agendaUpdateSummary({q,user,role,ids,now}):null;
     // A global monotonic sequence avoids timestamp ties; current rows are sent,
     // not obsolete versions. Last successful cursor advances only on commit.
     const rows=await all("SELECT e.*,(SELECT MAX(a.seq) FROM calendar_event_audit a WHERE a.entity_type='event' AND a.entity_id=e.id) AS change_seq FROM calendar_events e WHERE e.site_id IN ("+scope+") AND change_seq>? AND e.updated_at>=?"+(role==="ISTRUTTORE"?" AND EXISTS(SELECT 1 FROM calendar_event_instructors own WHERE own.event_id=e.id AND own.user_id=?)":"")+" ORDER BY change_seq,e.id LIMIT 200",...ids,cursor,since,...(role==="ISTRUTTORE"?[user]:[]));
     const visibleIds=(await all("SELECT id FROM calendar_events WHERE site_id IN ("+scope+") AND deleted=0"+(role==="ISTRUTTORE"?" AND EXISTS(SELECT 1 FROM calendar_event_instructors own WHERE own.event_id=calendar_events.id AND own.user_id=?)":""),...ids,...(role==="ISTRUTTORE"?[user]:[]))).map(e=>e.id);
-    return json({visibleIds,events:await hydrateEvents(rows,all),cursor:rows.length?rows.at(-1).change_seq:cursor,more:rows.length===200,sites,scope:ids});
+    return json({...(role==="ISTRUTTORE"?{agendaUpdate}:{}),visibleIds,events:await hydrateEvents(rows,all),cursor:rows.length?rows.at(-1).change_seq:cursor,more:rows.length===200,sites,scope:ids});
    }
    if(route==="vehicle-availability"){
     const sid=site(url.searchParams.get("site")),start=instant(url.searchParams.get("from")),end=instant(url.searchParams.get("to"));if(end<=start||Date.parse(end)-Date.parse(start)>86400000)fail(400,"Seleziona una fascia valida di massimo 24 ore.");
