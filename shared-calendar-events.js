@@ -14,11 +14,11 @@ export async function hydrateEvents(rows,all){
  const assignments=await all("SELECT * FROM calendar_participant_motorcycles WHERE event_id IN(SELECT value FROM json_each(?))",ids);
  const resources=await all("SELECT event_id,resource_key AS key,code_snapshot AS code,vehicle_id,vehicle_type AS type FROM calendar_event_operational_resources WHERE event_id IN(SELECT value FROM json_each(?))",ids);
  const catalog=await all("SELECT id,plate FROM calendar_vehicles");const display=(id,name)=>{name=String(name).trim().toUpperCase();const plate=catalog.find(v=>v.id===id)?.plate?.trim().toUpperCase();return plate&&!String(name).toUpperCase().includes(plate)?name+" — "+plate:name};
- return rows.map(e=>{const {write_token,...safe}=e;return{...safe,operational_resources:resources.filter(r=>r.event_id===e.id).map(({event_id,...r})=>r),...(details.find(x=>x.event_id===e.id)?{exam_type:details.find(x=>x.event_id===e.id).exam_type,instructor_vehicles:pairs.filter(x=>x.event_id===e.id).map(x=>({instructor_id:x.user_id,vehicle_id:x.vehicle_id,vehicle_name:display(x.vehicle_id,x.vehicle_name),transmission:x.transmission}))}:{}),instructors:data[0].filter(x=>x.event_id===e.id).map(x=>({id:x.user_id,name:x.name})),vehicles:data[1].filter(x=>x.event_id===e.id).map(x=>({id:x.vehicle_id,name:display(x.vehicle_id,x.name)})),participants:data[2].filter(x=>x.event_id===e.id).map(x=>{const m=assignments.find(m=>m.event_id===e.id&&m.participant_key===x.participant_key);return{id:x.student_id,name:x.name,...(x.surname!=null?{surname:x.surname,given_name:x.given_name||""}:{}),...(departures.find(d=>d.event_id===e.id&&d.participant_key===x.participant_key)?{depart_from_school:departures.find(d=>d.event_id===e.id&&d.participant_key===x.participant_key).depart_from_school===1}:{}),...(m?{motorcycle_code_id:m.code_id,motorcycle_code_snapshot:m.code_snapshot,vehicle_id:m.vehicle_id}:{})}})}});
+ return rows.map(e=>{const {write_token,...safe}=e;return{...safe,operational_resources:resources.filter(r=>r.event_id===e.id).map(({event_id,...r})=>r),...(details.find(x=>x.event_id===e.id)?{exam_type:details.find(x=>x.event_id===e.id).exam_type,...(details.find(x=>x.event_id===e.id).exam_type==="MOTO"?{exam_motorcycles:details.find(x=>x.event_id===e.id).session_motorcycles!=null?JSON.parse(details.find(x=>x.event_id===e.id).session_motorcycles):[...new Set(assignments.filter(m=>m.event_id===e.id&&m.vehicle_id&&departures.some(d=>d.event_id===e.id&&d.participant_key===m.participant_key&&d.depart_from_school===1)).map(m=>m.vehicle_id))]}:{}),instructor_vehicles:pairs.filter(x=>x.event_id===e.id).map(x=>({instructor_id:x.user_id,vehicle_id:x.vehicle_id,vehicle_name:display(x.vehicle_id,x.vehicle_name),transmission:x.transmission}))}:{}),instructors:data[0].filter(x=>x.event_id===e.id).map(x=>({id:x.user_id,name:x.name})),vehicles:data[1].filter(x=>x.event_id===e.id).map(x=>({id:x.vehicle_id,name:display(x.vehicle_id,x.name)})),participants:data[2].filter(x=>x.event_id===e.id).map(x=>{const m=assignments.find(m=>m.event_id===e.id&&m.participant_key===x.participant_key);return{participant_key:x.participant_key,id:x.student_id,name:x.name,...(x.surname!=null?{surname:x.surname,given_name:x.given_name||""}:{}),...(departures.find(d=>d.event_id===e.id&&d.participant_key===x.participant_key)?{depart_from_school:departures.find(d=>d.event_id===e.id&&d.participant_key===x.participant_key).depart_from_school===1}:{}),...(m?{motorcycle_code_id:m.code_id,motorcycle_code_snapshot:m.code_snapshot,vehicle_id:m.vehicle_id}:{})}})}});
 }
 export async function saveEvent(b,c){
  const {q,all,batch,site,user,now,text,instant,strict,version,fail,conflict}=c;
- strict(b,["id","version","event_type","site_id","starts_at","ends_at","student_id","student_name","category","instructor_id","vehicle_id","instructors","vehicles","participants","exam_type","exam_purpose","instructor_vehicles","meeting_point","examiner","note","status","deleted","operational_resources"]);
+ strict(b,["id","version","event_type","site_id","starts_at","ends_at","student_id","student_name","category","instructor_id","vehicle_id","instructors","vehicles","participants","exam_type","exam_purpose","exam_motorcycles","instructor_vehicles","meeting_point","examiner","note","status","deleted","operational_resources"]);
  if(typeof b.note==="string"&&/[<>]/.test(b.note))fail(400,"Inserisci soltanto testo semplice nella nota organizzativa.");
  const type=b.event_type||"GUIDA";if(!["GUIDA","ESAME"].includes(type))fail(400,"Tipo evento non valido.");
  const exam=type==="ESAME",states=exam?["PROGRAMMATO","CONFERMATO","ANNULLATO","CONCLUSO","ASSENTE"]:["PROGRAMMATA","CONFERMATA","ANNULLATA","ASSENTE","SVOLTA"];
@@ -34,6 +34,8 @@ export async function saveEvent(b,c){
  if(motorcycle&&b.participants&&["student_id","student_name","vehicle_id"].some(k=>k in b))fail(400,"Inserisci allievi e veicoli nelle singole righe partecipante.");
  if(end<=start||Date.parse(end)-Date.parse(start)>86400000)fail(400,"L'ora finale deve seguire l'inizio; durata massima 24 ore.");
  const ids=(items,label)=>{if(!Array.isArray(items)||items.length>50)fail(400,"Elenco "+label+" non valido.");const result=items.map(x=>text(x));if(new Set(result).size!==result.length)fail(400,"Risorse duplicate.");return result};
+ if(b.exam_motorcycles!==undefined&&(!exam||examType!=="MOTO"||!Array.isArray(b.exam_motorcycles)))fail(400,"Le moto della seduta sono riservate agli esami MOTO.");
+ const sessionBikes=b.exam_motorcycles===undefined?null:[...new Set(ids([...new Set(b.exam_motorcycles)],"moto della seduta"))];
  const instructors=ids(exam?b.instructors:[text(b.instructor_id)],"istruttori"),vehicles=ids(exam?b.vehicles:(b.vehicle_id?[text(b.vehicle_id)]:[]),"veicoli");
  const entries=exam||motorcycle&&b.participants?b.participants:[{id:b.student_id||null,name:b.student_name}];
  if(!Array.isArray(entries)||!entries.length||entries.length>100)fail(400,"Inserisci almeno un allievo convocato (massimo 100).");
@@ -47,7 +49,8 @@ export async function saveEvent(b,c){
  if(new Set(pairs.map(p=>p.instructor_id)).size!==pairs.length||new Set(pairs.map(p=>p.vehicle_id)).size!==pairs.length)fail(400,"Assegna una specifica auto diversa a ciascun istruttore.");
  if(!instructors.length)fail(400,"Seleziona almeno un istruttore.");
  if(examType==="AUTO"&&pairs.length!==instructors.length)fail(400,"Assegna un’auto d’esame a ciascun istruttore.");
- if(examType&&vehicles.some(id=>!pairs.some(p=>p.vehicle_id===id)&&!participants.some(p=>p.vehicle_id===id)))fail(400,"Associa ogni veicolo a un istruttore o a un allievo.");
+ if(examType&&examType!=="MOTO"&&vehicles.some(id=>!pairs.some(p=>p.vehicle_id===id)&&!participants.some(p=>p.vehicle_id===id)))fail(400,"Associa ogni veicolo a un istruttore o a un allievo.");
+ for(const id of sessionBikes||[])if(!vehicles.includes(id))vehicles.push(id);
  for(const pair of pairs)if(!vehicles.includes(pair.vehicle_id))vehicles.push(pair.vehicle_id);
  if(new Set(participants.map(p=>p.key)).size!==participants.length)fail(400,"Allievo duplicato nella seduta.");
  const assignedVehicles=participants.map(p=>p.vehicle_id).filter(Boolean);
@@ -62,6 +65,8 @@ export async function saveEvent(b,c){
  if(purpose!==null&&(!exam||!["conseguimento","esame-revisione","esame-esperimento"].includes(purpose)))fail(400,"Seleziona un tipo di prova valido.");
  if(!exam&&b.exam_purpose!==undefined)fail(400,"Il tipo di prova è riservato agli esami.");
  const previous=old?(await hydrateEvents([old],all))[0]:null;
+ const bookingBikes=sessionBikes??(examType==="MOTO"&&previous?.exam_motorcycles?previous.exam_motorcycles:null);
+ if(examType==="MOTO"&&bookingBikes)for(const id of bookingBikes)if(!vehicles.includes(id))vehicles.push(id);
  if(previous?.exam_type&&!examType)fail(400,"Seleziona il tipo di esame.");
  const codes=await all("SELECT id,code,active,version FROM calendar_motorcycle_codes WHERE id IN(SELECT value FROM json_each(?))",JSON.stringify(participants.map(p=>p.motorcycle_code_id).filter(Boolean)));
  for(const p of participants){
@@ -78,17 +83,19 @@ export async function saveEvent(b,c){
  if(teachers.length!==instructors.length||cars.length!==vehicles.length)fail(400,"Risorsa non disponibile.");
  const t=instructors.map(id=>({id,name:previous?.instructors.find(x=>x.id===id)?.name||teachers.find(x=>x.id===id).name}));
  if(examType){for(const pair of pairs)if(cars.find(v=>v.id===pair.vehicle_id)?.type!=="Auto")fail(400,"Seleziona un’auto d’esame per l’istruttore.");for(const p of participants)if(p.vehicle_id&&cars.find(v=>v.id===p.vehicle_id)?.type!=="Moto")fail(400,"Seleziona una moto per l’allievo.");}
+ if(examType==="MOTO")for(const id of bookingBikes||[])if(cars.find(v=>v.id===id)?.type!=="Moto")fail(400,"Seleziona una moto disponibile per la seduta.");
  const catalog=await all("SELECT id,name,plate,site_id FROM calendar_vehicles ORDER BY id");
  const vehicleName=v=>{const normalized=x=>String(x||"").trim().toUpperCase(),base=[normalized(v.name),normalized(v.plate)||"TARGA NON INSERITA"].join(" — "),same=catalog.filter(x=>normalized(x.name)===normalized(v.name)&&normalized(x.plate)===normalized(v.plate)&&x.site_id===v.site_id);return base+(same.length>1?" — veicolo "+(same.findIndex(x=>x.id===v.id)+1):"")};
  const pairSnapshots=pairs.map(p=>{const car=cars.find(v=>v.id===p.vehicle_id),prior=previous?.instructor_vehicles?.find(x=>x.instructor_id===p.instructor_id&&x.vehicle_id===p.vehicle_id);return{...p,vehicle_name:prior?.vehicle_name||vehicleName(car),transmission:prior?.transmission??car.transmission}});
  const v=vehicles.map(id=>({id,name:previous?.vehicles.find(x=>x.id===id)?.name||vehicleName(cars.find(x=>x.id===id)),category:examType?(pairs.some(p=>p.vehicle_id===id)?"auto":"moto"):category,type:examType?(pairs.some(p=>p.vehicle_id===id)?"Auto":"Moto"):null}));
- const reservable=examType==="MOTO"?vehicles.filter(id=>pairs.some(p=>p.vehicle_id===id)||participants.some(p=>p.vehicle_id===id&&p.depart_from_school)):vehicles;
+ const reservable=examType==="MOTO"?vehicles.filter(id=>pairs.some(p=>p.vehicle_id===id)||(bookingBikes?bookingBikes.includes(id):participants.some(p=>p.vehicle_id===id&&p.depart_from_school))):vehicles;
+ if(examType==="MOTO"&&vehicles.some(id=>!pairs.some(p=>p.vehicle_id===id)&&!(bookingBikes||[]).includes(id)&&!participants.some(p=>p.vehicle_id===id)))fail(400,"Seleziona le moto nella sezione della seduta.");
  const reservedV=v.filter(v=>reservable.includes(v.id)),reservedCars=cars.filter(v=>reservable.includes(v.id));
  // Participant snapshots remain untouched; operational requests do not turn mere exam codes into bookings.
  if(b.operational_resources!==undefined&&!Array.isArray(b.operational_resources))fail(400,"Richieste mezzi non valide.");
  const requests=examType==="MOTO"?(b.operational_resources||[]).filter(r=>r.vehicle_id&&reservable.includes(r.vehicle_id)).filter((r,i,a)=>a.findIndex(x=>x.vehicle_id===r.vehicle_id)===i):b.operational_resources;
  const operational=operationalResources({requests,cars:reservedCars,previous,strict,fail,participants,guideVehicle:b.vehicle_id});
- if(examType==="MOTO")for(const p of participants.filter(p=>p.depart_from_school)){
+ if(examType==="MOTO"&&!bookingBikes)for(const p of participants.filter(p=>p.depart_from_school)){
   const car=reservedCars.find(v=>v.id===p.vehicle_id),prior=previous?.participants.find(x=>x.name===p.name&&x.vehicle_id===p.vehicle_id&&x.depart_from_school&&x.motorcycle_code_id===p.motorcycle_code_id);
   if(!prior&&car?.operational_code!==p.motorcycle_code_snapshot)fail(400,"La moto selezionata non è compatibile con la sigla richiesta per "+p.name+".");
  }
@@ -104,7 +111,7 @@ export async function saveEvent(b,c){
   const overlap=await all("SELECT x.vehicle_id FROM calendar_event_vehicles x JOIN calendar_events e ON e.id=x.event_id WHERE "+vehicleReservationSQL()+" AND e.id<>? AND e.deleted=0 AND e.status NOT IN('ANNULLATA','ANNULLATO') AND ?<e.ends_at AND ?>e.starts_at AND x.vehicle_id IN(SELECT value FROM json_each(?))",id,start,end,JSON.stringify(reservable));
   if(overlap.length)fail(409,overlap.some(x=>participants.some(p=>p.vehicle_id===x.vehicle_id))?"La moto selezionata è già impegnata nello stesso orario.":"L’auto selezionata è già impegnata nello stesso orario.");
  }
- const compatibility=examType==="MOTO"?participants.filter(p=>p.depart_from_school&&!previous?.participants.some(x=>x.name===p.name&&x.vehicle_id===p.vehicle_id&&x.depart_from_school&&x.motorcycle_code_id===p.motorcycle_code_id)):[];
+ const compatibility=examType==="MOTO"&&!bookingBikes?participants.filter(p=>p.depart_from_school&&!previous?.participants.some(x=>x.name===p.name&&x.vehicle_id===p.vehicle_id&&x.depart_from_school&&x.motorcycle_code_id===p.motorcycle_code_id)):[];
  const current="EXISTS(SELECT 1 FROM calendar_events WHERE id=? AND write_token=?)";
  const operations=[stmt,q("UPDATE calendar_events SET exam_purpose=? WHERE id=? AND write_token=?",purpose,id,token),availabilityGuard(q,{id,starts_at:start,ends_at:end,instructors,vehicles:reservable,event_type:type,site_id:sid,cancelled:deleted||["ANNULLATA","ANNULLATO"].includes(b.status)})];
  if(compatibility.length)operations.push(q("INSERT OR REPLACE INTO calendar_motorcycle_write_guard(id,codes_ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM json_each(?) p WHERE NOT EXISTS(SELECT 1 FROM calendar_vehicles v WHERE v.id=json_extract(p.value,'$.vehicle_id') AND v.type='Moto' AND v.operational_code=json_extract(p.value,'$.motorcycle_code_snapshot'))) THEN 0 ELSE 1 END",JSON.stringify(compatibility)));
@@ -119,7 +126,7 @@ export async function saveEvent(b,c){
  operations.push(q("INSERT INTO calendar_event_participants(event_id,participant_key,student_id,name,position,surname,given_name) SELECT ?,json_extract(value,'$.key'),json_extract(value,'$.id'),json_extract(value,'$.name'),CAST(key AS INTEGER),json_extract(value,'$.surname'),json_extract(value,'$.given_name') FROM json_each(?) WHERE "+current,id,JSON.stringify(participants),id,token));
  operations.push(q("INSERT INTO calendar_participant_motorcycles(event_id,participant_key,code_id,code_snapshot,vehicle_id) SELECT ?,json_extract(value,'$.key'),json_extract(value,'$.motorcycle_code_id'),json_extract(value,'$.motorcycle_code_snapshot'),json_extract(value,'$.vehicle_id') FROM json_each(?) WHERE (json_extract(value,'$.motorcycle_code_id') IS NOT NULL OR json_extract(value,'$.vehicle_id') IS NOT NULL) AND "+current,id,JSON.stringify(participants),id,token));
  if(examType){
-  operations.push(q("INSERT INTO calendar_exam_details(event_id,exam_type) SELECT ?,? WHERE "+current,id,examType,id,token));
+  operations.push(q("INSERT INTO calendar_exam_details(event_id,exam_type,session_motorcycles) SELECT ?,?,? WHERE "+current,id,examType,bookingBikes?JSON.stringify(bookingBikes):null,id,token));
   operations.push(q("INSERT INTO calendar_exam_instructor_vehicles(event_id,user_id,vehicle_id,vehicle_name,transmission) SELECT ?,json_extract(value,'$.instructor_id'),json_extract(value,'$.vehicle_id'),json_extract(value,'$.vehicle_name'),json_extract(value,'$.transmission') FROM json_each(?) WHERE "+current,id,JSON.stringify(pairSnapshots),id,token));
   if(examType==="MOTO")operations.push(q("INSERT INTO calendar_exam_participant_departures(event_id,participant_key,depart_from_school) SELECT ?,json_extract(value,'$.key'),json_extract(value,'$.depart_from_school') FROM json_each(?) WHERE "+current,id,JSON.stringify(participants),id,token));
  }
@@ -128,7 +135,7 @@ export async function saveEvent(b,c){
  if(!deleted&&!['ANNULLATA','ANNULLATO'].includes(b.status))operations.push(operationalCapacityGuard(q,{site_id:sid,starts_at:start,ends_at:end}));
  const action=deleted?"DELETE":!old?"CREATE":(old.deleted?"RESTORE_":"UPDATE_")+b.status+(JSON.stringify(previous.instructors)!==JSON.stringify(t)?"_INSTRUCTOR":"")+(JSON.stringify(previous.vehicles)!==JSON.stringify(v)?"_VEHICLE":"");
  operations.push(q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) SELECT ?,'event',?,?,? WHERE "+current,user,id,action,now,id,token));
- operations.push(...coordinationStatements(c,{id,token,previous,next:{site_id:sid,starts_at:start,ends_at:end,event_type:type,exam_type:examType,exam_purpose:purpose,category,participants,instructors:t,vehicles:v,operational_resources:operational,instructor_vehicles:pairSnapshots,meeting_point:exam?text(b.meeting_point,160,!!examType):"",examiner:text(b.examiner,120,true),note:text(b.note,200,true),status:b.status,deleted},version:old?old.version+1:1,series:c.series}));
+ operations.push(...coordinationStatements(c,{id,token,previous,next:{site_id:sid,starts_at:start,ends_at:end,event_type:type,exam_type:examType,exam_motorcycles:bookingBikes,exam_purpose:purpose,category,participants,instructors:t,vehicles:v,operational_resources:operational,instructor_vehicles:pairSnapshots,meeting_point:exam?text(b.meeting_point,160,!!examType):"",examiner:text(b.examiner,120,true),note:text(b.note,200,true),status:b.status,deleted},version:old?old.version+1:1,series:c.series}));
  c.onCapacity?.({id,site_id:sid,starts_at:start,ends_at:end,resources:operational});
  const result=await batch(operations,guard);if(!result[0].meta.changes)fail(409,conflict);
  return{id};

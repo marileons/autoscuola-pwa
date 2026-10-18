@@ -165,3 +165,8 @@
 .shared-calendar .sc-admin-day>h2,.shared-calendar .sc-admin-day>p{grid-column:1/-1}
 .shared-calendar .sc-personal-site{font-size:12px;font-weight:400;color:#40534B;margin:8px 0 0}.shared-calendar .sc-personal-kind{display:block;margin:0 0 5px;font-size:13px}
 .sc-warm-agenda .sc-view-segments{flex-wrap:wrap}.sc-warm-agenda .sc-view-segments button{white-space:normal}
+
+/* Local report editor: no impact on calendar event colours. */
+.shared-calendar.sc-exam-report .sc-report-rows fieldset{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}.shared-calendar.sc-exam-report label{min-width:0}.shared-calendar.sc-exam-report input,.shared-calendar.sc-exam-report select,.shared-calendar.sc-exam-report textarea{min-height:48px;max-width:100%;width:100%;font-size:16px;box-sizing:border-box}.shared-calendar.sc-exam-report textarea{min-height:120px}.shared-calendar.sc-exam-report button{min-height:48px;white-space:normal}@media(max-width:600px){.shared-calendar.sc-exam-report .sc-report-rows fieldset{grid-template-columns:1fr}}
+
+.shared-calendar.sc-exam-report .sc-report-feedback{color:#14633e}.shared-calendar.sc-exam-report .sc-report-error{color:#a61b1b}

@@ -266,7 +266,7 @@
     const appData={studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),studentTrash:await storedTrashWithDrivingLicenses(),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[]),exams:examData.exams,examLocations:examData.locations};
     validateAppData(appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
-    return{version:1,appData,examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId)};
+    return{version:1,appData,examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId),examReports:window.SharedCalendarExamReport.createStore(localStorage).snapshot(accountId)};
   }
   async function restoreSafetySnapshot(snapshot){
     if(!snapshot||snapshot.version!==1)throw new Error("Copia di sicurezza locale non valida.");
@@ -276,6 +276,7 @@
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     if(snapshot.examinerRoutes)window.ExaminerRoutesUI.restore(accountId,{...snapshot.examinerRoutes,accountId});
     window.DrivingErrors.createCatalogStore(localStorage).restore(accountId,snapshot.drivingErrorCatalog||window.DrivingErrors.defaultCatalog());
+    if(snapshot.examReports)window.SharedCalendarExamReport.createStore(localStorage).restore(accountId,snapshot.examReports);
   }
 
   function arrayBufferToBase64(buffer){
@@ -489,6 +490,7 @@
       appData,
       examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,
       drivingErrorCatalog:window.DrivingErrors?.createCatalogStore?.(localStorage).snapshot(accountId)||null,
+      examReports:window.SharedCalendarExamReport.createStore(localStorage).snapshot(accountId),
       documents:[]
     };
     Object.defineProperty(payload,"documentKeys",{value:documentKeys});
@@ -502,6 +504,7 @@
     validateAppData(payload.appData);
     if(payload.formatVersion>=3&&(!payload.examinerRoutes||typeof payload.examinerRoutes!=="object"))throw new Error("Archivio percorsi esaminatori non valido.");
     if(payload.formatVersion>=4)window.DrivingErrors.normalizeCatalog(payload.drivingErrorCatalog,{strict:true});
+    if(payload.examReports!==undefined)window.SharedCalendarExamReport.normalize(payload.examReports);
     if(!Array.isArray(payload.documents))throw new Error("Sezione documenti non valida.");
     if(!payload.metadata||payload.metadata.students!==payload.appData.students.length||payload.metadata.documents!==payload.documents.length)throw new Error("Conteggi del backup non coerenti con il contenuto.");
     const restoredDocuments=[];
@@ -522,6 +525,7 @@
     validateAppData(payload.appData);
     if(payload.formatVersion>=3&&(!payload.examinerRoutes||typeof payload.examinerRoutes!=="object"))throw new Error("Archivio percorsi esaminatori non valido.");
     if(payload.formatVersion>=4)window.DrivingErrors.normalizeCatalog(payload.drivingErrorCatalog,{strict:true});
+    if(payload.examReports!==undefined)window.SharedCalendarExamReport.normalize(payload.examReports);
     if(!payload.metadata||payload.metadata.students!==payload.appData.students.length||!Number.isInteger(payload.metadata.documents)||payload.metadata.documents<0)throw new Error("Conteggi del backup non coerenti con il contenuto.");
   }
 
@@ -759,6 +763,7 @@
       studentSitesSha256:Object.hasOwn(validated.payload.appData,"studentSites")?await textSha256(JSON.stringify(window.StudentArchiveStore.normalizeSites(validated.payload.appData.studentSites))):null,
       examinerRoutesSha256:examinerRoutes?await textSha256(JSON.stringify(examinerRoutes)):null,
       drivingErrorCatalogSha256:await textSha256(JSON.stringify(drivingErrorCatalog)),
+      examReportsSha256:validated.payload.examReports?await textSha256(JSON.stringify(window.SharedCalendarExamReport.normalize(validated.payload.examReports))):null,
       documents:validated.documentManifest.map(documentRecord=>({...documentRecord}))
     };
   }
@@ -781,6 +786,7 @@
     if(manifest.studentSitesSha256&&await textSha256(JSON.stringify(appData.studentSites))!==manifest.studentSitesSha256)throw new Error("Verifica post-riavvio del catalogo sedi fallita.");
     if(manifest.examinerRoutesSha256){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),examinerRoutes=window.ExaminerRoutesUI.snapshot(currentAccount);if(await textSha256(JSON.stringify(examinerRoutes))!==manifest.examinerRoutesSha256)throw new Error("Verifica post-riavvio dei percorsi esaminatori fallita.")}
     if(manifest.drivingErrorCatalogSha256){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),catalog=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(await textSha256(JSON.stringify(catalog))!==manifest.drivingErrorCatalogSha256)throw new Error("Verifica post-riavvio delle classificazioni errori fallita.")}
+    if(manifest.examReportsSha256){const account=String(window.AgendaAuth?.currentUser?.()?.id||""),value=window.SharedCalendarExamReport.createStore(localStorage).snapshot(account);if(await textSha256(JSON.stringify(value))!==manifest.examReportsSha256)throw Error("Verifica dei verbali locali fallita.");}
     const documentKeys=await readDocumentKeys();
     if(documentKeys.length!==manifest.documents.length)throw new Error(`Verifica post-riavvio documenti fallita: attesi ${manifest.documents.length}, trovati ${documentKeys.length}.`);
     for(const expected of manifest.documents){
@@ -800,6 +806,7 @@
     if(Object.hasOwn(validated.payload.appData,"studentSites")&&JSON.stringify(await window.AgendaStudentArchiveStore.snapshotSites())!==JSON.stringify(window.StudentArchiveStore.normalizeSites(validated.payload.appData.studentSites)))throw new Error("Verifica del catalogo sedi non riuscita.");
     if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}
     if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected=window.DrivingErrors.normalizeCatalog(validated.payload.drivingErrorCatalog,{strict:true}),actual=window.DrivingErrors.createCatalogStore(localStorage).snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica delle classificazioni errori non riuscita.")}
+    if(validated.payload.examReports){const account=String(window.AgendaAuth?.currentUser?.()?.id||""),value=window.SharedCalendarExamReport.createStore(localStorage).snapshot(account);if(JSON.stringify(value)!==JSON.stringify(window.SharedCalendarExamReport.normalize(validated.payload.examReports)))throw Error("Verifica dei verbali locali fallita.");}
     const documentKeys=await readDocumentKeys();
     if(documentKeys.length!==validated.documentManifest.length)throw new Error("Verifica dei documenti non riuscita.");
     for(const expected of validated.documentManifest){
@@ -818,6 +825,7 @@
       await writeAppData(validated.payload.appData);
       if(validated.payload.formatVersion>=3){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.ExaminerRoutesUI.restore(currentAccount,{...validated.payload.examinerRoutes,accountId:currentAccount})}
       if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.DrivingErrors.createCatalogStore(localStorage).restore(currentAccount,validated.payload.drivingErrorCatalog)}
+      if(validated.payload.examReports){const account=String(window.AgendaAuth?.currentUser?.()?.id||""),value=window.SharedCalendarExamReport.normalize(validated.payload.examReports);window.SharedCalendarExamReport.createStore(localStorage).restore(account,value);}
       await verifyRestoredData(validated);
       const manifest=await createRestoreManifest(validated);
       localStorage.setItem(PENDING_RESTORE_KEY,JSON.stringify(manifest));
