@@ -170,3 +170,20 @@
 .shared-calendar.sc-exam-report .sc-report-rows fieldset{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}.shared-calendar.sc-exam-report label{min-width:0}.shared-calendar.sc-exam-report input,.shared-calendar.sc-exam-report select,.shared-calendar.sc-exam-report textarea{min-height:48px;max-width:100%;width:100%;font-size:16px;box-sizing:border-box}.shared-calendar.sc-exam-report textarea{min-height:120px}.shared-calendar.sc-exam-report button{min-height:48px;white-space:normal}@media(max-width:600px){.shared-calendar.sc-exam-report .sc-report-rows fieldset{grid-template-columns:1fr}}
 
 .shared-calendar.sc-exam-report .sc-report-feedback{color:#14633e}.shared-calendar.sc-exam-report .sc-report-error{color:#a61b1b}
+
+/* Compact controls limited to report forms and local catalog editors. */
+.shared-calendar.sc-exam-report button{min-height:44px;padding:8px 12px;max-width:100%;min-width:0;width:auto!important;margin:0!important;white-space:normal;overflow-wrap:anywhere;flex:0 1 auto;align-self:start;justify-self:start}
+.shared-calendar.sc-exam-report .sc-report-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.shared-calendar.sc-exam-report .sc-report-action-groups{display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px;margin-top:20px}
+.shared-calendar.sc-exam-report .sc-report-close{justify-content:flex-end;margin-bottom:12px}
+.shared-calendar.sc-exam-report .sc-report-catalogs{margin:20px 0;min-width:0}
+.shared-calendar.sc-exam-report .sc-report-catalogs summary{cursor:pointer;padding:10px 0;font-weight:600}
+.shared-calendar.sc-exam-report .sc-report-catalogs section{min-width:0;margin:18px 0;padding:12px;border:1px solid #CDD6D5;border-radius:10px}
+.shared-calendar.sc-exam-report .sc-report-catalog-items{display:grid;gap:12px;margin-top:12px}
+.shared-calendar.sc-exam-report .sc-report-catalog-item{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.shared-calendar.sc-exam-report .sc-report-catalog-item span{min-width:0;overflow-wrap:anywhere}
+.shared-calendar.sc-exam-report .sc-report-catalog-item button{flex-shrink:0}
+.shared-calendar.sc-exam-report .sc-report-catalog-editor{display:grid;gap:12px;background:#F7F3EC}
+.shared-calendar.sc-exam-report .sc-report-discard{padding:12px;margin-top:18px;border:1px solid #D89B36;border-radius:10px;background:#FFF4D6;color:#243038}
+.shared-calendar.sc-exam-report .sc-report-discard[hidden]{display:none}
+@media(max-width:600px){.shared-calendar.sc-exam-report .sc-report-action-groups{gap:18px}.shared-calendar.sc-exam-report .sc-report-catalogs section{padding:10px}}
