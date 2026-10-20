@@ -259,7 +259,7 @@
   function close(){state.reminderDismiss?.();if(programPanel){programPanel.close();programPanel.remove();programPanel=null}updateNotice.dismiss();state.active=false;clock.stop();for(const c of state.requests)c.abort();dialog.close()}
   dialog.addEventListener("cancel",e=>{e.preventDefault();close()});
   state.buttons=[];const home=document.querySelector(user.role==="SEGRETERIA"?"#secretaryHome":"#otherFunctions .other-functions-grid");if(home){
-   const decorate=(b,icon)=>{b.className=user.role==="SEGRETERIA"?"full":"home-pro-action full sc-home-entry";if(user.role!=="SEGRETERIA"){const span=el("span",null,"ui-icon");span.setAttribute("aria-hidden","true");span.innerHTML='<svg><use href="ui-icons.svg#'+icon+'"/></svg>';b.prepend(span)}b.dataset.sharedCalendar="";home.append(b);state.buttons.push(b)};
+   const decorate=(b,icon)=>{const label=el("span",b.textContent,"home-pro-label"),span=el("span",null,"ui-icon");b.className="home-pro-action full sc-home-entry";span.setAttribute("aria-hidden","true");span.innerHTML='<svg><use href="ui-icons.svg#'+icon+'"/></svg>';b.replaceChildren(span,label);b.dataset.sharedCalendar="";home.append(b);state.buttons.push(b)};
    decorate(button("AGENDA CONDIVISA",open),"schedule-pro");if(["ADMIN","SEGRETERIA"].includes(user.role)){const message=el("p"),report=button("PREPARA VERBALE",()=>prepareReportLibrary(report,message));decorate(report,"documents-pro");message.setAttribute("role","status");home.append(message);state.buttons.push(message)}
   }
   function officeHeading(cfg){if(user.role!=="SEGRETERIA")return;const title=document.querySelector("#secretaryHome .dashboard-intro p");if(title)title.textContent=(cfg?.officeLabel||"Segreteria")+(cfg?.central?" · SEGRETERIA CENTRALE":"");}

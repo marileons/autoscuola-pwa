@@ -62,13 +62,21 @@
   <button id="secretaryOtherFunctions" type="button" class="other-functions-entry full">ALTRE FUNZIONI</button>
   <button type="button" data-secretary-command="logoutHome" class="home-pro-action logout-action full secretary-session-command"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#logout-pro"/></svg></span>ESCI</button>
 </section>
-<section id="secretaryMenu" class="view">
-  <button id="secretaryMenuHome" type="button" class="home-command full secretary-session-command"><span class="ui-icon" aria-hidden="true">←</span>HOME</button>
-  <a class="home-pro-action link-button full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer">TURNI OPERATIVI ESAMINATORI</a>
-  <div class="card"><h2>SEGRETERIA</h2><p>Archivio esclusivamente locale. Importa le schede condivise dall’istruttore: nessuna sincronizzazione automatica.</p>
-  <button id="secretaryStudents" class="full">CERCA / VISUALIZZA ALLIEVI</button>
-  <button data-secretary-command="importStudent" class="full">IMPORTA ALLIEVO</button><button data-secretary-command="importStudents" class="full">IMPORTA PIÙ ALLIEVI</button>
-  <button data-secretary-command="shareStudents" class="full">CONDIVIDI PIÙ ALLIEVI</button><button data-secretary-command="archiveStudents" class="full">ARCHIVIA PIÙ ALLIEVI</button><button data-secretary-command="openArchive" class="full">ALLIEVI ARCHIVIATI</button><button data-secretary-command="deleteStudents" class="full">CESTINA PIÙ ALLIEVI</button><button data-secretary-command="openStudentTrash" class="full">CESTINO</button><button data-secretary-command="openDocuments" class="full">DOCUMENTI VARI</button></div>
+<section id="secretaryMenu" class="view other-functions-view">
+  <div class="card"><h2>Altre funzioni</h2><p>Archivio esclusivamente locale. Importa le schede condivise dall’istruttore: nessuna sincronizzazione automatica.</p>
+  <div class="other-functions-grid">
+  <button id="secretaryMenuHome" type="button" class="home-pro-action full"><span class="ui-icon" aria-hidden="true">←</span><span class="home-pro-label">HOME</span></button>
+  <a class="home-pro-action full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#schedule-pro"/></svg></span><span class="home-pro-label">TURNI OPERATIVI ESAMINATORI</span></a>
+  <button id="secretaryStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#archive-pro"/></svg></span><span class="home-pro-label">CERCA / VISUALIZZA ALLIEVI</span></button>
+  <button data-secretary-command="importStudent" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#import-pro"/></svg></span><span class="home-pro-label">IMPORTA ALLIEVO</span></button>
+  <button data-secretary-command="importStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#import-pro"/></svg></span><span class="home-pro-label">IMPORTA PIÙ ALLIEVI</span></button>
+  <button data-secretary-command="shareStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#share-pro"/></svg></span><span class="home-pro-label">CONDIVIDI PIÙ ALLIEVI</span></button>
+  <button data-secretary-command="archiveStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#archive-pro"/></svg></span><span class="home-pro-label">ARCHIVIA PIÙ ALLIEVI</span></button>
+  <button data-secretary-command="openArchive" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#archive-pro"/></svg></span><span class="home-pro-label">ALLIEVI ARCHIVIATI</span></button>
+  <button data-secretary-command="deleteStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#delete-pro"/></svg></span><span class="home-pro-label">CESTINA PIÙ ALLIEVI</span></button>
+  <button data-secretary-command="openStudentTrash" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#delete-pro"/></svg></span><span class="home-pro-label">CESTINO</span></button>
+  <button data-secretary-command="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#documents-pro"/></svg></span><span class="home-pro-label">DOCUMENTI VARI</span></button>
+  </div></div>
 </section>
 <section id="categoryHub" class="view category-hub">
   <button id="categoryHome" type="button" class="home-command full">← HOME</button>
@@ -86,21 +94,21 @@
 </section>
 
 <section id="otherFunctions" class="view other-functions-view">
-  <button id="otherFunctionsHome" type="button" class="home-command full">← HOME</button>
   <div class="card"><h2>Altre funzioni</h2><div class="other-functions-grid">
-  <button id="openGeneralStudentManagement" class="home-pro-action full">GESTIONE GENERALE ALLIEVI</button>
-  <button id="openArchive" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#archive-pro"/></svg></span> ALLIEVI ARCHIVIATI</button>
-  <button id="openExaminers" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#examiner-pro"/></svg></span> ESAMINATORI</button>
-  <a class="home-pro-action link-button full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#schedule-pro"/></svg></span> TURNI OPERATIVI ESAMINATORI</a>
-  <button id="openExams" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#license-test-pro"/></svg></span> ESAMI</button>
-  <a class="home-pro-action link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#road-link-pro"/></svg></span> LINK AL CODICE DELLA STRADA</a>
-  <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#checklist-pro"/></svg></span> PERCORSO DIDATTICO</button>
-  <button id="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#documents-pro"/></svg></span> DOCUMENTI VARI</button>
-  <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#settings-pro"/></svg></span> IMPOSTAZIONI</button>
-  <button id="openRegister" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#schedule-pro"/></svg></span> REGISTRO ORE E COMPENSI</button>
+  <button id="otherFunctionsHome" type="button" class="home-pro-action full"><span class="ui-icon" aria-hidden="true">←</span><span class="home-pro-label">HOME</span></button>
+  <button id="openGeneralStudentManagement" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#archive-pro"/></svg></span><span class="home-pro-label">GESTIONE GENERALE ALLIEVI</span></button>
+  <button id="openArchive" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#archive-pro"/></svg></span><span class="home-pro-label">ALLIEVI ARCHIVIATI</span></button>
+  <button id="openExaminers" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#examiner-pro"/></svg></span><span class="home-pro-label">ESAMINATORI</span></button>
+  <a class="home-pro-action link-button full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#schedule-pro"/></svg></span><span class="home-pro-label">TURNI OPERATIVI ESAMINATORI</span></a>
+  <button id="openExams" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#license-test-pro"/></svg></span><span class="home-pro-label">ESAMI</span></button>
+  <a class="home-pro-action link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#road-link-pro"/></svg></span><span class="home-pro-label">LINK AL CODICE DELLA STRADA</span></a>
+  <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#checklist-pro"/></svg></span><span class="home-pro-label">PERCORSO DIDATTICO</span></button>
+  <button id="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#documents-pro"/></svg></span><span class="home-pro-label">DOCUMENTI VARI</span></button>
+  <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#settings-pro"/></svg></span><span class="home-pro-label">IMPOSTAZIONI</span></button>
+  <button id="openRegister" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#schedule-pro"/></svg></span><span class="home-pro-label">REGISTRO ORE E COMPENSI</span></button>
+  <button id="openUserManagement" class="user-management-entry home-pro-action full hidden"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#settings-pro"/></svg></span><span class="home-pro-label">AREA RISERVATA</span></button>
   </div></div>
-  <button id="openUserManagement" class="user-management-entry home-pro-action full hidden"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#settings-pro"/></svg></span>AREA RISERVATA</button>
-  <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#logout-pro"/></svg></span> ESCI</button>
+  <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#logout-pro"/></svg></span><span class="home-pro-label">ESCI</span></button>
 </section>
 <section id="generalStudentManagement" class="view"><div class="other-functions-subnav"><button type="button" id="generalStudentsHome">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div><div class="card"><h2>Gestione generale allievi</h2><div class="other-functions-grid">
   <button id="archiveStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#archive-pro"/></svg></span> ARCHIVIA PIÙ ALLIEVI</button>

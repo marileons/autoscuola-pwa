@@ -398,18 +398,18 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 
 .lt-body label.lt-checkbox{display:flex;align-items:center;gap:10px;line-height:1.5}.lt-body label.lt-checkbox input{flex:0 0 24px;margin:0}.lt-filter-description{font-size:14px;line-height:1.5;color:#c6d8e2}
 
-/* Only home-owned captions and the relocated operational menu commands. */
-body:has(:is(#home,#secretaryHome,#userManagement).active) #appShell > .ownership{background:transparent;font-size:12px;}
-#otherFunctions .sc-home-entry,#otherFunctions #openUserManagement{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;min-height:54px;margin:0;padding:8px 12px;border-radius:15px;font-size:inherit;font-weight:850;letter-spacing:normal;text-align:left;}
-#otherFunctions .sc-home-entry{background:linear-gradient(135deg,var(--app-petrol),var(--app-aqua))!important;color:#fff!important;border:1px solid #43898c!important;}
-#otherFunctions .sc-home-entry .ui-icon,#otherFunctions #openUserManagement .ui-icon{width:32px;height:32px;flex:0 0 32px;}
-#otherFunctions .sc-home-entry svg,#otherFunctions #openUserManagement svg{width:28px;height:28px;}
-#otherFunctions #openUserManagement{margin-top:12px;}
-#otherFunctions :is(.sc-home-entry,#openUserManagement):focus-visible{outline:3px solid #FFE082;outline-offset:3px;}
-
+/* Reuse the ordinary Other Functions component, with balanced text and icon columns. */
+#appShell > footer.ownership{background:none;background-color:transparent;font-size:11px;}
+.other-functions-view .other-functions-grid .home-pro-action,#secretaryHome > .sc-home-entry{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;align-items:center;justify-content:stretch;gap:10px;width:100%;min-height:58px;margin:0;padding:8px 12px;border:1px solid #405663;border-left:3px solid #d94249;border-radius:15px;font:inherit;font-weight:850;letter-spacing:.01em;text-align:center;text-transform:uppercase;box-sizing:border-box;}
+.other-functions-view .other-functions-grid .home-pro-action .ui-icon,#secretaryHome > .sc-home-entry .ui-icon{grid-column:1;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;flex:0 0 42px;font-size:24px;color:inherit;background:transparent;box-shadow:none;}
+.other-functions-view .other-functions-grid .home-pro-action .ui-icon svg,#secretaryHome > .sc-home-entry .ui-icon svg{display:block;width:40px;height:40px;}
+.other-functions-view .other-functions-grid .home-pro-action .home-pro-label,#secretaryHome > .sc-home-entry .home-pro-label{grid-column:2;min-width:0;overflow-wrap:anywhere;text-align:center;}
+#otherFunctions .sc-home-entry,#secretaryHome > .sc-home-entry{background:linear-gradient(135deg,var(--app-petrol),var(--app-aqua))!important;color:#fff!important;}
+#otherFunctions #openUserManagement{background:linear-gradient(135deg,#086fd0,#29a6ef)!important;color:#fff;}
 #otherFunctions #openUserManagement.hidden{display:none;}
-
-#otherFunctions #openUserManagement{background:linear-gradient(135deg,#086fd0,#29a6ef)!important;border:1px solid #61c2f5!important;color:#fff;}
+#otherFunctionsHome{background:linear-gradient(145deg,#263640,#1a2730)!important;color:#f1f5f6!important;}
+:is(#otherFunctions,#secretaryMenu,#secretaryHome) .home-pro-action:focus-visible{outline:3px solid #FFE082;outline-offset:3px;}
+@media(max-width:520px){.other-functions-view .other-functions-grid .home-pro-action,#secretaryHome > .sc-home-entry{min-height:54px;}}
 
 /* Session navigation is scoped to secretary screens only. */
 :is(#secretaryHome,#secretaryMenu) .secretary-session-command{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:48px;padding:8px 12px;font-size:inherit;font-weight:850;letter-spacing:normal;border-radius:15px;box-sizing:border-box;}
