@@ -52,7 +52,7 @@ export async function handleCalendar(request,env,session,role,primary){
   if(role==="ISTRUTTORE"&&["vehicles","vehicle-availability","movements","motorcycle-codes"].includes(route))fail(403,"Il parco veicoli non è disponibile per il profilo Istruttore.");
   if(route==="reminders"||route==="reminders/catalog")return json(await handleSecretaryReminders(request,{q,all,batch,site,user,now,role,primary,writeIds,strict,text,version,fail}));
   if(route.startsWith("central/"))return json(await handleCentral(request,{q,all,batch,site,vehicleSite,user,now,text,instant,strict,version,fail,conflict,manage,primary,central,role,ids,writeIds,session,hydrateEvents,saveEvent,onCapacity:data=>capacityContext=data}));
-  if(route.startsWith("coordination/"))return json(await handleCoordination(request,{q,all,batch,site,user,now,text,instant,strict,version,fail,conflict,manage,primary,central,writeIds,role,ids,session,hydrateEvents,saveEvent,onCapacity:data=>capacityContext=data}));
+  if(route.startsWith("coordination/"))return json(await handleCoordination(request,{q,all,batch,site,user,now,text,instant,strict,version,fail,conflict,manage,primary,central,writeIds,role,ids,session,hydrateEvents,saveEvent,calendarInstructorSQL,onCapacity:data=>capacityContext=data}));
   if(method==="GET"){
    const allowed={config:[],sites:[],"motorcycle-codes":[],events:["site","from","to","deleted"],sync:["cursor","updated_since"],vehicles:["site","at","until","category","type","event"],"vehicle-availability":["site","from","to","event"],instructors:["site"],memberships:[],movements:["vehicle"]};
    if(!allowed[route])fail(404,"Risorsa non trovata.");

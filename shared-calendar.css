@@ -231,3 +231,17 @@
 .sc-local-link-status{font-size:13px;line-height:1.4;overflow-wrap:anywhere;}
 .sc-whatsapp-panel label[hidden]{display:none;}
 .sc-whatsapp-panel input[type=tel]{font-size:16px;}
+
+/* Manual program recipients, scoped to the existing programs panel. */
+.shared-calendar.sc-program-panel:has(.sc-program-whatsapp){width:min(640px,calc(100vw - 28px));}
+.sc-program-whatsapp{padding:12px;border:1px solid #CDD6D5;border-radius:10px;background:#FCFAF6;overflow-wrap:anywhere;margin:12px 0;}
+.sc-program-whatsapp article{border-top:1px solid #CDD6D5;padding:12px 0;}
+.sc-program-whatsapp label{display:flex;align-items:center;gap:10px;margin:10px 0;min-width:0;}
+.sc-program-whatsapp input[type=checkbox]{flex:0 0 24px;width:24px;min-height:24px;}
+.sc-program-whatsapp-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;}
+.shared-calendar .sc-program-whatsapp-actions button{display:flex;align-items:center;gap:8px;min-height:44px;text-align:left;white-space:normal;}
+.sc-program-whatsapp-actions .ui-icon{width:20px;height:20px;flex:0 0 20px;}
+.sc-program-whatsapp-actions svg{width:20px;height:20px;}
+.sc-program-whatsapp details{margin:12px 0;}.sc-program-whatsapp summary{cursor:pointer;min-height:44px;}
+.sc-program-stale{color:#794B10;background:#FFF0C2;padding:8px;border-radius:6px;}
+@media(max-width:520px){.sc-program-whatsapp-actions{display:grid;grid-template-columns:1fr;}.sc-program-whatsapp label{flex-wrap:wrap;}.shared-calendar.sc-program-panel:has(.sc-program-whatsapp){margin:12px auto;}}
