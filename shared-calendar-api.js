@@ -1,5 +1,6 @@
 import {operationalCode,operationalAvailability} from "./shared-calendar-operational.js";
 import {centralIdentity,handleCentral,secretarySQL,vehicleLocationSQL,vehicleBoundarySQL,vehicleReservationSQL} from "./shared-calendar-central-secretary.js";
+import {handleSecretaryReminders} from "./shared-calendar-secretary-reminders.js";
 // Calendar-only API. Loaded lazily by the Worker only with the explicit flag.
 import {hydrateEvents,saveEvent,calendarInstructorSQL} from "./shared-calendar-events.js";
 import {handleCoordination,refreshPrograms,agendaUpdateSummary} from "./shared-calendar-coordination.js";
@@ -49,13 +50,14 @@ export async function handleCalendar(request,env,session,role,primary){
   const site=(id,eventType=null)=>{const examAccess=!!central&&eventType==="ESAME";if(examAccess&&!sites.some(s=>s.id===id&&s.active===1))fail(403,"Sede non autorizzata.");if(method==="POST"&&role==="SEGRETERIA"&&!vehicleOperation&&!examAccess&&!writeIds.includes(id))fail(403,"CONSULTAZIONE CENTRALE IN SOLA LETTURA");if(!ids.includes(id)||(role==="ADMIN"&&!primary&&!sites.some(s=>s.id===id&&s.active===1)))fail(403,"Sede non autorizzata.");requiredSites.add(id);if(examAccess)examSites.add(id);return id};
   const vehicleSite=id=>{if(!primary&&!central)return site(id);if(!ids.includes(id))fail(403,"Sede non autorizzata.");requiredSites.add(id);return id};
   if(role==="ISTRUTTORE"&&["vehicles","vehicle-availability","movements","motorcycle-codes"].includes(route))fail(403,"Il parco veicoli non è disponibile per il profilo Istruttore.");
+  if(route==="reminders"||route==="reminders/catalog")return json(await handleSecretaryReminders(request,{q,all,batch,site,user,now,role,primary,writeIds,strict,text,version,fail}));
   if(route.startsWith("central/"))return json(await handleCentral(request,{q,all,batch,site,vehicleSite,user,now,text,instant,strict,version,fail,conflict,manage,primary,central,role,ids,writeIds,session,hydrateEvents,saveEvent,onCapacity:data=>capacityContext=data}));
   if(route.startsWith("coordination/"))return json(await handleCoordination(request,{q,all,batch,site,user,now,text,instant,strict,version,fail,conflict,manage,primary,central,writeIds,role,ids,session,hydrateEvents,saveEvent,onCapacity:data=>capacityContext=data}));
   if(method==="GET"){
    const allowed={config:[],sites:[],"motorcycle-codes":[],events:["site","from","to","deleted"],sync:["cursor","updated_since"],vehicles:["site","at","until","category","type","event"],"vehicle-availability":["site","from","to","event"],instructors:["site"],memberships:[],movements:["vehicle"]};
    if(!allowed[route])fail(404,"Risorsa non trovata.");
    if([...url.searchParams.keys()].some(k=>!allowed[route].includes(k)))fail(400,"Parametri non consentiti.");
-   if(route==="config")return json({enabled:true,coordination:true,manage,central:!!central,vehicleManage:primary||!!central||manage,fleetManage:primary||!!central,operationalCodeManage:primary||!!central||role==="ADMIN",writeSites:writeIds,examWriteSites:central?sites.filter(s=>s.active===1).map(s=>s.id):writeIds,manageCatalog:globalManage,assign:primary,sites:ids,...(primary?{operational:{enabled:operational.enabled===1,version:operational.version,updated_at:operational.updated_at,administrator:operational.administrator||(operational.updated_by?"Amministratore non più disponibile":null)}}:{})});
+   if(route==="config")return json({...(role==="SEGRETERIA"?{officeLabel:writeIds.length?"Segreteria "+sites.filter(s=>writeIds.includes(s.id)).map(s=>s.name).join(" / "):"Segreteria",central:!!central}:{}),enabled:true,coordination:true,manage,central:!!central,vehicleManage:primary||!!central||manage,fleetManage:primary||!!central,operationalCodeManage:primary||!!central||role==="ADMIN",writeSites:writeIds,examWriteSites:central?sites.filter(s=>s.active===1).map(s=>s.id):writeIds,manageCatalog:globalManage,assign:primary,sites:ids,...(primary?{operational:{enabled:operational.enabled===1,version:operational.version,updated_at:operational.updated_at,administrator:operational.administrator||(operational.updated_by?"Amministratore non più disponibile":null)}}:{})});
    if(route==="sites")return json({sites});
    if(route==="motorcycle-codes")return json({codes:globalManage||ids.length?await all("SELECT id,code,sort_order,active,version FROM calendar_motorcycle_codes ORDER BY sort_order,id"):[]});
    if(route==="memberships"){
@@ -177,6 +179,8 @@ export async function handleCalendar(request,env,session,role,primary){
   const reason=String(e.message||"");
   if(reason.includes("CALENDAR_OPERATIONAL_CAPACITY")){let details=[];if(capacityContext){const a=await operationalAvailability(all,{...capacityContext,exclude:capacityContext.id});const requests=capacityContext.resources||[];details=a.groups.map(g=>({code:g.code,type:g.type,requested:requests.filter(r=>r.code===g.code&&r.type===g.type).length,available:g.available})).filter(g=>g.requested>g.available);}return json({error:"Non sono disponibili abbastanza veicoli con sigla "+(details[0]?.code||"richiesta")+" nella sede e nella fascia oraria selezionate.",code:"VEHICLE_CAPACITY",capacity:details},409);}
   if(reason.includes("CALENDAR_COORDINATION_CONFLICT"))return json({error:"Conflitto organizzativo: risorsa indisponibile, prenotata o appuntamento modificato. Aggiorna e verifica il periodo."},409);
+  if(reason.includes("CALENDAR_REMINDER_CONFLICT"))return json({error:"Promemoria o catalogo modificati: ricarica prima di salvare."},409);
+  if(reason.includes("calendar_secretary_reminder_catalog.site_id"))return json({error:"Sigla già presente, anche se disattivata."},409);
   if(reason.includes("calendar_motorcycle_codes.normalized_code"))return json({error:"Sigla già presente, anche se disattivata."},409);
   if(reason.includes("CALENDAR_MOTORCYCLE_CODE"))return json({error:"Sigla moto modificata o non disponibile. Ricarica il catalogo prima di salvare."},409);
   if(reason.includes("CALENDAR_RATE"))return json({error:"Troppe modifiche. Attendi un minuto."},429);

@@ -397,3 +397,22 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 @media(max-width:560px){.lt-actions,.lt-date-range{grid-template-columns:1fr}.lt-dialog{padding:14px}.lt-body{gap:12px}}
 
 .lt-body label.lt-checkbox{display:flex;align-items:center;gap:10px;line-height:1.5}.lt-body label.lt-checkbox input{flex:0 0 24px;margin:0}.lt-filter-description{font-size:14px;line-height:1.5;color:#c6d8e2}
+
+/* Only home-owned captions and the relocated operational menu commands. */
+body:has(:is(#home,#secretaryHome,#userManagement).active) #appShell > .ownership{background:transparent;font-size:12px;}
+#otherFunctions .sc-home-entry,#otherFunctions #openUserManagement{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;min-height:54px;margin:0;padding:8px 12px;border-radius:15px;font-size:inherit;font-weight:850;letter-spacing:normal;text-align:left;}
+#otherFunctions .sc-home-entry{background:linear-gradient(135deg,var(--app-petrol),var(--app-aqua))!important;color:#fff!important;border:1px solid #43898c!important;}
+#otherFunctions .sc-home-entry .ui-icon,#otherFunctions #openUserManagement .ui-icon{width:32px;height:32px;flex:0 0 32px;}
+#otherFunctions .sc-home-entry svg,#otherFunctions #openUserManagement svg{width:28px;height:28px;}
+#otherFunctions #openUserManagement{margin-top:12px;}
+#otherFunctions :is(.sc-home-entry,#openUserManagement):focus-visible{outline:3px solid #FFE082;outline-offset:3px;}
+
+#otherFunctions #openUserManagement.hidden{display:none;}
+
+#otherFunctions #openUserManagement{background:linear-gradient(135deg,#086fd0,#29a6ef)!important;border:1px solid #61c2f5!important;color:#fff;}
+
+/* Session navigation is scoped to secretary screens only. */
+:is(#secretaryHome,#secretaryMenu) .secretary-session-command{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:48px;padding:8px 12px;font-size:inherit;font-weight:850;letter-spacing:normal;border-radius:15px;box-sizing:border-box;}
+:is(#secretaryHome,#secretaryMenu) .secretary-session-command .ui-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex:0 0 28px;font-size:24px;background:transparent;box-shadow:none;}
+:is(#secretaryHome,#secretaryMenu) .secretary-session-command .ui-icon svg{width:26px;height:26px;}
+:is(#secretaryHome,#secretaryMenu) .secretary-session-command:focus-visible{outline:3px solid #FFE082;outline-offset:3px;}

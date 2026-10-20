@@ -29,8 +29,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const calendarEnabled = env.SHARED_CALENDAR_ENABLED === "true" || env.SHARED_CALENDAR_ENABLED === true;
+    if (url.pathname==="/shared-calendar-secretary-reminders.js") return json({error:"Risorsa non disponibile."},404);
     if (url.pathname.startsWith("/api/calendar/") || /^\/shared-calendar(?:-store|-api|-events|-coordination|-central-secretary|-operational)?\.js$/.test(url.pathname)) {
-      if (!calendarEnabled || ["/shared-calendar-api.js","/shared-calendar-events.js","/shared-calendar-coordination.js","/shared-calendar-central-secretary.js","/shared-calendar-operational.js"].includes(url.pathname)) return json({error:"Risorsa non disponibile."},404);
+      if (!calendarEnabled || ["/shared-calendar-api.js","/shared-calendar-events.js","/shared-calendar-coordination.js","/shared-calendar-central-secretary.js","/shared-calendar-operational.js","/shared-calendar-secretary-reminders.js"].includes(url.pathname)) return json({error:"Risorsa non disponibile."},404);
       const session = await requireSession(request,env,false);
       if (session.response) return session.response;
       const role=effectiveRole(session.user);

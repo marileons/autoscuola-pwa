@@ -165,6 +165,7 @@
     syncAuditPanel();
     const adminButton = document.getElementById("openUserManagement");
     if (adminButton) adminButton.classList.toggle("hidden", !user?.capabilities?.manageUsers);
+    const office=document.querySelector("#secretaryHome .dashboard-intro p");if(office&&previousId!==nextId)office.textContent="Segreteria";
     updateHomeUser();
     updateAccountSummary();
   }

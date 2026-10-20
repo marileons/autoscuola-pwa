@@ -60,14 +60,15 @@
   <div class="dashboard-intro"><p>SEGRETERIA — Ricerca e consultazione</p></div>
   <div id="secretaryCategories" class="categories"></div>
   <button id="secretaryOtherFunctions" type="button" class="other-functions-entry full">ALTRE FUNZIONI</button>
+  <button type="button" data-secretary-command="logoutHome" class="home-pro-action logout-action full secretary-session-command"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#logout-pro"/></svg></span>ESCI</button>
 </section>
 <section id="secretaryMenu" class="view">
-  <button id="secretaryMenuHome" type="button" class="home-command full">HOME</button>
+  <button id="secretaryMenuHome" type="button" class="home-command full secretary-session-command"><span class="ui-icon" aria-hidden="true">←</span>HOME</button>
   <a class="home-pro-action link-button full" href="https://www.ilportaledellautomobilista.it/gms/turni/45" target="_blank" rel="noopener noreferrer">TURNI OPERATIVI ESAMINATORI</a>
   <div class="card"><h2>SEGRETERIA</h2><p>Archivio esclusivamente locale. Importa le schede condivise dall’istruttore: nessuna sincronizzazione automatica.</p>
   <button id="secretaryStudents" class="full">CERCA / VISUALIZZA ALLIEVI</button>
   <button data-secretary-command="importStudent" class="full">IMPORTA ALLIEVO</button><button data-secretary-command="importStudents" class="full">IMPORTA PIÙ ALLIEVI</button>
-  <button data-secretary-command="shareStudents" class="full">CONDIVIDI PIÙ ALLIEVI</button><button data-secretary-command="archiveStudents" class="full">ARCHIVIA PIÙ ALLIEVI</button><button data-secretary-command="openArchive" class="full">ALLIEVI ARCHIVIATI</button><button data-secretary-command="deleteStudents" class="full">CESTINA PIÙ ALLIEVI</button><button data-secretary-command="openStudentTrash" class="full">CESTINO</button><button data-secretary-command="openDocuments" class="full">DOCUMENTI VARI</button><button data-secretary-command="logoutHome" class="full">ESCI</button></div>
+  <button data-secretary-command="shareStudents" class="full">CONDIVIDI PIÙ ALLIEVI</button><button data-secretary-command="archiveStudents" class="full">ARCHIVIA PIÙ ALLIEVI</button><button data-secretary-command="openArchive" class="full">ALLIEVI ARCHIVIATI</button><button data-secretary-command="deleteStudents" class="full">CESTINA PIÙ ALLIEVI</button><button data-secretary-command="openStudentTrash" class="full">CESTINO</button><button data-secretary-command="openDocuments" class="full">DOCUMENTI VARI</button></div>
 </section>
 <section id="categoryHub" class="view category-hub">
   <button id="categoryHome" type="button" class="home-command full">← HOME</button>
@@ -98,7 +99,7 @@
   <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#settings-pro"/></svg></span> IMPOSTAZIONI</button>
   <button id="openRegister" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#schedule-pro"/></svg></span> REGISTRO ORE E COMPENSI</button>
   </div></div>
-  <button id="openUserManagement" class="user-management-entry full hidden">AREA RISERVATA</button>
+  <button id="openUserManagement" class="user-management-entry home-pro-action full hidden"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#settings-pro"/></svg></span>AREA RISERVATA</button>
   <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#logout-pro"/></svg></span> ESCI</button>
 </section>
 <section id="generalStudentManagement" class="view"><div class="other-functions-subnav"><button type="button" id="generalStudentsHome">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div><div class="card"><h2>Gestione generale allievi</h2><div class="other-functions-grid">
