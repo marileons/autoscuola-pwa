@@ -400,19 +400,25 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 
 /* Reuse the ordinary Other Functions component, with balanced text and icon columns. */
 #appShell > footer.ownership{background:none;background-color:transparent;font-size:11px;}
-.other-functions-view .other-functions-grid .home-pro-action,#secretaryHome > .sc-home-entry{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;align-items:center;justify-content:stretch;gap:10px;width:100%;min-height:58px;margin:0;padding:8px 12px;border:1px solid #405663;border-left:3px solid #d94249;border-radius:15px;font:inherit;font-weight:850;letter-spacing:.01em;text-align:center;text-transform:uppercase;box-sizing:border-box;}
-.other-functions-view .other-functions-grid .home-pro-action .ui-icon,#secretaryHome > .sc-home-entry .ui-icon{grid-column:1;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;flex:0 0 42px;font-size:24px;color:inherit;background:transparent;box-shadow:none;}
-.other-functions-view .other-functions-grid .home-pro-action .ui-icon svg,#secretaryHome > .sc-home-entry .ui-icon svg{display:block;width:40px;height:40px;}
-.other-functions-view .other-functions-grid .home-pro-action .home-pro-label,#secretaryHome > .sc-home-entry .home-pro-label{grid-column:2;min-width:0;overflow-wrap:anywhere;text-align:center;}
-#otherFunctions .sc-home-entry,#secretaryHome > .sc-home-entry{background:linear-gradient(135deg,var(--app-petrol),var(--app-aqua))!important;color:#fff!important;}
+.other-functions-view .other-functions-grid .home-pro-action,#secretaryHome .sc-home-entry{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;align-items:center;justify-content:stretch;gap:10px;width:100%;min-height:58px;margin:0;padding:8px 12px;border:1px solid #405663;border-left:3px solid #d94249;border-radius:15px;font:inherit;font-weight:850;letter-spacing:.01em;text-align:center;text-transform:uppercase;box-sizing:border-box;}
+.other-functions-view .other-functions-grid .home-pro-action .ui-icon,#secretaryHome .sc-home-entry .ui-icon{grid-column:1;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;flex:0 0 42px;font-size:24px;color:inherit;background:transparent;box-shadow:none;}
+.other-functions-view .other-functions-grid .home-pro-action .ui-icon svg,#secretaryHome .sc-home-entry .ui-icon svg{display:block;width:40px;height:40px;}
+.other-functions-view .other-functions-grid .home-pro-action .home-pro-label,#secretaryHome .sc-home-entry .home-pro-label{grid-column:2;min-width:0;overflow-wrap:anywhere;text-align:center;}
+#otherFunctions .sc-home-entry,#secretaryHome .sc-home-entry{background:linear-gradient(135deg,var(--app-petrol),var(--app-aqua))!important;color:#fff!important;}
 #otherFunctions #openUserManagement{background:linear-gradient(135deg,#086fd0,#29a6ef)!important;color:#fff;}
 #otherFunctions #openUserManagement.hidden{display:none;}
 #otherFunctionsHome{background:linear-gradient(145deg,#263640,#1a2730)!important;color:#f1f5f6!important;}
 :is(#otherFunctions,#secretaryMenu,#secretaryHome) .home-pro-action:focus-visible{outline:3px solid #FFE082;outline-offset:3px;}
-@media(max-width:520px){.other-functions-view .other-functions-grid .home-pro-action,#secretaryHome > .sc-home-entry{min-height:54px;}}
+@media(max-width:520px){.other-functions-view .other-functions-grid .home-pro-action,#secretaryHome .sc-home-entry{min-height:54px;}}
 
 /* Session navigation is scoped to secretary screens only. */
 :is(#secretaryHome,#secretaryMenu) .secretary-session-command{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:48px;padding:8px 12px;font-size:inherit;font-weight:850;letter-spacing:normal;border-radius:15px;box-sizing:border-box;}
 :is(#secretaryHome,#secretaryMenu) .secretary-session-command .ui-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex:0 0 28px;font-size:24px;background:transparent;box-shadow:none;}
 :is(#secretaryHome,#secretaryMenu) .secretary-session-command .ui-icon svg{width:26px;height:26px;}
 :is(#secretaryHome,#secretaryMenu) .secretary-session-command:focus-visible{outline:3px solid #FFE082;outline-offset:3px;}
+
+/* A single secretary command group keeps the existing button component and explicit spacing. */
+#secretaryHome .sc-secretary-home-commands{display:grid;gap:12px;margin:16px 0 12px;}
+#secretaryHome .sc-secretary-home-commands > .sc-home-entry{margin:0;}
+#secretaryHome .sc-secretary-home-commands > p{margin:0;}
+#secretaryHome .sc-secretary-home-commands > p:empty{display:none;}

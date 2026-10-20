@@ -1,5 +1,7 @@
 "use strict";
 (function(root){
+ // Concurrent script loads must keep the live controller and its single set of listeners.
+ if(root.SharedCalendar?.mount&&root.SharedCalendar?.dispose)return;
  let instance=null;
  const motorcycleCategory=value=>["moto","corso-moto","am","a1","a2","a"].includes(String(value).toLowerCase());
  function vehicleLabel(v,sites=[]){return [String(v.name||"Veicolo").trim().toUpperCase(),v.internal_name||v.descriptive_identifier,String(v.plate||"").trim().toUpperCase()||"TARGA NON INSERITA",(v.operational_code?"SIGLA "+v.operational_code:""),v.transmission==="automatico"?"AUTOMATICA":v.transmission==="manuale"?"MANUALE":"",sites.find(s=>s.id===(v.current_site_id||v.usual_site_id||v.site_id))?.name].filter(Boolean).join(" — ")}
@@ -175,7 +177,7 @@
 
  function mount(user){
   if(user?.sharedCalendarEnabled!==true||!["ADMIN","ISTRUTTORE","SEGRETERIA"].includes(user.role))return;
-  if(instance?.account===user.id)return;
+  if(instance?.account===user.id){if(user.role==="SEGRETERIA")instance.reconcileHome?.();return;}
   dispose();
   const cache=root.SharedCalendarStore.create(),state={account:user.id,alive:true,active:false,busy:false,saving:false,config:null,snapshot:null,mode:1,site:"",filter:{},requests:new Set(),instructors:{},advanced:false};
   instance=state;
@@ -258,10 +260,17 @@
   async function open(){updateNotice.openDay();state.active=true;state.verified=false;day.value=rome(Date.now()).slice(0,10);state.mode=user.role==="ISTRUTTORE"?2:1;dialog.showModal();try{state.snapshot=await cache.load(user.id);if(!state.alive)return;state.instructors=state.snapshot.instructors||{};state.suspended=state.snapshot.operationalSuspended===true;render()}catch{notice.textContent="Copia locale non leggibile. Nessun archivio esistente è stato modificato."}clock.update();void sync()}
   function close(){state.reminderDismiss?.();if(programPanel){programPanel.close();programPanel.remove();programPanel=null}updateNotice.dismiss();state.active=false;clock.stop();for(const c of state.requests)c.abort();dialog.close()}
   dialog.addEventListener("cancel",e=>{e.preventDefault();close()});
-  state.buttons=[];const home=document.querySelector(user.role==="SEGRETERIA"?"#secretaryHome":"#otherFunctions .other-functions-grid");if(home){
+  state.buttons=[];const homeHost=document.querySelector(user.role==="SEGRETERIA"?"#secretaryHome":"#otherFunctions .other-functions-grid"),secretaryCommands=user.role==="SEGRETERIA"&&homeHost?el("div",null,"sc-secretary-home-commands"):null,home=secretaryCommands||homeHost;if(secretaryCommands){secretaryCommands.setAttribute("role","group");secretaryCommands.setAttribute("aria-label","Agenda e verbali");state.buttons.push(secretaryCommands)}if(home){
    const decorate=(b,icon)=>{const label=el("span",b.textContent,"home-pro-label"),span=el("span",null,"ui-icon");b.className="home-pro-action full sc-home-entry";span.setAttribute("aria-hidden","true");span.innerHTML='<svg><use href="ui-icons.svg#'+icon+'"/></svg>';b.replaceChildren(span,label);b.dataset.sharedCalendar="";home.append(b);state.buttons.push(b)};
    decorate(button("AGENDA CONDIVISA",open),"schedule-pro");if(["ADMIN","SEGRETERIA"].includes(user.role)){const message=el("p"),report=button("PREPARA VERBALE",()=>prepareReportLibrary(report,message));decorate(report,"documents-pro");message.setAttribute("role","status");home.append(message);state.buttons.push(message)}
   }
+  if(secretaryCommands){const owned=new Set(secretaryCommands.querySelectorAll("button"));state.reconcileHome=()=>{
+   // Remove stale copies from earlier renders; retain the same owned nodes and handlers.
+   for(const group of homeHost.querySelectorAll(".sc-secretary-home-commands"))if(group!==secretaryCommands)group.remove();
+   for(const node of homeHost.querySelectorAll("button"))if(!owned.has(node)&&["AGENDA CONDIVISA","PREPARA VERBALE"].includes(node.textContent.trim().replace(/\s+/g," ")))node.remove();
+   for(const node of homeHost.querySelectorAll('p[role="status"]'))if(!secretaryCommands.contains(node)&&!node.textContent.trim())node.remove();
+   if(secretaryCommands.parentElement!==homeHost)homeHost.append(secretaryCommands);
+  };state.reconcileHome();}
   function officeHeading(cfg){if(user.role!=="SEGRETERIA")return;const title=document.querySelector("#secretaryHome .dashboard-intro p");if(title)title.textContent=(cfg?.officeLabel||"Segreteria")+(cfg?.central?" · SEGRETERIA CENTRALE":"");}
   if(user.role==="SEGRETERIA")void api("config").then(cfg=>{if(state.alive)officeHeading(cfg)}).catch(()=>{if(state.alive)officeHeading(null)});
   state.reminders={};let reminderEpoch=0;
