@@ -30,6 +30,11 @@ export default {
     const url = new URL(request.url);
     const calendarEnabled = env.SHARED_CALENDAR_ENABLED === "true" || env.SHARED_CALENDAR_ENABLED === true;
     if (url.pathname==="/shared-calendar-secretary-reminders.js") return json({error:"Risorsa non disponibile."},404);
+    if(url.pathname==="/api/exam-report/scope"){
+      const session=await requireSession(request,env,false);if(session.response)return session.response;
+      const role=effectiveRole(session.user);if(session.purpose!=="NORMAL"||!["ADMIN","SEGRETERIA"].includes(role))return json({error:"Accesso non consentito."},403);
+      const {handleReportScope}=await import("./shared-calendar-api.js");return handleReportScope(request,env,session,role,isPrimaryAdmin(session.user));
+    }
     if (url.pathname.startsWith("/api/calendar/") || /^\/shared-calendar(?:-store|-api|-events|-coordination|-central-secretary|-operational)?\.js$/.test(url.pathname)) {
       if (!calendarEnabled || ["/shared-calendar-api.js","/shared-calendar-events.js","/shared-calendar-coordination.js","/shared-calendar-central-secretary.js","/shared-calendar-operational.js","/shared-calendar-secretary-reminders.js"].includes(url.pathname)) return json({error:"Risorsa non disponibile."},404);
       const session = await requireSession(request,env,false);

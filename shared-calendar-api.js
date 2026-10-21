@@ -13,6 +13,16 @@ const version=v=>{if(!Number.isSafeInteger(v)||v<1)fail(400,"Versione non valida
 const instructorTargetSQL="u.active=1 AND u.role='ISTRUTTORE' AND (u.authorization_role IS NULL OR u.authorization_role='ISTRUTTORE') AND u.access_profile IS NULL AND u.is_primary_admin=0";
 const vehicles=["DISPONIBILE","TRASFERIMENTO_PROGRAMMATO","IN_TRASFERIMENTO","MANUTENZIONE","NON_UTILIZZABILE","DISMESSO"];
 const conflict="L'appuntamento è stato modificato da un altro utente. Ricarica la versione aggiornata prima di continuare.";
+// Autonomous local-report authorization: no calendar events, proposals or operational switch.
+export async function handleReportScope(request,env,session,role,primary){
+ const url=new URL(request.url);if(request.method!=="GET"||url.search)return json({error:"Richiesta non consentita."},400);
+ if(session.purpose!=="NORMAL"||!["ADMIN","SEGRETERIA"].includes(role)||(request.headers.get("origin")&&request.headers.get("origin")!==url.origin)||request.headers.get("sec-fetch-site")==="cross-site")return json({error:"Accesso non consentito."},403);
+ const q=(sql,...args)=>env.DB.prepare(sql).bind(...args),all=async(sql,...args)=>(await q(sql,...args).all()).results;
+ const central=role==="SEGRETERIA"?await centralIdentity(q,session.user.id):null;
+ const sites=await all(primary||central?"SELECT id,name,active FROM calendar_sites WHERE active=1 ORDER BY name,id":"SELECT z.id,z.name,z.active FROM calendar_sites z JOIN calendar_user_sites a ON a.site_id=z.id WHERE a.user_id=? AND z.active=1 ORDER BY z.name,z.id",...(primary||central?[]:[session.user.id]));
+ const ids=sites.map(s=>s.id),own=primary?ids:(await all("SELECT a.site_id FROM calendar_user_sites a JOIN calendar_sites z ON z.id=a.site_id WHERE a.user_id=? AND z.active=1",session.user.id)).map(r=>r.site_id);
+ return json({sites,config:{enabled:true,manage:true,central:!!central,sites:ids,writeSites:own,examWriteSites:central?ids:own}});
+}
 export async function handleCalendar(request,env,session,role,primary){
  const url=new URL(request.url),route=url.pathname.slice("/api/calendar/".length),method=request.method;
  if(!["true",true].includes(env.SHARED_CALENDAR_ENABLED))return json({error:"Risorsa non disponibile."},404);
@@ -30,6 +40,8 @@ export async function handleCalendar(request,env,session,role,primary){
  try{
   const operational=await q("SELECT o.*,u.name AS administrator FROM calendar_operational_state o LEFT JOIN users u ON u.id=o.updated_by WHERE o.id=1").first();
   if(!operational)fail(503,"Stato operativo Agenda non disponibile. Riprova senza modificare dati.");
+  if(route==="operational-status"&&(method!=="GET"||url.search))fail(400,"Richiesta non consentita.");
+  if(route==="operational-status"&&!primary&&operational.enabled!==1)return json({operational:{enabled:false,available:false,primary:false,version:operational.version},incoming:{count:0,revision:0,counts:{}},response:{revision:0}});
   if(!primary&&operational.enabled!==1)return json({error:"Agenda condivisa temporaneamente sospesa dall’amministratore",code:"CALENDAR_SUSPENDED"},403);
   if(route==="config"&&method==="POST"){
    if(!primary)fail(403,"Operazione riservata al principale.");if(url.search)fail(400,"Parametri non consentiti.");
@@ -59,11 +71,11 @@ export async function handleCalendar(request,env,session,role,primary){
   const proposalEligibility="EXISTS(SELECT 1 FROM users u JOIN calendar_user_sites a ON a.user_id=u.id JOIN calendar_sites z ON z.id=a.site_id WHERE "+calendarInstructorSQL+" AND u.id=p.instructor_id AND a.site_id=p.site_id AND z.active=1)";
   const proposalGuard=(p)=>q("INSERT OR REPLACE INTO calendar_coordination_guard(id,ok) SELECT 1,CASE WHEN EXISTS(SELECT 1 FROM calendar_instructor_proposals p WHERE p.id=? AND p.version=? AND p.state='IN ATTESA' AND p.withdrawn_at IS NULL AND "+proposalEligibility+") THEN 1 ELSE 0 END",p.id,p.version);
   const proposalAudit=(action,p)=>q("INSERT INTO calendar_coordination_audit(actor_id,actor_name,action,entity_id,site_id,version,snapshot,created_at) VALUES(?,?,?,?,?,?,json_object('instructor_id',?,'state',?),?)",user,session.user.name,action,p.id,p.site_id,p.version,p.instructor_id,p.state,now);
-  if(route==="proposal-updates"){
+  if(route==="proposal-updates"||route==="operational-status"){
    if(method!=="GET"||url.search)fail(400,"Richiesta non consentita.");
    const scope=JSON.stringify(primary?sites.filter(s=>s.active===1).map(s=>s.id):writeIds),ownScope=JSON.stringify(ids),operator=manage?1:0;
    const incoming=await q("SELECT count(*) AS count,COALESCE(MAX((SELECT MAX(seq) FROM calendar_coordination_audit a WHERE a.entity_id=p.id AND a.action='PROPOSTA CREATA')),0) AS revision FROM calendar_instructor_proposals p WHERE ?=1 AND p.state='IN ATTESA' AND p.withdrawn_at IS NULL AND p.site_id IN(SELECT value FROM json_each(?)) AND "+proposalEligibility,operator,scope).first();
-   const response=await q("SELECT COALESCE(MAX(a.seq),0) AS revision FROM calendar_coordination_audit a JOIN calendar_instructor_proposals p ON p.id=a.entity_id WHERE a.action IN('PROPOSTA INSERITA','PROPOSTA NON ACCOLTA') AND p.instructor_id=? AND p.personal_archived=0 AND p.withdrawn_at IS NULL AND p.site_id IN(SELECT value FROM json_each(?)) AND "+proposalEligibility,user,ownScope).first();const counts=manage?await all("SELECT p.site_id,count(*) AS count FROM calendar_instructor_proposals p WHERE p.state='IN ATTESA' AND p.withdrawn_at IS NULL AND p.site_id IN(SELECT value FROM json_each(?)) AND "+proposalEligibility+" GROUP BY p.site_id",scope):[];return json({incoming:{count:Number(incoming.count),revision:Number(incoming.revision),counts:Object.fromEntries(counts.map(r=>[r.site_id,Number(r.count)]))},response:{revision:Number(response.revision)}});
+   const response=await q("SELECT COALESCE(MAX(a.seq),0) AS revision FROM calendar_coordination_audit a JOIN calendar_instructor_proposals p ON p.id=a.entity_id WHERE a.action IN('PROPOSTA INSERITA','PROPOSTA NON ACCOLTA') AND p.instructor_id=? AND p.personal_archived=0 AND p.withdrawn_at IS NULL AND p.site_id IN(SELECT value FROM json_each(?)) AND "+proposalEligibility,user,ownScope).first();const counts=manage?await all("SELECT p.site_id,count(*) AS count FROM calendar_instructor_proposals p WHERE p.state='IN ATTESA' AND p.withdrawn_at IS NULL AND p.site_id IN(SELECT value FROM json_each(?)) AND "+proposalEligibility+" GROUP BY p.site_id",scope):[];return json({...(route==="operational-status"?{operational:{enabled:operational.enabled===1,available:primary||operational.enabled===1,primary:!!primary,version:operational.version}}:{}),incoming:{count:Number(incoming.count),revision:Number(incoming.revision),counts:Object.fromEntries(counts.map(r=>[r.site_id,Number(r.count)]))},response:{revision:Number(response.revision)}});
   }
   if(route==="proposals"){
    if(method==="GET"){
