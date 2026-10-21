@@ -250,3 +250,8 @@
 .shared-calendar .sc-proposals{flex:1 1 320px;max-width:100%;padding:10px;border:1px solid #CDD6D5;border-radius:10px;background:#FCFAF6;color:#243038}
 .shared-calendar .sc-proposals summary{cursor:pointer;min-height:44px;display:list-item;font-weight:700;line-height:1.5;padding:10px}
 .shared-calendar .sc-proposals article{margin-top:12px;overflow-wrap:anywhere}
+
+.sc-proposal-banner{position:relative;z-index:20;display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:8px auto;padding:10px 14px;max-width:960px;border:1px solid #B7791F;border-radius:10px;background:#FFF0BF;color:#243038;font:600 15px/1.4 "Segoe UI",sans-serif;overflow-wrap:anywhere}
+.sc-proposal-banner[hidden]{display:none!important}.sc-proposal-banner button{min-height:44px;padding:8px 14px;border:1px solid #64748B;border-radius:8px;background:#203640;color:#FFFFFF;font:inherit;cursor:pointer}.sc-proposal-banner button:focus-visible{outline:3px solid #8E6200;outline-offset:2px}
+
+.sc-proposal-banner-global{position:fixed;top:12px;right:12px;margin:0;width:calc(100% - 24px);max-width:520px;box-sizing:border-box;z-index:10000;pointer-events:none}.sc-proposal-banner-global button{pointer-events:auto}
