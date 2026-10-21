@@ -137,6 +137,7 @@ export async function saveEvent(b,c){
  operations.push(q("INSERT INTO calendar_event_audit(actor_id,entity_type,entity_id,action,created_at) SELECT ?,'event',?,?,? WHERE "+current,user,id,action,now,id,token));
  operations.push(...coordinationStatements(c,{id,token,previous,next:{site_id:sid,starts_at:start,ends_at:end,event_type:type,exam_type:examType,exam_motorcycles:bookingBikes,exam_purpose:purpose,category,participants,instructors:t,vehicles:v,operational_resources:operational,instructor_vehicles:pairSnapshots,meeting_point:exam?text(b.meeting_point,160,!!examType):"",examiner:text(b.examiner,120,true),note:text(b.note,200,true),status:b.status,deleted},version:old?old.version+1:1,series:c.series}));
  c.onCapacity?.({id,site_id:sid,starts_at:start,ends_at:end,resources:operational});
+ if(c.completeProposal)operations.push(...c.completeProposal(id,token));
  const result=await batch(operations,guard);if(!result[0].meta.changes)fail(409,conflict);
  return{id};
 }

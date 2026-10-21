@@ -245,3 +245,8 @@
 .sc-program-whatsapp details{margin:12px 0;}.sc-program-whatsapp summary{cursor:pointer;min-height:44px;}
 .sc-program-stale{color:#794B10;background:#FFF0C2;padding:8px;border-radius:6px;}
 @media(max-width:520px){.sc-program-whatsapp-actions{display:grid;grid-template-columns:1fr;}.sc-program-whatsapp label{flex-wrap:wrap;}.shared-calendar.sc-program-panel:has(.sc-program-whatsapp){margin:12px auto;}}
+
+/* Requests are separate from reservations; compact disclosure in management tools. */
+.shared-calendar .sc-proposals{flex:1 1 320px;max-width:100%;padding:10px;border:1px solid #CDD6D5;border-radius:10px;background:#FCFAF6;color:#243038}
+.shared-calendar .sc-proposals summary{cursor:pointer;min-height:44px;display:list-item;font-weight:700;line-height:1.5;padding:10px}
+.shared-calendar .sc-proposals article{margin-top:12px;overflow-wrap:anywhere}
