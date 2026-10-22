@@ -18,3 +18,76 @@
 @media print{.report-mobile-only{display:none!important}.report-wide{display:block!important}}
 .danger-outline{background:#291c20!important;border:1px solid #88434a!important;color:#ffb5ba!important}.register-deletion-backup-warning{background:#3a2a16;border:1px solid #806337;border-left:4px solid #e3a943;border-radius:11px;color:#ffe1a8;display:grid;gap:4px;padding:12px}.register-deletion-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px}.register-deletion-card{background:#101a21;border:1px solid var(--reg-line);border-radius:13px;padding:15px}.register-deletion-card h4{margin-top:0}.register-delete-all-card{border-color:#774047}.register-deletion-summary{background:#162a33;border:1px solid #3c5d69;border-radius:10px;display:grid;gap:5px;margin-top:12px;padding:12px}.register-deletion-summary strong{color:#fff}.register-deletion-summary span{color:#bed0d7;font-size:.88rem}
 @media(max-width:700px){.register-deletion-columns{grid-template-columns:1fr}}
+
+/* MR screen presentation only. No print document or persistence changes. */
+@media screen{
+ body:has(#registerView.active){background:radial-gradient(ellipse at 90% 0,#17778a,transparent 65%),#07586a;color:#fff7e8;min-height:100svh}
+ body:has(#registerView.active) #appShell{background:transparent}
+ body:has(#registerView.active) #appShell>main{max-width:1180px;padding:18px max(16px,env(safe-area-inset-right)) 28px max(16px,env(safe-area-inset-left));background:transparent}
+ #registerView{--reg-bg:#07586a;--reg-panel:#0d5263;--reg-line:#508591;--reg-accent:#ffd29a;--reg-ok:#a5d6a7;color:#fff7e8;font-family:'Nunito Sans',system-ui,sans-serif;min-width:0}
+ #registerView :is(button,input,select,textarea){font-family:inherit}
+ #registerView :is(.register-gate-card,.register-editor,.register-account-card,.register-summary-card,.register-tools-card){background:linear-gradient(135deg,#116477,#0b4d5f);border-color:var(--reg-line);box-shadow:0 4px 12px #00232d25;border-radius:16px;padding:18px;min-width:0}
+ #registerView :is(h2,h3,h4){color:#fff7e8;line-height:1.35}
+ #registerView .register-header{position:static;color:#fff7e8}
+ #registerView .register-header h2{display:flex;align-items:center;gap:10px;font-size:clamp(23px,3vw,30px)}
+ #registerView .register-mr-icon{width:20px;height:20px;flex:0 0 20px;vertical-align:middle;color:inherit;fill:none}
+ #registerView h3 .register-mr-icon{margin-right:8px;color:#ffd29a}
+ #registerView :is(.register-eyebrow,.register-account-card span,.muted,.empty,.register-block-duration label,.register-file-name){color:#d0e0e2}
+ #registerView .register-local-notice,#registerView .register-backup-warning,#registerView .register-print-hint{background:#104b5b;border-color:#508591;border-left-color:#ffd29a}
+ #registerView :is(.register-local-notice,.register-backup-warning) span{color:#d0e0e2}
+ #registerView button:not(:where(#registerPrintPanel button)){display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;max-width:100%;padding:10px 14px;border-radius:11px;border:1px solid #76a0aa;background:#ffd29a;color:#143d48;line-height:1.4;font-size:15px;white-space:normal;overflow-wrap:anywhere}
+ #registerView button.secondary,#registerView .register-tabs button{background:#125063;color:#fff7e8;border-color:#6b929c}
+ #registerView .register-tabs{background:#093d4c;border-color:#508591;gap:8px}
+ #registerView .register-tabs button.active{background:#ffd29a;color:#143d48;border-color:#ffd29a}
+ #registerView :is(button.danger,button.danger-outline){background:transparent!important;color:#ffc2be!important;border:1px solid #cb8a8a!important}
+ #registerView .register-topbar{display:flex;gap:12px;flex-wrap:wrap}
+ #registerView .register-topbar button{width:auto;min-width:110px}
+ #registerView .register-tools-card{gap:12px}#registerView .register-tools-card .full{margin:0}
+ #registerView .register-form-actions{gap:12px;margin-top:6px}
+ #registerView .register-form :is(input,textarea,select),#registerView .register-block-editor :is(input,select){background:#083e4d;color:#fff7e8;border:1px solid #6b929c;min-height:46px;font-size:16px;min-width:0}
+ #registerView .register-form input[type=checkbox]{min-height:20px;width:20px;accent-color:#ffd29a}
+ #registerView :is(button,input,select,textarea,summary):focus-visible{outline:3px solid #ffd29a;outline-offset:3px}
+ #registerView .register-layout{grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);align-items:start;gap:18px}
+ #registerView .register-layout :is(main,aside){min-width:0}
+ #registerView .register-summary-row{align-items:baseline;border-color:#508591;gap:14px}
+ #registerView .register-summary-row strong{font-variant-numeric:tabular-nums;text-align:right;white-space:normal;overflow-wrap:anywhere;min-width:0}
+ #registerView .register-summary-row:last-child{font-size:19px;color:#ffd29a;font-weight:800;padding-top:15px}
+ #registerView .register-day-card summary{gap:12px;flex-wrap:wrap}#registerView .register-day-card summary strong{font-variant-numeric:tabular-nums}
+ #registerView .register-day-body{background:#0a4757}
+ #registerView .register-block-row{gap:12px;flex-wrap:wrap}
+ #registerView .register-block-editor{grid-template-columns:minmax(100px,1fr) minmax(180px,1.3fr) 46px 46px 46px;gap:8px}
+ #registerView .register-block-editor button{padding:6px}
+ #registerView .register-editor{max-width:100%;gap:14px}
+ #registerView :is(.register-backup-card,.register-deletion-card){background:#0a4757}
+ @media(max-width:850px){#registerView .register-layout{grid-template-columns:minmax(0,1fr)}#registerView .register-layout aside{order:0}#registerView #registerSummary{display:block}#registerView .register-block-editor{grid-template-columns:minmax(0,1fr) 44px 44px 44px}#registerView .register-block-category{grid-column:1/-1}#registerView .register-block-duration{grid-column:1}}
+ @media(max-width:480px){#registerView .register-account-card{grid-template-columns:minmax(0,1fr)}#registerView .register-header{flex-wrap:wrap}#registerView .register-block-editor{gap:6px}#registerView .register-summary-row{font-size:15px}#registerView .register-form-actions{grid-template-columns:minmax(0,1fr)}#registerView .register-period-bar{grid-template-columns:44px minmax(0,1fr) 44px}}
+}
+
+@media screen{
+ body:has(#registerView.active){background:#082f3b}
+ #registerView{--reg-panel:#125569;--reg-line:#628d98}
+ #registerView :is(.register-gate-card,.register-editor,.register-account-card,.register-summary-card,.register-tools-card){background:#125569;border-color:#628d98}
+ #registerView button:not(:where(#registerPrintPanel button)){background:#0a3c4d;color:#fff7e8}
+ #registerView :is(#registerAddDay,button[type=submit]):not(:where(#registerPrintPanel button)),#registerView .register-tabs button.active{background:#ffd29a;color:#143d48}
+ #registerView :is(.register-form,.register-block-editor) :is(input,textarea,select){background:#062b37}
+ #registerView :is(button,input,select,textarea,summary):focus-visible{outline-color:#a9e0ef}
+ #registerView button:disabled{opacity:.42;cursor:not-allowed}
+}
+
+@media screen{
+ body:has(#registerView.active) #appShell,body:has(#registerView.active) #registerView{background:#082f3b!important}
+ body:has(#registerView.active) .app-header{position:static!important;background:transparent!important;border:0;box-shadow:none;padding:14px 18px}
+ body:has(#registerView.active) .app-header>:not(.home-brand){display:none!important}
+ body:has(#registerView.active) .home-brand{display:flex!important;gap:12px;align-items:center;color:#fff7e8;font-family:'Nunito Sans',system-ui,sans-serif}
+ body:has(#registerView.active) .home-brand>img{width:48px;height:48px;border-radius:12px}
+ body:has(#registerView.active) .home-wordmark{font-size:25px}
+ body:has(#registerView.active) .home-brand-user{margin-left:auto;font-size:14px;overflow-wrap:anywhere}
+ #appShell #registerView button:not(:where(#registerPrintPanel button)){background:#0a3c4d!important;color:#fff7e8!important;border:1px solid #628d98!important;box-shadow:none!important;min-height:44px;min-width:44px}
+ #appShell #registerView :is(#registerAddDay,button[type=submit]):not(:where(#registerPrintPanel button)),#appShell #registerView .register-tabs button.active{background:#ffd29a!important;color:#143d48!important;border-color:#ffd29a!important}
+ #appShell #registerView .register-tabs button.active:after{content:'✓';font-weight:900}
+ #appShell #registerView :is(button.danger,button.danger-outline){background:transparent!important;color:#ffc2be!important;border-color:#cd8c8c!important}
+ #appShell #registerView :is(.register-form,.register-block-editor) :is(input,select,textarea){background:#062b37!important;color:#fff7e8!important;border-color:#769ba6!important}
+ #appShell #registerView .register-block-editor button.danger{font-size:0}
+ #appShell #registerView .register-block-editor button.danger:before{content:'';width:20px;height:20px;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' d='M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7'/%3E%3C/svg%3E") center/contain no-repeat}
+ @media(max-width:600px){body:has(#registerView.active) .home-brand{display:grid!important;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr)}body:has(#registerView.active) .home-wordmark{font-size:21px}body:has(#registerView.active) .home-brand-user{font-size:12px}}
+}

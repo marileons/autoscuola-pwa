@@ -133,3 +133,46 @@
  #appShell #lesson .lesson-timing{grid-template-columns:minmax(0,1fr)}
  @media(max-width:600px){#appShell #lesson .lesson-summary{grid-template-columns:minmax(0,1fr)}}
 }
+
+/* Shared MR hierarchy, scoped to internal views; evaluated states and prints excluded. */
+@media screen{
+ body:has(.interior-view.active),body:has(#registerView.active){background:#082f3b;--mr-panel:#125569;--mr-field:#062b37;--mr-border:#628d98;--mr-muted:#d0e0e2}
+ #appShell .interior-view :is(.card,.student-card,.lesson-card,.manager-row,.document-card,.activity-section,.driving-error-card,.driving-error-catalog-card){background:#125569!important;border-color:#628d98!important;box-shadow:0 3px 10px #001d2829!important}
+ #appShell .interior-view :is(input:not([type=checkbox]):not([type=radio]),textarea,select){background:#062b37!important;border-color:#769ba6!important}
+ #appShell .interior-view button:not(.state-btn):not(.student-card):not(.lesson-card):not(.password-toggle){background:#0a3c4d!important;border-color:#628d98!important;color:#fff7e8!important;min-width:44px;min-height:44px}
+ #appShell .interior-view :is(#saveStudent,#newLesson,#saveLesson,#saveExaminer,#addChecklistItem,#addDrivingErrorCategory,.driving-error-classify,.signal-driving-error,#documentOpen,#saveStudentLicense){background:#ffd29a!important;border-color:#ffddb3!important;color:#143d48!important}
+ #appShell .interior-view button.danger,#appShell .interior-view .delete-error{background:transparent!important;border-color:#cd8c8c!important;color:#ffc2be!important}
+ #appShell .interior-view button:disabled{opacity:.42;filter:saturate(.3);cursor:not-allowed;box-shadow:none!important}
+ #appShell .interior-view :is(button,input,select,textarea,summary):focus-visible{outline:3px solid #a9e0ef!important;outline-offset:3px;box-shadow:0 0 0 5px #082f3b!important}
+ #appShell #checklistManager .check-tabs{gap:12px}
+ #appShell #checklistManager .check-tabs button{justify-content:flex-start;position:relative;padding-right:38px}
+ #appShell #checklistManager .check-tabs button.active{border:2px solid #ffd29a!important;background:#174c5b!important}
+ #appShell #checklistManager .check-tabs button.active:after{content:'✓';position:absolute;right:12px;color:#ffd29a;font-weight:900}
+ #appShell #checklistManager .manager-row{gap:16px;padding:14px}
+ #appShell #checklistManager .manager-label{min-width:0;overflow-wrap:anywhere;line-height:1.5}
+ #appShell #checklistManager .manager-actions{gap:10px}
+ #appShell #checklistManager .manager-actions .remove{margin-left:10px}
+ #appShell #checklistManager .manager-actions :is(.up,.down){font-size:0;width:44px;height:44px;padding:10px}
+ #appShell #checklistManager .manager-actions :is(.up,.down) svg{margin:0}
+ #appShell #checklistManager .checklist-add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}
+ #appShell #checklistManager .checklist-add button{width:auto;margin:0}
+ #appShell .interior-view .document-card.selected{border:2px solid #ffd29a!important;background:#1a6274!important}
+ #appShell .interior-view .document-card.selected:after{content:'✓ SELEZIONATO';color:#ffd29a;font-size:13px;font-weight:800}
+ #appShell .interior-view .home-command{background:#062b37!important;border-color:#ffd29a!important}
+ body:has(.interior-view.active) .choice-modal:not(.hidden) :is(.choice-card,.choice-modal-card){background:#125569;border-color:#628d98;color:#fff7e8}
+ @media(max-width:700px){#appShell #checklistManager .manager-row{grid-template-columns:minmax(0,1fr)}#appShell #checklistManager .manager-actions{flex-wrap:wrap}#appShell #checklistManager .checklist-add{grid-template-columns:minmax(0,1fr)}}
+}
+
+@media screen{
+ #appShell :is(#student,#lesson,#checklistManager,#studentForm,#studentTrash,#studentMultiAction,#generalStudentManagement,#examinerForm,#exams,#examForm,#documentsView) :is(button.danger,button.delete-error){background:transparent!important;border-color:#cd8c8c!important;color:#ffc2be!important}
+ #appShell #checklistManager .check-tabs button{display:flex;flex-wrap:wrap;gap:7px;padding:12px 24px 12px 10px;font-size:14px;overflow-wrap:normal;word-break:normal;line-height:1.4}
+ #appShell #checklistManager .check-tabs button.active:after{right:6px}
+ #appShell #checklistManager #addChecklistItem{justify-self:start;min-width:120px}
+}
+
+@media screen{
+ body:has(.interior-view.active) .choice-modal button{background:#0a3c4d!important;color:#fff7e8!important;border:1px solid #628d98!important;min-width:44px;min-height:44px;display:inline-flex;gap:8px;align-items:center;justify-content:center}
+ body:has(.interior-view.active) .choice-modal button.danger{background:transparent!important;border-color:#cd8c8c!important;color:#ffc2be!important}
+ body:has(.interior-view.active) .choice-modal button:focus-visible{outline:3px solid #a9e0ef;outline-offset:3px}
+ body:has(.interior-view.active) .choice-modal .mr-interior-icon{width:20px;height:20px;fill:none}
+}

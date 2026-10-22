@@ -41,4 +41,10 @@
 <symbol id="mr-license" viewBox="0 0 24 24"><path d="M3 5h18v14H3z M7 9h3v4H7z M14 9h4 M14 13h4 M6 16h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="mr-import" viewBox="0 0 24 24"><path d="M12 3v12 M7 10l5 5 5-5 M4 16v5h16v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="mr-export" viewBox="0 0 24 24"><path d="M12 16V4 M7 9l5-5 5 5 M4 16v5h16v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="mr-edit" viewBox="0 0 24 24"><path d="M4 16L16 4l4 4L8 20H4z M13 7l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="mr-up" viewBox="0 0 24 24"><path d="M12 20V4 M5 11l7-7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="mr-down" viewBox="0 0 24 24"><path d="M12 4v16 M5 13l7 7 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="mr-print" viewBox="0 0 24 24"><path d="M6 9V3h12v6 M6 17H3V9h18v8h-3 M6 14h12v7H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="mr-car" viewBox="0 0 24 24"><path d="M4 10l2-6h12l2 6 M3 10h18v9H3z M6 19v2 M18 19v2 M6 14h2 M16 14h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="mr-moto" viewBox="0 0 24 24"><path d="M8 17a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M24 17a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 17l5-9h7l4 9 M9 8l4 9H4 M14 4h3l3 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>

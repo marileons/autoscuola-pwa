@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="documents.css?v=1.21-premium-r10-document-button-accents">
 <link rel="stylesheet" href="full-backup.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="student-photo.css?v=1.21-photo-v1">
-<link rel="stylesheet" href="register-ui.css?v=1.21-register-ui-v5">
+<link rel="stylesheet" href="register-ui.css?v=register-mr-1">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/home-petrol/favicon-32.png?v=1">
 <link rel="stylesheet" href="assets/home-petrol/home-font.css?v=1">
 <link rel="stylesheet" href="home-look.css?v=home-petrol-1">
@@ -125,12 +125,12 @@
 
 <section id="registerView" class="view register-view" aria-labelledby="registerTitle">
   <div class="register-topbar">
-    <button id="registerHome" type="button" class="home-command">HOME</button>
-    <button id="registerBack" type="button" class="secondary">INDIETRO</button>
+    <button id="registerHome" type="button" class="home-command"><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-home"></use></svg>HOME</button>
+    <button id="registerBack" type="button" class="secondary"><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-back"></use></svg>INDIETRO</button>
   </div>
   <div class="register-shell">
     <header class="register-header">
-      <div><p class="register-eyebrow">AGENDA ISTRUTTORI</p><h2 id="registerTitle">Registro ore e compensi</h2></div>
+      <div><p class="register-eyebrow">AGENDA ISTRUTTORI</p><h2 id="registerTitle"><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-clock"></use></svg>Registro ore e compensi</h2></div>
       <span id="registerLockBadge" class="register-lock-badge">BLOCCATO</span>
     </header>
     <div class="register-local-notice"><strong>Solo su questo dispositivo</strong><span>Ore, tariffe, compensi e note restano nel tuo archivio locale cifrato.</span></div>
@@ -191,18 +191,18 @@
       </div>
       <div class="register-layout">
         <main>
-          <button id="registerAddDay" type="button" class="full">+ AGGIUNGI GIORNATA</button>
+          <button id="registerAddDay" type="button" class="full"><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-plus"></use></svg>AGGIUNGI GIORNATA</button>
           <div id="registerDayCards" class="register-day-cards"></div>
           <p id="registerEmptyDays" class="empty hidden">Nessuna giornata registrata nel periodo.</p>
         </main>
         <aside>
-          <section class="register-summary-card"><h3>Riepilogo</h3><div id="registerSummary"></div></section>
+          <section class="register-summary-card"><h3><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-activity"></use></svg>Riepilogo</h3><div id="registerSummary"></div></section>
           <section class="register-tools-card">
-            <button id="registerOpenRates" type="button" class="secondary full">TARIFFE PERSONALI</button>
-            <button id="registerOpenSecurity" type="button" class="secondary full">SICUREZZA REGISTRO</button>
-            <button id="registerOpenBackup" type="button" class="secondary full">BACKUP / RIPRISTINO REGISTRO</button>
-            <button id="registerOpenPrint" type="button" class="secondary full">ANTEPRIMA / STAMPA PDF</button>
-            <button id="registerOpenDeletion" type="button" class="secondary danger-outline full">CANCELLAZIONE DATI REGISTRO</button>
+            <button id="registerOpenRates" type="button" class="secondary full"><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-settings"></use></svg>TARIFFE PERSONALI</button>
+            <button id="registerOpenSecurity" type="button" class="secondary full"><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-license"></use></svg>SICUREZZA REGISTRO</button>
+            <button id="registerOpenBackup" type="button" class="secondary full"><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-save"></use></svg>BACKUP / RIPRISTINO REGISTRO</button>
+            <button id="registerOpenPrint" type="button" class="secondary full"><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-documents"></use></svg>ANTEPRIMA / STAMPA PDF</button>
+            <button id="registerOpenDeletion" type="button" class="secondary danger-outline full"><svg class="register-mr-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=interior-mr-1#mr-delete"></use></svg>CANCELLAZIONE DATI REGISTRO</button>
           </section>
         </aside>
       </div>
