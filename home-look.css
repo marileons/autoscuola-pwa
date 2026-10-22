@@ -1,0 +1,93 @@
+/* Home identity only: no lesson, calendar, archive or document rules. */
+html{background-color:#07586a}
+.home-brand{display:none}
+body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active){background:radial-gradient(ellipse at 55% 0,#14798a 0,transparent 62%),#07586a;color:#fff7e8;min-height:100svh}
+body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) #appShell{background:transparent;min-height:100svh;padding-bottom:env(safe-area-inset-bottom)}
+body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) .app-header{display:block!important;background:none;border:0;box-shadow:none;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 0 max(20px,env(safe-area-inset-left));text-align:left;font-family:'Nunito Sans',system-ui,sans-serif}
+body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) .app-header>:not(.home-brand){display:none!important}
+body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) .home-brand{display:flex;align-items:center;gap:14px;max-width:1240px;margin:auto;color:#fff7e8}
+.home-brand>img{width:64px;height:64px;flex:none;border-radius:15px;box-shadow:0 3px 12px #003b4940}
+.home-wordmark{font-size:clamp(23px,3vw,34px);font-weight:850;line-height:1.05;letter-spacing:-.025em}.home-wordmark b{color:#ffd29a;font-weight:850}
+.home-brand-user{margin-left:auto;font-size:16px!important;line-height:1.3;max-width:28%;overflow-wrap:anywhere;font-weight:700;color:#fff7e8!important}
+body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) #appShell>main{max-width:1280px;padding:20px max(20px,env(safe-area-inset-right)) 12px max(20px,env(safe-area-inset-left));}
+:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement){font-family:'Nunito Sans',system-ui,sans-serif;color:#fff7e8}
+:is(#home,#secretaryHome) .dashboard-intro{padding:0;margin:0 0 18px;background:none;border:0}
+:is(#home,#secretaryHome) .dashboard-intro p{margin:0;font-size:clamp(26px,3vw,38px);line-height:1.2;font-weight:850;letter-spacing:-.025em;color:#fff7e8}
+#homeAuthenticatedUser{display:none!important}
+:is(#home,#secretaryHome) .categories{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px}
+:is(#home,#secretaryHome) .categories>button{position:relative;display:flex!important;flex-direction:column;align-items:flex-start;justify-content:flex-start;isolation:isolate;grid-template-columns:none;min-width:0;min-height:190px;padding:16px!important;border:1px solid #62b3bf!important;border-radius:20px;background:linear-gradient(135deg,#14798b,#0b6579)!important;box-shadow:0 4px 10px #003b4920;color:#fff7e8!important;text-align:left;overflow:hidden;white-space:normal;text-overflow:clip;letter-spacing:0;line-height:1.18;font-family:inherit;transition:background .15s,transform .15s}
+:is(#home,#secretaryHome) .categories>button::after{content:none!important}
+:is(#home,#secretaryHome) .categories>button::before{content:none!important}
+:is(#home,#secretaryHome) .categories>button .hero-copy{position:relative!important;inset:auto!important;display:block;width:100%;z-index:2;max-width:none;transform:none;text-shadow:none}
+:is(#home,#secretaryHome) .categories>button strong,:is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark):not(.category-icon){display:block;max-width:none!important;width:auto;color:#fff7e8;font-size:clamp(15px,1.5vw,20px)!important;line-height:1.2;font-weight:850;letter-spacing:-.01em;overflow-wrap:normal;word-break:normal;text-align:left;text-shadow:none;position:relative;inset:auto;z-index:2;}
+:is(#home,#secretaryHome) .categories>button .hero-copy::after,:is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark):not(.category-icon)::after{content:'';display:block;width:34px;height:5px;border-radius:5px;background:#ffd29a;margin-top:9px}
+:is(#home,#secretaryHome) .categories>button img{position:absolute!important;inset:auto 4% 2% auto!important;display:block!important;width:90%!important;height:65%!important;object-fit:contain!important;object-position:center!important;transform:none!important;filter:none!important;mix-blend-mode:normal;z-index:1;pointer-events:none}
+:is(#home,#secretaryHome) .categories>button.auto-hero{grid-column:1/-1;min-height:242px;justify-content:center;padding:24px!important}
+:is(#home,#secretaryHome) .categories>button.auto-hero .hero-copy{width:36%;max-width:none;}
+:is(#home,#secretaryHome) .categories>button.auto-hero strong{font-size:clamp(38px,6vw,62px)!important;line-height:1;}
+:is(#home,#secretaryHome) .categories>button.auto-hero img{right:0!important;bottom:-1%!important;width:63%!important;height:112%!important}
+:is(#home,#secretaryHome) .categories>button.auto-hero .hero-copy::after{position:absolute;top:calc(1em + 6px);}
+:is(#home,#secretaryHome) .auto-hero small{display:block;max-width:210px;margin-top:22px;font-size:clamp(16px,2vw,21px);line-height:1.3;color:#fff7e8;font-weight:600}
+:is(#home,#secretaryHome) .categories>button .category-icon{display:none!important}
+:is(#home,#secretaryHome) .categories>button.pro-card .home-path-mark{display:block;position:absolute;right:20px;bottom:12px;width:66px;height:66px;color:#ffd29a;}
+.home-path-mark svg{display:block;width:100%;height:100%}
+:is(#home,#secretaryHome) .categories>button.pro-card{min-height:172px}
+:is(#home,#secretaryHome) .categories>button.ga-pro img{height:57%!important;width:76%!important;right:3%!important}
+:is(#home,#secretaryHome) .categories>button:hover{background:linear-gradient(135deg,#1a8496,#0c6e80)!important}
+:is(#home,#secretaryHome) .categories>button:active{transform:translateY(1px)}
+:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement) :is(button,a,input,select):focus-visible{outline:3px solid #ffe0af!important;outline-offset:4px;box-shadow:0 0 0 6px #003b49!important}
+:is(#home,#secretaryHome) :is(.other-functions-entry,.home-pro-action),:is(#otherFunctions,#secretaryMenu) .home-pro-action{font-family:inherit!important;min-height:52px;line-height:1.3;gap:12px;border:1px solid #62a8b5!important;border-radius:16px;background:#126c7e!important;box-shadow:0 3px 9px #003b4920;color:#fff7e8!important;font-size:16px;white-space:normal;text-decoration:none;}
+:is(#home,#secretaryHome) .other-functions-entry{width:100%;margin:0 0 14px!important;padding:14px 20px;display:flex!important;align-items:center;justify-content:center;font-weight:850;letter-spacing:.01em;border-color:#66b7c3!important}
+:is(#home,#secretaryHome) .other-functions-symbol{width:26px;height:26px;color:#ffd29a;fill:#ffd29a}
+:is(#home,#secretaryHome) .logout-action{width:min(100%,240px);margin:16px auto!important;background:#744548!important;border-color:#b77b7b!important;justify-content:center!important;min-height:48px}
+:is(#otherFunctions,#secretaryMenu) .card,#userManagement>.card{background:#0c5e70!important;border:1px solid #4e9aa9!important;box-shadow:0 5px 15px #003b4925;color:#fff7e8}
+:is(#otherFunctions,#secretaryMenu,#userManagement) :is(h2,p,.muted){color:#fff2df}
+:is(#otherFunctions,#secretaryMenu) .other-functions-grid{gap:12px}
+:is(#otherFunctions,#secretaryMenu) .other-functions-grid .home-pro-action{display:grid;grid-template-columns:30px minmax(0,1fr) 30px;align-items:center;padding:12px;min-height:56px;border-left-width:1px!important;text-align:center}
+:is(#otherFunctions,#secretaryMenu) .home-pro-label{grid-column:2;overflow-wrap:anywhere}
+:is(#otherFunctions,#secretaryMenu,#secretaryHome) .home-pro-action .ui-icon{width:28px!important;height:28px!important;flex-basis:28px!important;grid-column:1;color:#ffd29a!important;background:none!important;box-shadow:none!important;font-size:22px}
+:is(#otherFunctions,#secretaryMenu,#secretaryHome) .home-pro-action .ui-icon svg{width:26px!important;height:26px!important}
+#secretaryHome .sc-home-entry{display:grid;grid-template-columns:30px minmax(0,1fr) 30px;padding:12px;min-height:56px;background:#126c7e!important;border-left-width:1px!important}
+:is(#otherFunctions,#secretaryMenu) :is(.danger,.logout-action),#userManagement .danger{background:#744548!important;border-color:#b77b7b!important}
+#userManagement :is(button,input,select){min-height:44px;font-family:inherit}#userManagement input,#userManagement select{background:#fff7e8;color:#173d46;border:1px solid #8ab4ba}
+body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) #appShell>footer.ownership{font-family:'Nunito Sans',system-ui,sans-serif;background:transparent!important;color:#d3e5e5;font-size:11px;line-height:1.5;max-width:1000px;margin:10px auto 0;padding:12px max(18px,env(safe-area-inset-left)) max(18px,env(safe-area-inset-bottom));border:0;box-shadow:none}
+@media(min-width:1500px){body:has(:is(#home,#secretaryHome).active) #appShell>main,.home-brand{max-width:1380px}}
+@media(min-width:601px) and (max-width:900px){:is(#home,#secretaryHome) .categories{grid-template-columns:repeat(2,minmax(0,1fr))}:is(#home,#secretaryHome) .categories>button{min-height:205px}:is(#home,#secretaryHome) .categories>button.auto-hero{min-height:240px}:is(#home,#secretaryHome) .categories>button.pro-card{min-height:140px}}
+@media(max-width:600px){body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) #appShell>main{padding:18px max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left))}body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) .app-header{padding:max(18px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}.home-brand{gap:10px}.home-brand>img{width:48px;height:48px;border-radius:11px}.home-wordmark{font-size:23px;max-width:155px}.home-wordmark b{display:block}.home-brand-user{max-width:100px;font-size:13px!important}.home-brand-user:empty{display:none}.home-brand-user::before{content:'●';color:#ffd29a;display:block;font-size:17px;line-height:1}.home-brand-user:empty::before{display:none}:is(#home,#secretaryHome) .dashboard-intro{margin-bottom:16px}:is(#home,#secretaryHome) .dashboard-intro p{font-size:27px}:is(#home,#secretaryHome) .categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}:is(#home,#secretaryHome) .categories>button{min-height:185px;padding:13px!important;border-radius:17px}:is(#home,#secretaryHome) .categories>button strong{font-size:15px!important}:is(#home,#secretaryHome) .categories>button img{height:61%!important;width:95%!important;right:2%!important}:is(#home,#secretaryHome) .categories>button.auto-hero{min-height:218px;padding:18px!important;justify-content:flex-start}:is(#home,#secretaryHome) .categories>button.auto-hero .hero-copy{width:45%}:is(#home,#secretaryHome) .categories>button.auto-hero strong{font-size:36px!important}:is(#home,#secretaryHome) .categories>button.auto-hero img{width:72%!important;height:73%!important;right:-3%!important;bottom:0!important}:is(#home,#secretaryHome) .auto-hero small{font-size:16px;max-width:130px;margin-top:22px}:is(#home,#secretaryHome) .categories>button.pro-card{grid-column:1/-1;min-height:84px;padding:14px 42px 14px 90px!important;justify-content:center}:is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark):not(.category-icon){font-size:15px!important}:is(#home,#secretaryHome) .categories>button.pro-card>span::after{display:none!important}:is(#home,#secretaryHome) .categories>button.ga-pro img{left:9px!important;right:auto!important;bottom:15%!important;width:75px!important;height:70%!important}:is(#home,#secretaryHome) .categories>button.pro-card .home-path-mark{left:23px;right:auto;bottom:calc(50% - 22px);width:44px;height:44px}:is(#home,#secretaryHome) .categories>button.pro-card::after{content:'›'!important;display:block;position:absolute;inset:calc(50% - 17px) 15px auto auto;font-size:30px;font-weight:800;color:#ffd29a;background:none!important;width:auto!important;height:auto!important}:is(#otherFunctions,#secretaryMenu) .other-functions-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){:is(#home,#secretaryHome) .categories>button{transition:none}}
+/* Explicitly retire the previous Home-only artwork treatments and grid spans. */
+body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) #appShell>main{background:transparent!important}
+#appShell main>:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement){background:transparent!important;}
+#appShell :is(#home,#secretaryHome) .categories>button{grid-column:auto!important;min-height:205px!important;align-items:flex-start!important;border:1px solid #62b3bf!important;border-left:1px solid #62b3bf!important;}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero{grid-column:1/-1!important;min-height:260px!important;justify-content:center!important}
+#appShell :is(#home,#secretaryHome) .categories>button.pro-card{min-height:175px!important}
+#appShell :is(#home,#secretaryHome) .categories>button img{mix-blend-mode:normal!important;mask-image:none!important;-webkit-mask-image:none!important;opacity:1!important;max-width:none!important;max-height:none!important;filter:none!important}
+#appShell :is(#home,#secretaryHome) .auto-hero .hero-copy::after{display:none!important}
+#appShell :is(#home,#secretaryHome) .auto-hero strong::after{content:'';display:block;width:60px;height:6px;background:#ffd29a;border-radius:6px;margin-top:12px}
+#appShell :is(#home,#secretaryHome) .auto-hero small{letter-spacing:0!important;margin-top:14px;}
+@media(max-width:600px){#appShell :is(#home,#secretaryHome) .categories>button{min-height:195px!important}#appShell :is(#home,#secretaryHome) .categories>button.auto-hero{min-height:226px!important;justify-content:flex-start!important}#appShell :is(#home,#secretaryHome) .categories>button.pro-card{grid-column:1/-1!important;min-height:84px!important;justify-content:center!important}}
+
+/* Final local refinements: subtle light, compact portrait rows and session action. */
+#appShell :is(#home,#secretaryHome) .categories>button{background:radial-gradient(ellipse at 100% 100%,#48a2ad38,transparent 65%),linear-gradient(145deg,#18798a,#0b6579)!important;box-shadow:0 5px 15px #00374630;}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero{border:1px solid #72b6c0!important;box-shadow:0 5px 16px #00374630;}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero:not(:focus-visible){outline:none!important;}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero:focus-visible{outline:3px solid #ffe0af!important;outline-offset:4px;}
+#appShell :is(#home,#secretaryHome,#otherFunctions,#secretaryMenu) .logout-action,#appShell #userManagement #managerLogout{display:flex!important;align-items:center;justify-content:center!important;gap:10px;width:min(100%,220px);min-height:46px;margin:20px auto 8px!important;padding:10px 18px;background:#063f4d!important;border:1px solid #e8bc87!important;border-radius:14px;color:#fff7e8!important;box-shadow:0 3px 10px #00374625;font:700 15px/1.3 'Nunito Sans',system-ui,sans-serif;}
+#appShell :is(#home,#secretaryHome,#otherFunctions,#secretaryMenu) .logout-action .ui-icon{color:#fff7e8!important;width:26px!important;height:26px!important;flex-basis:26px!important;background:none!important;box-shadow:none;}
+#appShell :is(#home,#secretaryHome,#otherFunctions,#secretaryMenu) .logout-action .ui-icon svg{width:25px!important;height:25px!important;}
+#appShell :is(#home,#secretaryHome,#otherFunctions,#secretaryMenu) .logout-action.hidden,#appShell #managerLogout.hidden{display:none!important;}
+@media(min-width:601px) and (max-width:900px){
+ #appShell :is(#home,#secretaryHome) .categories>button.pro-card{grid-column:1/-1!important;min-height:84px!important;padding:14px 48px 14px 94px!important;justify-content:center!important;}
+ #appShell :is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark){font-size:17px!important;}
+ #appShell :is(#home,#secretaryHome) .categories>button.pro-card>span::after{display:none!important;}
+ #appShell :is(#home,#secretaryHome) .categories>button.pro-card .home-path-mark{left:25px;right:auto;bottom:calc(50% - 23px);width:46px;height:46px;}
+}
+@media(max-width:600px){
+ body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) .home-brand{display:grid;grid-template-columns:48px minmax(0,1.3fr) minmax(0,1fr);gap:10px;align-items:center;}
+ .home-wordmark{min-width:0;max-width:none;font-size:22px;}
+ .home-brand-user{min-width:0;max-width:none;margin-left:0;font-size:12px!important;line-height:1.35;overflow-wrap:anywhere;align-self:center;}
+ .home-brand-user::before{display:none;}
+}
+
+#appShell #managerLogout .ui-icon,#appShell #managerLogout svg{display:block;width:25px;height:25px;color:#fff7e8;}
+@media(min-width:601px) and (max-width:900px){#appShell :is(#home,#secretaryHome) .categories>button.ga-pro img{left:12px!important;right:auto!important;bottom:15%!important;width:74px!important;height:70%!important;}}

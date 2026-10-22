@@ -4,25 +4,26 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#14242e",
-  "theme_color": "#14242e",
+  "background_color": "#07586A",
+  "theme_color": "#07586A",
   "icons": [
     {
-      "src": "icon-192-v1-21.png?v=branding-v2",
+      "src": "assets/home-petrol/icon-192.png?v=1",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "icon-512-v1-21.png?v=branding-v2",
+      "src": "assets/home-petrol/icon-512.png?v=1",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "apple-touch-icon-v1-21.png?v=branding-v2",
-      "sizes": "180x180",
-      "type": "image/png"
+      "src": "assets/home-petrol/icon-maskable-512.png?v=1",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

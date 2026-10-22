@@ -296,7 +296,7 @@
    for(const group of homeHost.querySelectorAll(".sc-secretary-home-commands"))if(group!==secretaryCommands)group.remove();
    for(const node of homeHost.querySelectorAll("button"))if(!owned.has(node)&&["AGENDA CONDIVISA","PREPARA VERBALE"].includes(node.textContent.trim().replace(/\s+/g," ")))node.remove();
    for(const node of homeHost.querySelectorAll('p[role="status"]'))if(!secretaryCommands.contains(node)&&!node.textContent.trim())node.remove();
-   if(secretaryCommands.parentElement!==homeHost)homeHost.append(secretaryCommands);
+   const exit=homeHost.querySelector('[data-secretary-command="logoutHome"]');if(exit){if(secretaryCommands.nextElementSibling!==exit)homeHost.insertBefore(secretaryCommands,exit);if(homeHost.lastElementChild!==exit)homeHost.append(exit);}else if(secretaryCommands.parentElement!==homeHost)homeHost.append(secretaryCommands);
   };state.reconcileHome();}
   function officeHeading(cfg){if(user.role!=="SEGRETERIA")return;const title=document.querySelector("#secretaryHome .dashboard-intro p");if(title)title.textContent=(cfg?.officeLabel||"Segreteria")+(cfg?.central?" · SEGRETERIA CENTRALE":"");}
 

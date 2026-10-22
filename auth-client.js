@@ -173,6 +173,7 @@
   function updateHomeUser() {
     const box = document.getElementById("homeAuthenticatedUser");
     const displayName = String(currentUser?.name || "").trim();
+    const brandUser=document.getElementById("homeBrandUser");if(brandUser)brandUser.textContent=displayName?`Ciao, ${displayName}`:"";
     if (!box) return;
     box.textContent = displayName ? `Utente: ${displayName}` : "";
     box.classList.toggle("hidden", !displayName);

@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#14242e">
+<meta name="theme-color" content="#07586A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Agenda Istruttori</title>
-<link rel="manifest" href="manifest.json?v=1.21-dark-viewport">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v1-21.png?v=branding-v2">
+<link rel="manifest" href="manifest.json?v=home-petrol-1">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/home-petrol/apple-touch-180.png?v=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css?v=1.21-lesson-transfer-v1">
 <link rel="stylesheet" href="auth.css?v=1.21-premium-r10">
@@ -16,11 +16,14 @@
 <link rel="stylesheet" href="full-backup.css?v=1.21-premium-r10">
 <link rel="stylesheet" href="student-photo.css?v=1.21-photo-v1">
 <link rel="stylesheet" href="register-ui.css?v=1.21-register-ui-v5">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/home-petrol/favicon-32.png?v=1">
+<link rel="stylesheet" href="assets/home-petrol/home-font.css?v=1">
+<link rel="stylesheet" href="home-look.css?v=home-petrol-1">
 </head>
 <body>
 <section id="loginScreen" class="auth-screen hidden">
   <div class="auth-card">
-    <div class="auth-logo-frame"><img src="home-logo-mr-header-v1-21.png?v=branding-v3" alt="Logo Applicazione Istruttori MR con cartelli Genova e Sassari" class="auth-logo"></div>
+    <div class="auth-logo-frame"><img src="assets/home-petrol/logo-header.png?v=1" alt="Logo Agenda Istruttori: MR e strada curva" class="auth-logo"></div>
     <h1>AGENDA ISTRUTTORI</h1>
     <p class="muted auth-version">Versione 1.21</p>
     <p class="muted">Inserisci le tue credenziali per accedere.</p>
@@ -34,24 +37,24 @@
   </div>
 </section>
 <div id="appShell" class="hidden">
-<header class="app-header"><img src="home-logo-mr-header-v1-21.png?v=branding-v3" alt="Logo MR con automobile, moto, volante e strada" class="main-logo"><h1>AGENDA ISTRUTTORI</h1><div>Gestione Allievi e Guide · v1.21</div></header>
+<header class="app-header"><div class="home-brand"><img src="assets/home-petrol/logo-192.png?v=1" alt="Logo MR" width="64" height="64"><span class="home-wordmark">Agenda <b>Istruttori</b></span><span id="homeBrandUser" class="home-brand-user" aria-live="polite"></span></div><img src="assets/home-petrol/logo-header.png?v=1" alt="Logo MR Agenda Istruttori" class="main-logo"><h1>AGENDA ISTRUTTORI</h1><div>Gestione Allievi e Guide · v1.21</div></header>
 <main>
 <section id="home" class="view active">
   <p id="homeAuthenticatedUser" class="home-authenticated-user hidden" aria-live="polite"></p>
-  <div class="dashboard-intro"><p>Scegli una sezione</p></div>
+  <div class="dashboard-intro"><p>Scegli il tuo percorso</p></div>
   <div class="categories">
-    <button data-f="auto" class="automotive-hero auto-hero"><span class="hero-copy"><strong>AUTO</strong></span><img src="home-auto-realistic-r8e.png" alt="Automobile moderna vista frontalmente"></button>
-    <button data-f="moto" class="automotive-hero compact-vehicle moto-hero"><span class="hero-copy"><strong>MOTO</strong></span><img src="home-moto-realistic-r8e.png" alt="Motocicletta moderna con pilota vista frontalmente"></button>
-    <button data-f="quad-leggero" class="automotive-hero compact-vehicle microcar-hero"><span class="hero-copy"><strong>QUADRICICLO LEGGERO AM</strong></span><img src="home-b1-microcar-realistic-r8g.png" alt="Microcar moderna per patente AM"></button>
-    <button data-f="quad-pesante" class="automotive-hero compact-vehicle b1-hero"><span class="hero-copy"><strong>QUADRICICLO PESANTE B1</strong></span><img src="home-microcar-realistic-r8f.png" alt="Microcar moderna di categoria B1"></button>
-    <button data-f="corso-moto" class="automotive-hero compact-vehicle two-moto-hero"><span class="hero-copy"><strong>CORSO MOTO A2/A</strong></span><img src="home-moto-scooter-realistic-r10.png" alt="Una motocicletta e uno scooter moderni affiancati"></button>
-    <button data-f="guida-accompagnata" class="pro-card ga-pro"><span class="category-icon icon-ga" aria-hidden="true">GA</span><span>GUIDA ACCOMPAGNATA</span><img class="ga-auto-image" src="home-guida-accompagnata-utilitaria-r13.png" alt="Utilitaria arancione per guida accompagnata"></button>
-    <button data-f="perfezionamento" class="pro-card car-pro"><span>GUIDE DI PERFEZIONAMENTO</span><img src="home-perfezionamento-utilitaria-r13.png" alt="Utilitaria azzurra per guide di perfezionamento"></button>
-    <button data-f="esame-revisione" class="pro-card car-pro revision-car"><span>GUIDE PER LA PREPARAZIONE ALLA REVISIONE</span><img src="home-revisione-utilitaria-r13.png" alt="Utilitaria gialla per esami di revisione"></button>
-    <button data-f="esame-esperimento" class="pro-card car-pro experiment-car"><span>GUIDE PER LA PREPARAZIONE ALL’ESPERIMENTO</span><img src="home-esperimento-utilitaria-r13.png" alt="Utilitaria bianca per esperimento di guida"></button>
+    <button data-f="auto" class="automotive-hero auto-hero"><span class="hero-copy"><strong>AUTO</strong><small>Lezioni e gestione allievi</small></span><img src="assets/home-petrol/auto.webp?v=1" alt="Automobile moderna vista frontalmente"></button>
+    <button data-f="moto" class="automotive-hero compact-vehicle moto-hero"><span class="hero-copy"><strong>MOTO</strong></span><img src="assets/home-petrol/moto.webp?v=1" alt="Motocicletta stradale moderna"></button>
+    <button data-f="quad-leggero" class="automotive-hero compact-vehicle microcar-hero"><span class="hero-copy"><strong>QUADRICICLO LEGGERO AM</strong></span><img src="assets/home-petrol/am.webp?v=1" alt="Microcar moderna per patente AM"></button>
+    <button data-f="quad-pesante" class="automotive-hero compact-vehicle b1-hero"><span class="hero-copy"><strong>QUADRICICLO PESANTE B1</strong></span><img src="assets/home-petrol/b1.webp?v=1" alt="Microcar moderna di categoria B1"></button>
+    <button data-f="corso-moto" class="automotive-hero compact-vehicle two-moto-hero"><span class="hero-copy"><strong>CORSO MOTO A2/A</strong></span><img src="assets/home-petrol/moto.webp?v=1" alt="Motocicletta per il corso A2/A"></button>
+    <button data-f="guida-accompagnata" class="pro-card ga-pro"><span class="category-icon icon-ga" aria-hidden="true">GA</span><span>GUIDA ACCOMPAGNATA</span><img class="ga-auto-image" src="assets/home-petrol/auto.webp?v=1" alt="Automobile per guida accompagnata"></button>
+    <button data-f="perfezionamento" class="pro-card car-pro"><span>GUIDE DI PERFEZIONAMENTO</span><span class="home-path-mark"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><path d="M12 57C12 26 31 24 45 7M50 57C26 33 37 19 45 7"/><path d="M30 54l-2-9m2-9 4-7m4-9 4-7"/></svg></span></button>
+    <button data-f="esame-revisione" class="pro-card car-pro revision-car"><span>GUIDE PER LA PREPARAZIONE ALLA REVISIONE</span><span class="home-path-mark"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><rect x="11" y="7" width="36" height="48" rx="4"/><path d="M19 18h20M19 28h15M26 44l8 8 20-23"/></svg></span></button>
+    <button data-f="esame-esperimento" class="pro-card car-pro experiment-car"><span>GUIDE PER LA PREPARAZIONE ALL’ESPERIMENTO</span><span class="home-path-mark"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><rect x="11" y="7" width="36" height="48" rx="4"/><path d="M19 18h20M19 28h15M29 48l4-12 17-17 7 7-17 17z"/></svg></span></button>
   </div>
   <button id="openOtherFunctions" class="other-functions-entry full"><svg class="other-functions-symbol" viewBox="0 0 32 32" aria-hidden="true"><circle cx="7" cy="16" r="3"></circle><circle cx="16" cy="16" r="3"></circle><circle cx="25" cy="16" r="3"></circle></svg><span>ALTRE FUNZIONI</span></button>
-  <button id="logoutHome" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=home-r8f#logout-pro"/></svg></span> Esci</button>
+  <button id="logoutHome" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4"/></svg></span> Esci</button>
   <input id="studentFile" class="hidden" type="file" accept=".json,application/json">
   <input id="studentsImportFile" class="hidden" type="file" accept=".json,application/json">
 </section>
@@ -60,7 +63,7 @@
   <div class="dashboard-intro"><p>SEGRETERIA — Ricerca e consultazione</p></div>
   <div id="secretaryCategories" class="categories"></div>
   <button id="secretaryOtherFunctions" type="button" class="other-functions-entry full">ALTRE FUNZIONI</button>
-  <button type="button" data-secretary-command="logoutHome" class="home-pro-action logout-action full secretary-session-command"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#logout-pro"/></svg></span>ESCI</button>
+  <button type="button" data-secretary-command="logoutHome" class="home-pro-action logout-action full secretary-session-command"><span class="ui-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4"/></svg></span>ESCI</button>
 </section>
 <section id="secretaryMenu" class="view other-functions-view">
   <div class="card"><h2>Altre funzioni</h2><p>Archivio esclusivamente locale. Importa le schede condivise dall’istruttore: nessuna sincronizzazione automatica.</p>
@@ -108,7 +111,7 @@
   <button id="openRegister" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#schedule-pro"/></svg></span><span class="home-pro-label">REGISTRO ORE E COMPENSI</span></button>
   <button id="openUserManagement" class="user-management-entry home-pro-action full hidden"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#settings-pro"/></svg></span><span class="home-pro-label">AREA RISERVATA</span></button>
   </div></div>
-  <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#logout-pro"/></svg></span><span class="home-pro-label">ESCI</span></button>
+  <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4"/></svg></span><span class="home-pro-label">ESCI</span></button>
 </section>
 <section id="generalStudentManagement" class="view"><div class="other-functions-subnav"><button type="button" id="generalStudentsHome">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div><div class="card"><h2>Gestione generale allievi</h2><div class="other-functions-grid">
   <button id="archiveStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#archive-pro"/></svg></span> ARCHIVIA PIÙ ALLIEVI</button>
@@ -544,7 +547,7 @@
       <button type="submit">Crea utente</button>
     </form>
     <p id="userManagementMessage" class="muted hidden" role="status"></p>
-    <button id="managerLogout" type="button" class="danger hidden">ESCI</button>
+    <button id="managerLogout" type="button" class="danger hidden"><span class="ui-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4"/></svg></span><span>ESCI</span></button>
   </div>
   <div class="card"><h2>Utenti</h2><div id="userList"></div></div>
   <div class="other-functions-subnav"><button id="backUserManagement" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
@@ -640,5 +643,5 @@
     </div>
   </form>
 </div>
-<script src="auth-client.js?v=9-lesson-transfer"></script>
+<script src="auth-client.js?v=home-petrol-1"></script>
 </body></html>
