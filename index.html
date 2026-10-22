@@ -19,6 +19,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/home-petrol/favicon-32.png?v=1">
 <link rel="stylesheet" href="assets/home-petrol/home-font.css?v=1">
 <link rel="stylesheet" href="home-look.css?v=home-petrol-1">
+<link rel="stylesheet" href="interior-look.css?v=interior-mr-1">
 </head>
 <body>
 <section id="loginScreen" class="auth-screen hidden">
@@ -81,7 +82,7 @@
   <button data-secretary-command="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#documents-pro"/></svg></span><span class="home-pro-label">DOCUMENTI VARI</span></button>
   </div></div>
 </section>
-<section id="categoryHub" class="view category-hub">
+<section id="categoryHub" class="view category-hub interior-view">
   <button id="categoryHome" type="button" class="home-command full">← HOME</button>
   <div id="studentSection" class="card student-section">
     <h2 id="currentSectionTitle">Auto</h2>
@@ -113,7 +114,7 @@
   </div></div>
   <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4"/></svg></span><span class="home-pro-label">ESCI</span></button>
 </section>
-<section id="generalStudentManagement" class="view"><div class="other-functions-subnav"><button type="button" id="generalStudentsHome">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div><div class="card"><h2>Gestione generale allievi</h2><div class="other-functions-grid">
+<section id="generalStudentManagement" class="view interior-view"><div class="other-functions-subnav"><button type="button" id="generalStudentsHome">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div><div class="card"><h2>Gestione generale allievi</h2><div class="other-functions-grid">
   <button id="archiveStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#archive-pro"/></svg></span> ARCHIVIA PIÙ ALLIEVI</button>
   <button id="importStudent" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#import-pro"/></svg></span> IMPORTA ALLIEVO</button>
   <button id="importStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#import-pro"/></svg></span> IMPORTA PIÙ ALLIEVI</button>
@@ -318,7 +319,7 @@
   </div>
 </section>
 
-<section id="studentMultiAction" class="view">
+<section id="studentMultiAction" class="view interior-view">
   <div class="other-functions-subnav"><button id="backStudentMultiAction" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-general-students-back>INDIETRO</button></div>
   <div class="card form"><h2 id="studentMultiActionTitle"></h2>
     <p id="studentMultiActionPrompt" class="muted"></p>
@@ -328,7 +329,7 @@
   </div>
 </section>
 
-<section id="studentArchive" class="view">
+<section id="studentArchive" class="view interior-view">
   <button id="openStudentTrash" type="button" class="full secondary">CESTINO ALLIEVI</button>
   <div class="card student-section archive-section">
     <h2>Allievi archiviati</h2>
@@ -339,11 +340,11 @@
   <div class="other-functions-subnav"><button id="backArchive" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
 </section>
 
-<section id="studentTrash" class="view">
+<section id="studentTrash" class="view interior-view">
   <div class="card"><h2>Cestino allievi</h2><p>Le schede e i dati collegati sono conservati per 15 giorni. Ripristina una scheda prima della scadenza per conservarla.</p><p id="studentTrashEmpty">Il cestino è vuoto.</p><div id="studentTrashList"></div></div>
   <button id="backStudentTrash" type="button" class="full secondary">INDIETRO</button>
 </section>
-<section id="studentForm" class="view">
+<section id="studentForm" class="view interior-view">
   <div class="card form"><h2 id="studentFormTitle">Nuovo allievo</h2>
     <label>Categoria<select id="category">
       <option value="auto">Auto</option><option value="guida-accompagnata">Guida Accompagnata</option><option value="moto">Moto</option>
@@ -374,7 +375,7 @@
   <button id="backStudentForm" class="secondary full">Indietro</button>
 </section>
 
-<section id="studentMultiShare" class="view">
+<section id="studentMultiShare" class="view interior-view">
   <div class="other-functions-subnav"><button id="backStudentMultiShare" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-general-students-back>INDIETRO</button></div>
   <div class="card form"><h2>Condividi più allievi</h2>
     <p class="muted">Seleziona gli allievi da includere. Guide, checklist e percorsi GPS rimangono associati.</p>
@@ -383,7 +384,7 @@
   </div>
 </section>
 
-<section id="studentMultiImport" class="view">
+<section id="studentMultiImport" class="view interior-view">
   <div class="other-functions-subnav"><button id="studentMultiImportHome" type="button" class="home-command">HOME</button><button id="cancelStudentMultiImportTop" type="button" class="secondary">INDIETRO</button></div>
   <div class="card form"><h2>Importa più allievi</h2>
     <p id="studentMultiImportSummary" class="muted"></p><div id="studentMultiImportPreview"></div>
@@ -394,43 +395,43 @@
   </div>
 </section>
 
-<section id="student" class="view">
+<section id="student" class="view interior-view">
   <div class="top"><button id="editStudent">Modifica dati</button></div>
   <div class="card student-profile-card"><div class="student-profile-copy"><h2 id="studentName"></h2><div id="studentDetails"></div></div><aside class="student-profile-photo"><img id="studentPhoto" class="hidden" alt="Foto allievo"><div id="studentPhotoPlaceholder" class="student-photo-placeholder" aria-label="Foto non presente">Foto<br>non presente</div><button id="changeStudentPhoto" type="button" class="secondary">CAMBIA FOTO</button><button id="removeStudentPhoto" type="button" class="secondary hidden">RIMUOVI FOTO</button></aside></div>
-  <div class="card student-license-card" aria-labelledby="studentLicenseTitle"><h2 id="studentLicenseTitle">PATENTE CONSEGUITA</h2><p id="studentLicenseRecommendation" class="student-license-recommendation hidden">Esame idoneo registrato: completa questi dati quando disponibili.</p><div id="studentLicenseDisplay"></div><button id="editStudentLicense" type="button" class="secondary full">INSERISCI DATI PATENTE</button><form id="studentLicenseForm" class="form hidden" novalidate><label for="studentLicenseCategory">Categoria patente</label><select id="studentLicenseCategory" required><option value="">Seleziona categoria</option><option>AM</option><option>A1</option><option>A2</option><option>A</option><option>B1</option><option>B</option><option>BE</option><option>C1</option><option>C1E</option><option>C</option><option>CE</option><option>D1</option><option>D1E</option><option>D</option><option>DE</option></select><label for="studentLicenseNumber">Numero patente</label><input id="studentLicenseNumber" autocomplete="off"><label for="studentLicenseIssueDate">Data di rilascio</label><input id="studentLicenseIssueDate" type="date"><label for="studentLicenseExpiryDate">Data di scadenza</label><input id="studentLicenseExpiryDate" type="date"><p id="studentLicenseError" class="auth-error hidden" role="alert"></p><div class="student-license-actions"><button id="saveStudentLicense" type="submit">SALVA</button><button id="cancelStudentLicense" type="button" class="secondary">ANNULLA</button><button id="removeStudentLicense" type="button" class="danger hidden">RIMUOVI PATENTE</button></div></form></div>
   <button id="newLesson" class="full">Nuova guida</button>
-  <button id="shareStudent" class="secondary full">📤 Condividi allievo</button>
-  <button id="restoreStudent" class="restore-action full hidden">↩️ Ripristina allievo</button>
   <div class="card lessons-panel"><h2>Guide</h2><div id="lessons"></div><p id="emptyLessons" class="empty hidden">Nessuna guida salvata.</p><button id="toggleLessons" type="button" class="secondary full hidden" aria-expanded="false">VEDI TUTTE LE GUIDE</button></div>
+<details class="student-secondary card"><summary>ALTRE AZIONI - PATENTE, CONDIVISIONE E ARCHIVIO</summary>  <div class="card student-license-card" aria-labelledby="studentLicenseTitle"><h2 id="studentLicenseTitle">PATENTE CONSEGUITA</h2><p id="studentLicenseRecommendation" class="student-license-recommendation hidden">Esame idoneo registrato: completa questi dati quando disponibili.</p><div id="studentLicenseDisplay"></div><button id="editStudentLicense" type="button" class="secondary full">INSERISCI DATI PATENTE</button><form id="studentLicenseForm" class="form hidden" novalidate><label for="studentLicenseCategory">Categoria patente</label><select id="studentLicenseCategory" required><option value="">Seleziona categoria</option><option>AM</option><option>A1</option><option>A2</option><option>A</option><option>B1</option><option>B</option><option>BE</option><option>C1</option><option>C1E</option><option>C</option><option>CE</option><option>D1</option><option>D1E</option><option>D</option><option>DE</option></select><label for="studentLicenseNumber">Numero patente</label><input id="studentLicenseNumber" autocomplete="off"><label for="studentLicenseIssueDate">Data di rilascio</label><input id="studentLicenseIssueDate" type="date"><label for="studentLicenseExpiryDate">Data di scadenza</label><input id="studentLicenseExpiryDate" type="date"><p id="studentLicenseError" class="auth-error hidden" role="alert"></p><div class="student-license-actions"><button id="saveStudentLicense" type="submit">SALVA</button><button id="cancelStudentLicense" type="button" class="secondary">ANNULLA</button><button id="removeStudentLicense" type="button" class="danger hidden">RIMUOVI PATENTE</button></div></form></div>
+<div class="student-action-group">  <button id="shareStudent" class="secondary full">📤 Condividi allievo</button>
+  <button id="restoreStudent" class="restore-action full hidden">↩️ Ripristina allievo</button>
   <button id="archiveStudent" class="archive-action full">🗃️ Archivia allievo</button>
   <button id="exportStudentPdf" class="student-report-action full">ESPORTA REPORT PDF</button>
   <a id="openStudentPdfFallback" class="link-button full hidden" target="_blank" rel="noopener">APRI PDF</a>
   <p id="studentPdfFallbackMessage" class="muted hidden" role="status">L’apertura automatica è stata bloccata. Tocca APRI PDF per continuare.</p>
   <button id="deleteStudent" class="danger full">Elimina allievo</button>
-  <button id="backStudent" class="secondary full">Indietro</button>
+</div></details>  <button id="backStudent" class="secondary full">Indietro</button>
   <button id="backHome" class="home-command full">← HOME</button>
 </section>
 
-<section id="lesson" class="view">
-  <h2 id="lessonTitle">Nuova guida</h2>
-  <p id="lessonStudentIdentity" class="lesson-student-identity" aria-live="polite"></p>
-  <div class="card form">
+<section id="lesson" class="view interior-view">
+  <div class="lesson-heading"><button id="backLesson" class="secondary full">Indietro</button></div><h2 id="lessonTitle">Nuova guida</h2>
+  <div class="lesson-summary card"><div class="lesson-summary-cell"><span class="lesson-summary-label"><svg class="mr-summary-icon" aria-hidden="true"><use href="ui-icons.svg?v=interior-mr-1#mr-activity"></use></svg>CATEGORIA</span><strong id="lessonCategory"></strong></div><div class="lesson-summary-cell"><span class="lesson-summary-label"><svg class="mr-summary-icon" aria-hidden="true"><use href="ui-icons.svg?v=interior-mr-1#mr-student"></use></svg>ALLIEVO</span><p id="lessonStudentIdentity" class="lesson-student-identity" aria-live="polite"></p></div></div>
+  <div class="card form lesson-timing" aria-label="Data, ora e durata">
     <label>Data<input id="lessonDate" type="date"></label>
 <label>Ora<select id="lessonTime"><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option><option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option></select></label>
 <label>Durata<select id="lessonDuration"><option>1 ora</option><option>1 ora e 30 minuti</option><option>2 ore</option><option>3 ore</option></select></label>
     <p id="lessonInstructor" class="muted">Istruttore: non registrato</p>
-    <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><p class="native-dictation-hint">Per dettare, usa il microfono della tastiera del dispositivo.</p>
+
   </div>
-  <div class="card lesson-activities-card"><h2>Attività didattica</h2><button id="toggleLessonActivity" type="button" class="secondary full" aria-expanded="false" aria-controls="lessonChecklist">VISUALIZZA TUTTA L’ATTIVITÀ DIDATTICA</button><div id="lessonChecklist"></div></div>
-  <div class="card gps-card"><h2>GPS</h2><p class="muted">Valore orientativo, non uno strumento omologato.</p><button id="speedOnly" type="button" class="secondary full">SOLO VELOCITÀ</button><button id="startGps" type="button" class="gps-toggle full" aria-pressed="false">AVVIA GPS</button><button id="stopGps" type="button" class="hidden" tabindex="-1" aria-hidden="true">Ferma GPS</button><p id="gpsIndicator" class="gps-indicator" role="status">GPS non attivo</p><p id="gpsStatus" class="muted" aria-live="polite">GPS non attivo.</p><p id="wakeLockStatus" class="muted wake-lock-status" aria-live="polite">Schermo attivo: in attesa del GPS.</p><div class="live-map-frame"><div id="liveMap" class="map"></div><div id="indicativeSpeed" class="speed-dial" role="status" aria-label="Velocità indicativa" hidden><strong id="indicativeSpeedValue">—</strong><small>km/h</small><span>Velocità indicativa</span></div></div><div class="driving-error-quick"><button id="signalDrivingError" type="button" class="signal-driving-error full">SEGNALA ERRORE</button><p id="drivingErrorConfirmation" class="driving-error-confirmation" role="status" aria-live="polite"></p><p id="drivingErrorCount" class="muted">Errori registrati: 0</p></div></div>
-  <details id="drivingErrorsPanel" class="card driving-errors-panel"><summary id="drivingErrorsSummary">ERRORI SEGNALATI DURANTE LA GUIDA (0)</summary><p id="drivingErrorsPending" class="driving-errors-pending" aria-live="polite"></p><div id="drivingErrorsList"></div><p id="drivingErrorsEmpty" class="muted">Nessun errore segnalato.</p><button id="manageDrivingErrorCatalog" type="button" class="secondary full">GESTISCI CLASSIFICAZIONI ERRORI</button><section id="drivingErrorCatalogManager" class="driving-error-catalog-manager hidden"><h3>Classificazioni errori</h3><p class="muted">Le modifiche valgono per le scelte future. Gli errori storici conservano le etichette originarie.</p><div class="driving-error-catalog-toolbar"><button id="addDrivingErrorCategory" type="button">+ AGGIUNGI CATEGORIA</button><button id="resetDrivingErrorCatalog" type="button" class="danger">RIPRISTINA PREDEFINITE</button></div><div id="drivingErrorCatalogList"></div></section></details>
+<div class="lesson-workspace">  <div class="card lesson-activities-card"><h2>Attività didattica</h2><button id="toggleLessonActivity" type="button" class="secondary full" aria-expanded="false" aria-controls="lessonChecklist">VISUALIZZA TUTTA L’ATTIVITÀ DIDATTICA</button><div id="lessonChecklist"></div></div>
+<div class="lesson-side"><div class="card lesson-notes-card"><h2>Note della lezione</h2>    <label>Note<textarea id="lessonNotes" rows="7"></textarea></label><p class="native-dictation-hint">Per dettare, usa il microfono della tastiera del dispositivo.</p></div>  <details id="drivingErrorsPanel" class="card driving-errors-panel"><summary id="drivingErrorsSummary">ERRORI SEGNALATI DURANTE LA GUIDA (0)</summary><p id="drivingErrorsPending" class="driving-errors-pending" aria-live="polite"></p><div id="drivingErrorsList"></div><p id="drivingErrorsEmpty" class="muted">Nessun errore segnalato.</p><button id="manageDrivingErrorCatalog" type="button" class="secondary full">GESTISCI CLASSIFICAZIONI ERRORI</button><section id="drivingErrorCatalogManager" class="driving-error-catalog-manager hidden"><h3>Classificazioni errori</h3><p class="muted">Le modifiche valgono per le scelte future. Gli errori storici conservano le etichette originarie.</p><div class="driving-error-catalog-toolbar"><button id="addDrivingErrorCategory" type="button">+ AGGIUNGI CATEGORIA</button><button id="resetDrivingErrorCatalog" type="button" class="danger">RIPRISTINA PREDEFINITE</button></div><div id="drivingErrorCatalogList"></div></section></details></div></div>  <div class="card gps-card"><h2>GPS</h2><p class="muted">Valore orientativo, non uno strumento omologato.</p><button id="speedOnly" type="button" class="secondary full">SOLO VELOCITÀ</button><button id="startGps" type="button" class="gps-toggle full" aria-pressed="false">AVVIA GPS</button><button id="stopGps" type="button" class="hidden" tabindex="-1" aria-hidden="true">Ferma GPS</button><p id="gpsIndicator" class="gps-indicator" role="status">GPS non attivo</p><p id="gpsStatus" class="muted" aria-live="polite">GPS non attivo.</p><p id="wakeLockStatus" class="muted wake-lock-status" aria-live="polite">Schermo attivo: in attesa del GPS.</p><div class="live-map-frame"><div id="liveMap" class="map"></div><div id="indicativeSpeed" class="speed-dial" role="status" aria-label="Velocità indicativa" hidden><strong id="indicativeSpeedValue">—</strong><small>km/h</small><span>Velocità indicativa</span></div></div><div class="driving-error-quick"><button id="signalDrivingError" type="button" class="signal-driving-error full">SEGNALA ERRORE</button><p id="drivingErrorConfirmation" class="driving-error-confirmation" role="status" aria-live="polite"></p><p id="drivingErrorCount" class="muted">Errori registrati: 0</p></div></div>
+
   <button id="openSavedRoute" class="secondary full hidden">Apri percorso salvato</button>
-  <div style="margin-bottom:90px"><button id="saveLesson" class="full">💾 Salva guida</button></div>
+  <div class="lesson-save-bar"><button id="saveLesson" class="full">💾 Salva guida</button></div>
   <button id="deleteLesson" class="danger full hidden">Elimina guida</button>
-  <button id="backLesson" class="secondary full">Indietro</button>
+
 </section>
 
-<section id="checklistManager" class="view">
+<section id="checklistManager" class="view interior-view">
   <div class="card"><h2>Percorso didattico</h2>
     <div class="check-tabs">
       <button data-list="auto" aria-pressed="false">Auto</button><button data-list="guida-accompagnata" aria-pressed="false">Guida Accompagnata</button><button data-list="moto" aria-pressed="false">Moto</button>
@@ -444,20 +445,20 @@
   <div class="other-functions-subnav"><button id="backChecklistManager" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
 </section>
 
-<section id="examiners" class="view">
+<section id="examiners" class="view interior-view">
   <div class="other-functions-subnav"><button id="examinersTopHome" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
   <div class="top"><button id="newExaminer">➕ Nuovo esaminatore</button></div>
   <div class="card"><h2>Esaminatori</h2><div id="examinerList"></div><p id="emptyExaminers" class="empty hidden">Nessun esaminatore.</p></div>
   <div class="other-functions-subnav"><button id="backExaminers" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
 </section>
 
-<section id="exams" class="view exams-view">
+<section id="exams" class="view exams-view interior-view">
   <div class="other-functions-subnav"><button id="examsHome" type="button" class="home-command">HOME</button><button id="examsBack" type="button" class="secondary">INDIETRO</button></div>
   <div class="top"><button id="newExam" type="button">NUOVO ESAME</button><button id="manageExamLocations" type="button" class="secondary">GESTISCI LOCALITÀ</button></div>
   <div class="card"><h2>Esami</h2><div id="examList"></div><p id="emptyExams" class="empty hidden">Nessun esame salvato. Premi NUOVO ESAME per crearne uno.</p><button id="toggleExams" type="button" class="secondary full hidden" aria-expanded="false">VISUALIZZA TUTTI GLI ESAMI</button></div>
 </section>
 
-<section id="examForm" class="view exam-form-view">
+<section id="examForm" class="view exam-form-view interior-view">
   <div class="other-functions-subnav"><button id="examFormHome" type="button" class="home-command">HOME</button><button id="backExamForm" type="button" class="secondary">INDIETRO</button></div>
   <div class="card form"><h2 id="examFormTitle">Nuovo esame</h2>
     <label>Data<input id="examDate" type="date" required></label>
@@ -472,22 +473,22 @@
   <button id="deleteExam" type="button" class="danger full hidden">ELIMINA ESAME</button>
 </section>
 
-<section id="examExaminerPicker" class="view exam-examiner-picker-view">
+<section id="examExaminerPicker" class="view exam-examiner-picker-view interior-view">
   <div class="other-functions-subnav"><button id="examExaminerPickerHome" type="button" class="home-command">HOME</button><button id="backExamExaminerPicker" type="button" class="secondary">INDIETRO</button></div>
   <div class="card"><h2>Seleziona esaminatore</h2><p>Scegli un solo esaminatore già registrato.</p><div id="examExaminerPickerList"></div><p id="emptyExamExaminerPicker" class="empty hidden">Nessun esaminatore disponibile. Creane prima uno nella sezione ESAMINATORI.</p><button id="confirmExamExaminer" type="button" class="full">CONFERMA ESAMINATORE</button></div>
 </section>
 
-<section id="examStudentPicker" class="view exam-student-picker-view">
+<section id="examStudentPicker" class="view exam-student-picker-view interior-view">
   <div class="other-functions-subnav"><button id="examStudentPickerHome" type="button" class="home-command">HOME</button><button id="backExamStudentPicker" type="button" class="secondary">INDIETRO</button></div>
   <div class="card"><h2>Aggiungi allievi</h2><p>Seleziona uno o più allievi dall’archivio.</p><div id="examStudentPickerList"></div><button id="confirmExamStudents" type="button" class="full">AGGIUNGI SELEZIONATI</button></div>
 </section>
 
-<section id="examLocations" class="view exam-locations-view">
+<section id="examLocations" class="view exam-locations-view interior-view">
   <div class="other-functions-subnav"><button id="examLocationsHome" type="button" class="home-command">HOME</button><button id="backExamLocations" type="button" class="secondary">INDIETRO</button></div>
   <div class="card form"><h2>Località esami</h2><div id="examLocationList"></div><label>Nuova località<input id="newExamLocation" maxlength="120"></label><button id="addExamLocation" type="button" class="full">AGGIUNGI LOCALITÀ</button></div>
 </section>
 
-<section id="examinerForm" class="view">
+<section id="examinerForm" class="view interior-view">
   <div class="other-functions-subnav"><button id="examinerFormHome" type="button" class="home-command">HOME</button><button id="backExaminerForm" type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
   <div class="top"><button id="saveExaminer">Salva</button></div>
   <div class="card form"><h2 id="examinerFormTitle">Nuovo esaminatore</h2>
@@ -507,11 +508,11 @@
   <button id="deleteExaminer" class="danger full hidden">Elimina esaminatore</button>
 </section>
 
-<section id="examinerRouteView" class="view examiner-route-view"><div class="other-functions-subnav"><button id="examinerRouteHome" type="button" class="home-command">HOME</button><button id="backExaminerRoute" type="button" class="secondary">INDIETRO</button></div><div class="card"><div class="examiner-route-title"><div><h2 id="examinerRouteTitle">PERCORSO ESAME GPS</h2><p id="examinerRouteExaminer" class="muted"></p></div><span id="examinerRouteRecordingBadge" class="recording-badge hidden">REGISTRAZIONE</span></div><label>Zona/località<input id="examinerRouteZone" maxlength="160" placeholder="Zona del percorso"></label><label>Titolo facoltativo<input id="examinerRouteTitleInput" maxlength="120"></label><label>Nota facoltativa<textarea id="examinerRouteNote" maxlength="500" rows="3"></textarea></label><div class="examiner-route-metrics"><span><strong>Durata</strong><b id="examinerRouteDuration">0 min</b></span><span><strong>Punti validi</strong><b id="examinerRoutePoints">0</b></span><span><strong>Distanza</strong><b id="examinerRouteDistance">0 m</b></span></div><p id="examinerRouteGpsStatus" class="muted" role="status" aria-live="polite">GPS non attivo.</p><div id="examinerRouteMap" class="map examiner-route-map"></div><div id="examinerRouteRecordingActions" class="route-actions hidden"><button id="finishExaminerRoute" type="button">TERMINA E SALVA</button><button id="cancelExaminerRoute" type="button" class="danger">ANNULLA REGISTRAZIONE</button></div><div id="examinerRouteSavedActions" class="route-actions hidden"><button id="saveExaminerRouteMeta" type="button">SALVA DATI</button><button id="generateExaminerRoadReport" type="button">GENERA REPORT VIE</button><button id="resumeExaminerRoadReport" type="button" class="secondary hidden">RIPRENDI REPORT</button><button id="retryExaminerRoadReport" type="button" class="secondary hidden">RIPROVA PUNTI NON IDENTIFICATI</button><button id="stopExaminerRoadReport" type="button" class="danger hidden">INTERROMPI</button><button id="printExaminerRoadReport" type="button" class="secondary">ANTEPRIMA / STAMPA PDF</button></div><p id="examinerRoadReportStatus" class="muted" aria-live="polite"></p></div><div id="examinerRoadReportPanel" class="card examiner-road-report-panel hidden"></div><button id="registerAnotherExaminerRoute" type="button" class="full hidden">REGISTRA UN ALTRO PERCORSO</button></section>
+<section id="examinerRouteView" class="view examiner-route-view interior-view"><div class="other-functions-subnav"><button id="examinerRouteHome" type="button" class="home-command">HOME</button><button id="backExaminerRoute" type="button" class="secondary">INDIETRO</button></div><div class="card"><div class="examiner-route-title"><div><h2 id="examinerRouteTitle">PERCORSO ESAME GPS</h2><p id="examinerRouteExaminer" class="muted"></p></div><span id="examinerRouteRecordingBadge" class="recording-badge hidden">REGISTRAZIONE</span></div><label>Zona/località<input id="examinerRouteZone" maxlength="160" placeholder="Zona del percorso"></label><label>Titolo facoltativo<input id="examinerRouteTitleInput" maxlength="120"></label><label>Nota facoltativa<textarea id="examinerRouteNote" maxlength="500" rows="3"></textarea></label><div class="examiner-route-metrics"><span><strong>Durata</strong><b id="examinerRouteDuration">0 min</b></span><span><strong>Punti validi</strong><b id="examinerRoutePoints">0</b></span><span><strong>Distanza</strong><b id="examinerRouteDistance">0 m</b></span></div><p id="examinerRouteGpsStatus" class="muted" role="status" aria-live="polite">GPS non attivo.</p><div id="examinerRouteMap" class="map examiner-route-map"></div><div id="examinerRouteRecordingActions" class="route-actions hidden"><button id="finishExaminerRoute" type="button">TERMINA E SALVA</button><button id="cancelExaminerRoute" type="button" class="danger">ANNULLA REGISTRAZIONE</button></div><div id="examinerRouteSavedActions" class="route-actions hidden"><button id="saveExaminerRouteMeta" type="button">SALVA DATI</button><button id="generateExaminerRoadReport" type="button">GENERA REPORT VIE</button><button id="resumeExaminerRoadReport" type="button" class="secondary hidden">RIPRENDI REPORT</button><button id="retryExaminerRoadReport" type="button" class="secondary hidden">RIPROVA PUNTI NON IDENTIFICATI</button><button id="stopExaminerRoadReport" type="button" class="danger hidden">INTERROMPI</button><button id="printExaminerRoadReport" type="button" class="secondary">ANTEPRIMA / STAMPA PDF</button></div><p id="examinerRoadReportStatus" class="muted" aria-live="polite"></p></div><div id="examinerRoadReportPanel" class="card examiner-road-report-panel hidden"></div><button id="registerAnotherExaminerRoute" type="button" class="full hidden">REGISTRA UN ALTRO PERCORSO</button></section>
 
-<section id="savedMapView" class="view"><div id="savedMap" class="saved-map"></div><div class="saved-route-actions"><button id="generateRoadReport" type="button" class="full">GENERA REPORT STRADE</button><button id="toggleRoadReport" type="button" class="secondary full hidden" aria-expanded="true">NASCONDI REPORT</button></div><p id="roadReportStatus" class="muted road-report-status" aria-live="polite"></p><div id="roadReportPanel" class="card road-report-panel hidden"></div><button id="backSavedMap" class="secondary full">Indietro</button></section>
+<section id="savedMapView" class="view interior-view"><div id="savedMap" class="saved-map"></div><div class="saved-route-actions"><button id="generateRoadReport" type="button" class="full">GENERA REPORT STRADE</button><button id="toggleRoadReport" type="button" class="secondary full hidden" aria-expanded="true">NASCONDI REPORT</button></div><p id="roadReportStatus" class="muted road-report-status" aria-live="polite"></p><div id="roadReportPanel" class="card road-report-panel hidden"></div><button id="backSavedMap" class="secondary full">Indietro</button></section>
 
-<section id="settings" class="view">
+<section id="settings" class="view interior-view">
   <div class="card form"><h2>Impostazioni</h2>
     <h3>Account</h3>
     <p id="accountSummary" class="muted">Sessione protetta e gestita centralmente.</p>
@@ -556,7 +557,7 @@
   <div class="choice-modal-card"><h2 id="temporaryPasswordTitle">Password provvisoria</h2><p>Comunicala all’utente tramite un canale sicuro. Non sarà più mostrata.</p><output id="temporaryPasswordValue" class="temporary-password-value"></output><p id="temporaryPasswordExpiry" class="muted"></p><button id="closeTemporaryPassword" type="button">HO SALVATO LA PASSWORD</button></div>
 </div>
 
-<section id="documentsView" class="view">
+<section id="documentsView" class="view interior-view">
   <p id="documentsMessage" class="muted hidden" role="status"></p>
   <div id="documentViewer" class="card" hidden></div>
   <div class="other-functions-subnav"><button id="backDocuments" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
@@ -643,5 +644,5 @@
     </div>
   </form>
 </div>
-<script src="auth-client.js?v=home-petrol-1"></script>
+<script src="auth-client.js?v=interior-mr-1"></script>
 </body></html>

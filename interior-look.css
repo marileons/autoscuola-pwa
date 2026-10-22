@@ -1,0 +1,135 @@
+/* MR internal UI. Printing engines and the published Home theme are intentionally separate. */
+@media screen{
+ body:has(.interior-view.active){background:radial-gradient(ellipse at 80% 0,#13778a,transparent 65%),#07586a;color:#fff7e8;min-height:100svh;--mr-panel:#0e5e70;--mr-field:#084654;--mr-border:#4c8d9c;--mr-muted:#d0e0e2;}
+ body:has(#lesson.active){background:#082f3b;--mr-panel:#103e4a;--mr-field:#092c37;--mr-border:#416b76;--mr-muted:#c5d8dc;}
+ body:has(.interior-view.active) #appShell{background:transparent;min-height:100svh;padding-bottom:env(safe-area-inset-bottom)}
+ body:has(.interior-view.active) #appShell>main{background:transparent;max-width:1160px;padding:18px max(18px,env(safe-area-inset-right)) 28px max(18px,env(safe-area-inset-left));}
+ body:has(.interior-view.active) .app-header{display:block!important;background:transparent;border:0;box-shadow:none;padding:max(16px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 4px max(18px,env(safe-area-inset-left));}
+ body:has(.interior-view.active) .app-header>:not(.home-brand){display:none!important}
+ body:has(.interior-view.active) .home-brand{display:flex;align-items:center;gap:12px;max-width:1124px;margin:auto;font-family:'Nunito Sans',system-ui,sans-serif;color:#fff7e8}
+ body:has(.interior-view.active) .home-brand>img{width:48px;height:48px;border-radius:12px}
+ body:has(.interior-view.active) .home-wordmark{font-size:25px}
+ body:has(.interior-view.active) .home-brand-user{font-size:14px!important}
+ #appShell main>.interior-view{background:transparent!important;color:#fff7e8!important;font-family:'Nunito Sans',system-ui,sans-serif;animation:none;padding:0!important;min-width:0;}
+ #appShell .interior-view :is(button,input,select,textarea){font-family:inherit}
+ #appShell .interior-view :is(h2,h3,h4){color:#fff7e8!important;line-height:1.3;letter-spacing:-.015em;overflow-wrap:anywhere}
+ #appShell .interior-view h2{font-size:clamp(21px,2.3vw,28px);margin:0 0 14px;font-weight:800}
+ #appShell .interior-view h3{font-size:19px}
+ #appShell .interior-view :is(.card,.student-card,.lesson-card,.manager-row,.document-card,.activity-section,.driving-error-card,.driving-error-catalog-card){background:var(--mr-panel)!important;border:1px solid var(--mr-border)!important;border-left:1px solid var(--mr-border)!important;border-radius:17px!important;box-shadow:0 4px 13px #00232d22!important;color:#fff7e8!important;}
+ #appShell .interior-view :is(.card,.document-card){padding:18px;}
+ #appShell .interior-view :is(.muted,.meta,.empty,.detail-row,.native-dictation-hint){color:var(--mr-muted)!important}
+ #appShell .interior-view :is(.detail-row,.state-row){border-color:var(--mr-border)!important}
+ #appShell .interior-view :is(input:not([type=checkbox]):not([type=radio]),textarea,select){background:var(--mr-field)!important;color:#fff7e8!important;border:1px solid var(--mr-border)!important;border-radius:11px;min-height:46px;font-size:16px;line-height:1.45;box-shadow:none!important;}
+ #appShell .interior-view textarea{min-height:130px;resize:vertical}
+ #appShell .interior-view ::placeholder{color:#b9cfd5!important;opacity:1}
+ #appShell .interior-view :is(button,a,input,textarea,select,summary):focus-visible{outline:3px solid #ffd29a!important;outline-offset:3px;box-shadow:0 0 0 5px #082f3b!important}
+ #appShell .interior-view button:not(.state-btn):not(.student-card):not(.lesson-card):not(.password-toggle){display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;max-width:100%;padding:11px 16px;border:1px solid #5f9ca9!important;border-radius:12px;background:#146b7d!important;color:#fff7e8!important;box-shadow:0 3px 9px #00232d22!important;font-size:15px;line-height:1.35;font-weight:750;text-align:center;white-space:normal;overflow-wrap:anywhere;letter-spacing:0;}
+ #appShell .interior-view button.secondary{background:#174854!important;border-color:#5d818b!important}
+ #appShell .interior-view button.danger{background:#783641!important;border-color:#c27c81!important}
+ #appShell .interior-view :is(.archive-action,.signal-driving-error,.driving-error-classify){background:#ffd29a!important;color:#173b45!important;border-color:#ffdeb5!important}
+ #appShell #lesson #saveLesson{background:#1b6956!important;border-color:#70ad95!important;}
+ #appShell .interior-view button:disabled{opacity:.6;cursor:not-allowed}
+ .interior-view .mr-interior-icon{display:inline-block;vertical-align:middle;width:20px;height:20px;flex:0 0 20px;align-self:center;fill:none;stroke:currentColor;pointer-events:none;color:inherit;}
+ .interior-view :is(h2,h3,summary,label)>.mr-interior-icon{margin-right:9px;color:#ffd29a;}
+ #appShell .interior-view .top{align-items:center;flex-wrap:wrap}
+ #appShell .interior-view :is(.manager-actions,.student-license-actions,.driving-error-actions,.driving-error-edit-actions){display:flex;flex-wrap:wrap;gap:12px;}
+ #appShell .interior-view .driving-error-actions .delete-error{margin-left:14px}
+ #appShell #lesson .driving-error-classify{min-height:48px;}
+ #appShell .interior-view .activity-section>summary{color:#fff7e8;background:transparent;font-weight:800;min-height:48px;padding:14px;}
+ #appShell .interior-view .activity-section[open]>summary{background:#174854;border-color:var(--mr-border)}
+ #appShell .interior-view .state-btn{width:46px!important;height:46px!important;min-height:46px!important;padding:0!important;border-radius:12px;border:1px solid #8ca7af!important;font-size:24px;line-height:1;color:#193c46!important;background:#254e5b!important;box-shadow:none!important;}
+ #appShell .interior-view .state-btn.none{color:#d9e6e9!important;background:#254e5b!important}
+ #appShell .interior-view .state-btn.repeat{background:#ffe082!important;color:#263a40!important}
+ #appShell .interior-view .state-btn.orange{background:#ffb56b!important;color:#263a40!important}
+ #appShell .interior-view .state-btn.good{background:#a5d6a7!important;color:#163a30!important}
+ .interior-view .activity-indicator{display:inline-block;width:19px;font-weight:800}.interior-view .activity-indicator-repeat{color:#ffe082}.interior-view .activity-indicator-orange{color:#ffb56b}.interior-view .activity-indicator-good{color:#a5d6a7}
+ #appShell .interior-view .latest-badge{background:#ffd29a;color:#143d48;font-weight:850;}
+ #appShell .interior-view .lesson-card{display:block;padding:18px;line-height:1.5}
+ #appShell .interior-view .lesson-card:has(.auto-summary){display:grid;grid-template-columns:minmax(0,1.1fr) minmax(245px,.9fr);gap:20px;}
+ #appShell .interior-view .lesson-card .lesson-items{display:block;margin-top:12px;}
+ #appShell .interior-view .auto-summary{border-color:var(--mr-border);font-family:inherit;}
+ #appShell .interior-view .auto-summary-row{font-size:14px;line-height:1.4}
+ #appShell .interior-view .gps-indicator{background:#0b3541;border-color:var(--mr-border);color:#d0e0e2}
+ #appShell .interior-view .gps-toggle.gps-active{background:#783641!important;border-color:#c27c81!important;}
+ #appShell .interior-view #activitySearch{background:var(--mr-field)!important;color:#fff7e8!important;min-height:48px;}
+ #appShell .interior-view :is(.driving-error-specifics,.driving-error-category-group){background:#0d3541;border-color:var(--mr-border);color:#fff7e8}
+ #appShell .interior-view .driving-error-category-heading{font-weight:800;color:#fff7e8}
+ #appShell .interior-view :is(.driving-error-specific-option input[type=checkbox],.document-select){accent-color:#ffd29a}
+ #appShell .interior-view .document-card.selected{border:2px solid #ffd29a!important;background:#18596a!important}
+ #appShell .interior-view .document-command-panel{position:static}
+ #appShell .interior-view .document-global-actions{gap:10px;}
+ #appShell .interior-view .documents-error{color:#ffbdba}.interior-view .documents-success{color:#ace5bc}
+ body:has(.interior-view.active) .choice-modal:not(.hidden) .choice-card,body:has(.interior-view.active) .choice-modal:not(.hidden) .choice-modal-card{font-family:'Nunito Sans',system-ui,sans-serif;background:#103e4a;color:#fff7e8;border:1px solid #628895;box-shadow:0 15px 50px #001d2d77;}
+ body:has(.interior-view.active) .choice-modal :is(button,input,select){font:inherit;min-height:44px;border-radius:12px;}
+ body:has(.interior-view.active) #appShell>.ownership{color:#d0e0e2;background:transparent!important;font-size:11px;}
+ /* Shared calendar: typography only; retain its own warm palette and print layouts. */
+ .sc-main,.sc-main :is(button,input,select,textarea){font-family:'Nunito Sans',system-ui,sans-serif;}
+
+ @media(max-width:600px){body:has(.interior-view.active) #appShell>main{padding:16px max(14px,env(safe-area-inset-right)) 24px max(14px,env(safe-area-inset-left))}.interior-view .top{flex-direction:row}#appShell .interior-view :is(.card,.document-card){padding:15px;}#appShell .interior-view .lesson-card:has(.auto-summary){grid-template-columns:minmax(0,1fr)}#appShell .interior-view .auto-summary{border-left:0;border-top:1px solid var(--mr-border);padding:14px 0 0}body:has(.interior-view.active) .home-brand{display:grid;grid-template-columns:44px minmax(0,1.3fr) minmax(0,1fr);gap:10px}body:has(.interior-view.active) .home-brand>img{width:44px;height:44px}body:has(.interior-view.active) .home-wordmark{font-size:21px}body:has(.interior-view.active) .home-brand-user{font-size:12px!important;max-width:none;margin:0;overflow-wrap:anywhere}#appShell .interior-view .driving-error-actions .delete-error{margin-left:0}#appShell .interior-view .document-global-actions{grid-template-columns:repeat(2,minmax(0,1fr));}}
+}
+@media screen{
+ #appShell #lesson.interior-view .map{background:#0b3541!important;border-color:#416b76;}
+ #appShell #lesson.interior-view .driving-error-quick{background:rgba(16,62,74,.97);border:1px solid #628895;}
+ #appShell #lesson.interior-view .signal-driving-error{min-height:52px;background:#ffd29a!important;color:#173b45!important;border-color:#ffdeb5!important;}
+ #appShell #student.interior-view .student-profile-photo button{display:grid!important;grid-template-columns:20px minmax(0,1fr);gap:6px;padding:8px!important;font-size:13px!important;overflow-wrap:normal!important;word-break:normal;line-height:1.35;}
+ #appShell #student.interior-view .student-profile-photo button .mr-interior-icon{width:20px;height:20px;}
+ @media(max-width:600px){#appShell #student.interior-view .student-profile-card{grid-template-columns:minmax(0,1fr) 112px;gap:12px;}#appShell #student.interior-view .student-profile-photo :is(img,.student-photo-placeholder){width:108px;}}
+}
+
+@media screen{#appShell #documentsView :is(.documents-heading,.document-card){border-left:1px solid var(--mr-border)!important;}}
+
+@media screen{#appShell .interior-view .ui-icon.mr-interior-icon-slot{display:inline-flex;width:20px!important;height:20px!important;flex:0 0 20px!important;background:none!important;border:0;box-shadow:none!important;border-radius:0;color:inherit;}}
+
+@media screen{
+ #appShell #lesson .lesson-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+ #appShell #lesson .lesson-heading h2{margin:0}#appShell #lesson #backLesson{width:auto;margin:0;flex:0 0 auto}
+ #appShell #lesson .lesson-summary{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;align-items:center;gap:16px;padding:16px}
+ #appShell #lesson #lessonCategory{display:block;color:#ffd29a;font-size:22px}#appShell #lesson .lesson-summary p{margin:0}
+ #appShell #lesson .lesson-workspace{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+ #appShell #lesson .lesson-workspace>*{min-width:0}#appShell #lesson .lesson-side{display:grid;gap:14px}#appShell #lesson .lesson-side .card{margin:0}
+ #appShell #lesson #lessonNotes{min-height:120px;height:140px;resize:vertical}#appShell #lesson .native-dictation-hint{font-size:14px;margin-bottom:0}
+ #appShell #lesson .driving-error-quick{position:static;margin-top:14px;inset:auto}
+ #appShell #lesson .lesson-save-bar{margin:18px 0}#appShell #lesson #saveLesson{min-height:56px;background:#ffd29a!important;color:#143d48!important;border-color:#ffe0b8!important;font-size:20px}#appShell #lesson #saveLesson svg{color:inherit}
+ #appShell .interior-view button.danger{background:transparent!important;color:#ffc2be!important;border:1px solid #c58080!important;box-shadow:none!important}#appShell .interior-view button.danger svg{color:inherit}
+ #appShell #student .student-secondary>summary{min-height:48px;cursor:pointer;font-weight:800;padding:12px 0;color:#fff7e8}
+ #appShell #student .student-action-group{display:flex;flex-wrap:wrap;gap:12px;align-items:center}#appShell #student .student-action-group>*{width:auto;max-width:100%;margin:0}#appShell #student .student-action-group .danger{margin-left:12px}
+ #appShell #student .lesson-history-row{display:block;padding:12px 16px}#appShell #student .lesson-history-row .lesson-card-main{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 16px}#appShell #student .lesson-history-row .lesson-items{display:none}
+ @media(max-width:850px){#appShell #lesson .lesson-workspace{grid-template-columns:minmax(0,1fr)}#appShell #lesson .lesson-summary{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#appShell #lesson .lesson-summary .gps-indicator{grid-column:1/-1;justify-self:start}}
+ @media(max-width:600px){#appShell #lesson .lesson-summary .gps-indicator{grid-column:auto}#appShell #student .lesson-history-row .lesson-card-main{grid-template-columns:minmax(0,1fr)}#appShell #student .student-action-group>*{width:100%}#appShell #student .student-action-group .danger{margin-left:0}}
+}
+
+@media screen{
+ #appShell #student .student-profile-photo button.hidden{display:none!important}
+ #appShell #student .lesson-history-row .lesson-card-main>strong{grid-row:1/4}
+ #appShell #student .lesson-history-row .lesson-card-main>:not(strong){grid-column:2}
+ #appShell #student .lesson-history-row .lesson-notes{font-weight:400}
+ #appShell #student .student-profile-photo :is(img,.student-photo-placeholder){height:105px;min-height:0;object-fit:cover}
+ #appShell #student .student-profile-card .detail-row{padding:4px 0}
+ @media(max-width:600px){#appShell #student .lesson-history-row .lesson-card-main>strong{grid-row:auto}#appShell #student .lesson-history-row .lesson-card-main>:not(strong){grid-column:auto}}
+}
+
+/* Final tablet refinements: separate summary cells and two readable panels. */
+@media screen{
+ #appShell #lesson .lesson-summary{grid-template-columns:minmax(100px,.65fr) minmax(0,1.3fr) minmax(0,1.1fr) minmax(110px,.7fr);gap:0;padding:18px}
+ #appShell #lesson .lesson-summary-cell{min-width:0;padding:4px 18px;border-left:1px solid var(--mr-border)}
+ #appShell #lesson .lesson-summary-cell:first-child{border-left:0;padding-left:0}
+ #appShell #lesson .lesson-summary-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.035em;color:#d0e0e2;margin-bottom:9px}
+ #appShell #lesson .mr-summary-icon{width:20px;height:20px;flex:0 0 20px;color:#ffd29a}
+ #appShell #lesson #lessonStudentIdentity{background:transparent;border:0;padding:0;min-height:0;line-height:1.45;overflow-wrap:anywhere}
+ #appShell #lesson .lesson-summary .gps-indicator{font-size:14px;padding:7px 10px;display:inline-block;max-width:100%;overflow-wrap:anywhere}
+ #appShell #student .lesson-card:has(.auto-summary){padding:0;background:transparent!important;border:0!important;box-shadow:none;gap:16px;align-items:stretch}
+ #appShell #student .lesson-card:has(.auto-summary)>.lesson-card-main,#appShell #student .lesson-card>.auto-summary{display:block;margin:0;padding:18px;border:1px solid var(--mr-border);border-radius:16px;background:#0a4c5d;min-width:0}
+ #appShell #student .lesson-card>.auto-summary{background:#104655}
+ #appShell #student .latest-badge{display:block;background:transparent;color:#fff7e8;font-size:19px;font-weight:850;letter-spacing:0;padding:0 0 12px;margin:0 0 12px;border-bottom:1px solid var(--mr-border);border-radius:0}
+ #appShell #student .auto-summary-title{display:block;font-size:19px;font-weight:850;color:#fff7e8;margin-bottom:4px}
+ #appShell #student .auto-summary-caption{display:block;font-size:13px;font-weight:400;color:#d0e0e2;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--mr-border)}
+ #appShell #student .auto-summary-row{font-size:15px;line-height:1.5;padding:4px 0}
+ @media(min-width:601px) and (max-width:900px){#appShell #lesson .lesson-summary{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:16px 0}#appShell #lesson .lesson-summary-cell:nth-child(3){border-left:0;padding-left:0}}
+ @media(max-width:600px){#appShell #lesson .lesson-summary{grid-template-columns:minmax(0,1fr);gap:14px}#appShell #lesson .lesson-summary-cell{padding:0;border:0}#appShell #lesson .lesson-summary-label{margin-bottom:5px}#appShell #student .lesson-card:has(.auto-summary){grid-template-columns:minmax(0,1fr)}}
+}
+
+@media screen{
+ #appShell #lesson .lesson-summary{grid-template-columns:minmax(100px,.7fr) minmax(0,1.3fr)}
+ #appShell #lesson .lesson-timing{grid-template-columns:minmax(0,1fr)}
+ @media(max-width:600px){#appShell #lesson .lesson-summary{grid-template-columns:minmax(0,1fr)}}
+}
