@@ -3,17 +3,28 @@
  function distance(a,b){const r=Math.PI/180,x=(b.lat-a.lat)*r,y=(b.lng-a.lng)*r,h=Math.sin(x/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(y/2)**2;return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));}
  // Accuracy is uncertainty, not absence of signal. Preserve raw coordinates;
  // heading, acceleration and sensor speed do not veto plausible track points.
- function create(){let previous=null,accepted=null,candidate=null,pending=null,pendingCount=0,ready=false,interrupted=false,smoothed=null;
+ function create({initialAcquisition=false,now=()=>Date.now()}={}){const acquisitionStarted=now();let acquisitionPrevious=null,acquisitionCount=0;let previous=null,accepted=null,candidate=null,pending=null,pendingCount=0,ready=false,interrupted=false,smoothed=null;
   const coherent=(a,b)=>{const seconds=(b.time-a.time)/1000;return seconds>0&&seconds<=60&&distance(a,b)<=65*seconds+Math.min(100,a.accuracy+b.accuracy)};
-  return {observe(point,speed){
+  return {observe(point,speed){let justAcquired=false;
    const valid=point&&Number.isFinite(point.lat)&&Math.abs(point.lat)<=90&&Number.isFinite(point.lng)&&Math.abs(point.lng)<=180&&Number.isFinite(point.accuracy)&&point.accuracy>=0&&Number.isFinite(point.time);
-   if(!valid){previous=null;candidate=null;pending=null;pendingCount=0;smoothed=null;interrupted=!!accepted;return{ready:false,accept:false,speed:null};}
+   if(!valid){acquisitionPrevious=null;acquisitionCount=0;previous=null;candidate=null;pending=null;pendingCount=0;smoothed=null;interrupted=!!accepted;return{ready:false,accept:false,speed:null};}
+   if(initialAcquisition&&!ready){
+    // Three fresh fixes, never an average or a fabricated road position.
+    const age=now()-point.time,limit=now()-acquisitionStarted>=15000?65:35;
+    if(age>8000||age< -2000||point.accuracy>limit){acquisitionPrevious=null;acquisitionCount=0;return{ready:false,accept:false,speed:null,reason:"acquiring"};}
+    const dt=acquisitionPrevious?(point.time-acquisitionPrevious.time)/1000:0;
+    if(acquisitionPrevious&&dt<=0)return{ready:false,accept:false,speed:null,reason:"acquiring"};
+    const consistent=acquisitionPrevious&&dt>=.3&&dt<=8&&distance(acquisitionPrevious,point)<=55*dt+Math.min(25,acquisitionPrevious.accuracy+point.accuracy);
+    acquisitionCount=consistent?acquisitionCount+1:1;acquisitionPrevious={...point};
+    if(acquisitionCount<3)return{ready:false,accept:false,speed:null,reason:"acquiring"};
+    ready=true;justAcquired=true;previous=null;candidate=null;smoothed=null;
+   }
    if((previous&&point.time<=previous.time)||(accepted&&point.time<=accepted.time))return{ready,accept:false,speed:null};
    const last=previous;previous={...point};
    if(last&&point.time-last.time>60000){interrupted=!!accepted;candidate=null;}
    // Existing tachometer measurement and smoothing stay separate from recording.
    let measured=null;
-   if(point.accuracy<=35&&typeof speed==="number"&&Number.isFinite(speed)&&speed>=0&&speed<=65)measured=speed*3.6;
+   if(!justAcquired&&point.accuracy<=35&&typeof speed==="number"&&Number.isFinite(speed)&&speed>=0&&speed<=65)measured=speed*3.6;
    else if(last&&point.accuracy<=25&&last.accuracy<=25){const dt=(point.time-last.time)/1000,d=distance(last,point),noise=Math.max(3,(last.accuracy+point.accuracy)/2);if(dt>=1&&dt<=10&&d/dt<=65)measured=d<=noise?0:d/dt*3.6;}
    if(!ready){ready=point.accuracy<=15||!!(candidate&&coherent(candidate,point));candidate={...point};if(!ready)return{ready:false,accept:false,speed:null};candidate=null;}
    let breakBefore=false;

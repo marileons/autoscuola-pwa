@@ -3,11 +3,11 @@ const test=require("node:test"),assert=require("node:assert/strict"),fs=require(
 const app=fs.readFileSync(path.join(root,"app.js"),"utf8"),road=fs.readFileSync(path.join(root,"r10-features.js"),"utf8");
 function functions(context,names){for(const name of names)vm.runInContext(app.split(/\r?\n/).find(line=>line.startsWith(`function ${name}(`)),context)}
 test("GPS: dopo la ripresa un solo break, linea continua sui punti successivi e nessun duplicato",()=>{
- let callback,persisted=0;const state={watch:null,tempRoute:[],gpsNeedsBreak:false},context=vm.createContext({state,window:{LessonGps:require("../lesson-gps.js"),AgendaAuth:{can:()=>true}},navigator:{geolocation:{watchPosition(fn){callback=fn;return 1}}},drawLive(){},persistLessonSession(){persisted++},updateGpsUi(){},alert(){throw Error("unexpected")}});
+ let callback,persisted=0,clock=0;const state={watch:null,tempRoute:[],gpsNeedsBreak:false},context=vm.createContext({Date:{now:()=>clock},state,window:{LessonGps:{create:options=>require("../lesson-gps.js").create({...options,now:()=>clock})},AgendaAuth:{can:()=>true}},navigator:{geolocation:{watchPosition(fn){callback=fn;return 1}}},drawLive(){},persistLessonSession(){persisted++},updateGpsUi(){},alert(){throw Error("unexpected")}});
  functions(context,["distance","bearing","bearingDelta","evaluateGpsPoint","startGps"]);context.startGps();
- const point=(latitude,timestamp,accuracy=5)=>callback({coords:{latitude,longitude:8.9,accuracy},timestamp});
- point(44.4,1000);point(44.4001,5000);state.gpsNeedsBreak=true;point(44.4002,100000);point(44.4003,105000);point(44.4003,105000);
- assert.equal(state.tempRoute.length,3);assert.deepEqual(state.tempRoute.map(p=>p.breakBefore),[false,false,true]);assert.equal(persisted,3);
+ const point=(latitude,timestamp,accuracy=5)=>{clock=timestamp;callback({coords:{latitude,longitude:8.9,accuracy},timestamp})};
+ point(44.3998,1000);point(44.3999,2000);point(44.4,3000);point(44.4001,5000);state.gpsNeedsBreak=true;point(44.4002,100000);point(44.4003,105000);point(44.4003,105000);
+ assert.equal(state.tempRoute.length,3);assert.deepEqual(state.tempRoute.map(p=>p.breakBefore),[true,false,true]);assert.equal(persisted,3);
  point(91,110000,150);assert.equal(state.tempRoute.length,3);point(44.4004,115000);assert.equal(state.tempRoute.length,3);point(44.4005,120000);assert.equal(state.tempRoute.at(-1).breakBefore,true);assert.equal(state.gpsNeedsBreak,false);
  point(44.4006,125000);assert.equal(state.tempRoute.at(-1).breakBefore,false);assert.equal(state.tempRoute.length,5);
 });
