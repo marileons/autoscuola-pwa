@@ -422,3 +422,18 @@ body{width:100%;min-width:0;min-height:100vh;min-height:100dvh;margin:0;backgrou
 #secretaryHome .sc-secretary-home-commands > .sc-home-entry{margin:0;}
 #secretaryHome .sc-secretary-home-commands > p{margin:0;}
 #secretaryHome .sc-secretary-home-commands > p:empty{display:none;}
+
+/* AUTO lesson summary and local activity search. */
+.lesson-card:has(.auto-summary){display:grid;grid-template-columns:minmax(0,1fr) minmax(245px,.85fr);gap:20px;align-items:start}
+.lesson-card-main{min-width:0;display:block;overflow-wrap:anywhere}
+.auto-summary{display:grid;gap:8px;border-left:1px solid #617582;padding-left:18px;font-weight:400;line-height:1.35;color:inherit}
+.auto-summary-title{font-size:12px;font-weight:800;letter-spacing:.03em;margin-bottom:4px}
+.auto-summary-row{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px;font-size:14px;text-align:left}
+.auto-summary-row>span:first-child{font-size:20px;line-height:1;color:#bce6d2}
+.auto-summary-note{font-size:12px;font-weight:400;color:#c9d6dd}
+.activity-search-controls{margin:12px 0;min-width:0}.activity-search-controls[hidden]{display:none}
+.activity-search-controls>label{display:block;font-size:14px;font-weight:800;margin-bottom:6px}
+.activity-search-controls>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+#activitySearch{min-width:0;min-height:48px;font-size:16px;background:#15212a;color:#f1f4f5;border:1px solid #728a98;margin:0}
+#activitySearch::placeholder{color:#becbd3}#clearActivitySearch{min-height:48px}
+@media(max-width:600px){.lesson-card:has(.auto-summary){grid-template-columns:minmax(0,1fr)}.auto-summary{border-left:0;border-top:1px solid #617582;padding:14px 0 0}.activity-search-controls>div{grid-template-columns:minmax(0,1fr) auto}#clearActivitySearch{padding-inline:10px;font-size:13px}}
