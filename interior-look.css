@@ -183,3 +183,5 @@
  #appShell #lesson #drivingErrorsSaveStatus:empty{display:none}
  #appShell #lesson .save-error{background:#ffd29a!important;color:#143d48!important;border-color:#ffddb3!important}
 }
+
+@media screen{#appShell #lesson .gps-local-diagnostics{margin:10px 0;border:1px solid var(--mr-border);border-radius:11px;padding:0 12px}#appShell #lesson .gps-local-diagnostics>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:14px;font-weight:800;list-style:disclosure-closed}#appShell #lesson .gps-local-diagnostics[open]>summary{border-bottom:1px solid var(--mr-border)}#appShell #lesson #gpsDiagnosticData{font-size:14px;line-height:1.5;overflow-wrap:anywhere}}
