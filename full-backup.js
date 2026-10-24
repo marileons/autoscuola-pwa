@@ -32,14 +32,25 @@
   const byId=id=>document.getElementById(id);
   let restoreInProgress=false,restoreReloadScheduled=false,restoreAbortController=null;
   const RESTORE_PHASES={READ:"lettura e validazione",SAFETY:"preparazione copia preventiva",DOCUMENTS:"applicazione documenti",DATA:"applicazione dati",CATALOGS:"applicazione cataloghi",VERIFY:"verifica del ripristino",COMPLETE:"completamento",RESTART:"verifica dopo riavvio"};
+  const DOCUMENT_STEPS={SOURCE_OPEN:"apertura area temporanea",SOURCE_KEYS:"lettura chiavi",TARGET_OPEN:"apertura archivio documenti",TARGET_CLEAR:"svuotamento transazionale",SOURCE_READ:"lettura documento preparato",PREPARE:"verifica chiave, metadati e Blob",TARGET_WRITE:"scrittura transazionale",STAGING_CHUNK:"preparazione blocchi",STAGING_FINISH:"composizione documento"};
+  const TECHNICAL_EXCEPTIONS=new Set(["Error","DOMException","DataCloneError","DataError","ConstraintError","TransactionInactiveError","InvalidStateError","AbortError","UnknownError","NotFoundError","VersionError","QuotaExceededError","SecurityError","NotAllowedError","NotReadableError","ReadOnlyError","TimeoutError","TypeError","RangeError","SyntaxError","OperationError"]);
+  function documentFailure(error,context){
+    const cause=error?.target?.error||error;
+    return Object.assign(new Error("Operazione documenti non completata."),{name:TECHNICAL_EXCEPTIONS.has(cause?.name)?cause.name:"UnknownException",cause,documentContext:{...context}});
+  }
   function restoreDiagnostic(error,phase,status="unchanged",cleanup=true){
     if(error?.restoreDiagnostic)return error;
-    const cause=error?.target?.error||error, name=cause?.name||"";
-    const category=name==="QuotaExceededError"?"STORAGE_QUOTA":["SecurityError","NotAllowedError"].includes(name)?"STORAGE_ACCESS":["InvalidStateError","TransactionInactiveError","AbortError","UnknownError","NotFoundError","VersionError"].includes(name)?"STORAGE":phase==="READ"?"VALIDATION":phase==="VERIFY"||phase==="RESTART"?"VERIFICATION":"APPLICATION";
-    const labels={STORAGE_QUOTA:"spazio locale insufficiente (quota)",STORAGE_ACCESS:"accesso allo storage non disponibile",STORAGE:"errore dello storage locale",VALIDATION:"file non valido o non leggibile",VERIFICATION:"verifica dei dati non riuscita",APPLICATION:"errore di applicazione"};
-    const code=`FB-${phase}-${category}-${status.toUpperCase()}${cleanup?"":"-CLEANUP"}`;
+    const cause=error?.target?.error||error,name=TECHNICAL_EXCEPTIONS.has(cause?.name)?cause.name:"UnknownException",context=error?.documentContext;
+    const fileCodes={READ:"FILE_READ",UTF8:"FILE_ENCODING",CHECKSUM:"INTEGRITY",DOCUMENT_SIZE:"DOCUMENT_SIZE",TRUNCATED:"FILE_TRUNCATED",BASE64:"FILE_ENCODING",JSON_INVALID:"VALIDATION",FORMAT:"VALIDATION",VERSION:"VALIDATION",METADATA_LIMIT:"VALIDATION"};
+    const types={QuotaExceededError:"STORAGE_QUOTA",SecurityError:"STORAGE_ACCESS",NotAllowedError:"STORAGE_ACCESS",DataCloneError:"DOCUMENT_CLONE",DataError:"DOCUMENT_KEY",ConstraintError:"DOCUMENT_KEY",TransactionInactiveError:"TRANSACTION",InvalidStateError:"TRANSACTION",AbortError:"TRANSACTION",ReadOnlyError:"TRANSACTION",UnknownError:"STORAGE",NotFoundError:"STORAGE_SCHEMA",VersionError:"STORAGE_SCHEMA",NotReadableError:"FILE_READ",TimeoutError:"STORAGE",RangeError:"MEMORY",TypeError:"DATA_TYPE",SyntaxError:"VALIDATION"};
+    const category=types[name]||(phase==="READ"?fileCodes[cause?.code]||"VALIDATION":phase==="VERIFY"||phase==="RESTART"?"VERIFICATION":phase==="DOCUMENTS"?"DOCUMENT_OPERATION":"APPLICATION");
+    const labels={STORAGE_QUOTA:"spazio locale insufficiente (quota)",STORAGE_ACCESS:"accesso allo storage non disponibile",STORAGE:"errore dello storage locale",STORAGE_SCHEMA:"schema o archivio locale non disponibile",TRANSACTION:"transazione IndexedDB non completata",DOCUMENT_CLONE:"copia del documento non memorizzabile",DOCUMENT_KEY:"chiave o vincolo del documento non valido",DOCUMENT_OPERATION:"operazione documenti non identificata",FILE_READ:"lettura del file non riuscita",FILE_ENCODING:"codifica del file non valida",FILE_TRUNCATED:"lettura o file incompleto",INTEGRITY:"controllo di integrità non superato",DOCUMENT_SIZE:"dimensione dichiarata non coerente",MEMORY:"limite di memoria o dimensione non gestibile",DATA_TYPE:"tipo di dato non supportato",VALIDATION:"file non valido o non leggibile",VERIFICATION:"verifica dei dati non riuscita",APPLICATION:"errore di applicazione"};
+    const step=context&&Object.hasOwn(DOCUMENT_STEPS,context.subphase)?context.subphase:null;
+    const index=Number.isSafeInteger(context?.index)&&context.index>0?context.index:0,total=Number.isSafeInteger(context?.total)&&context.total>=0?context.total:null;
+    const detail=step?` Sottofase ${DOCUMENT_STEPS[step]}; eccezione ${name}.${index?` Documento ${index}${total!==null?` di ${total}`:""}.`:total!==null?` Documenti previsti: ${total}.`:""}`:"";
+    const code=`FB-${phase}${step?`-${step}`:""}-${category}${step?`-${name}${index?`-${index}OF${total===null?"UNKNOWN":total}`:""}`:""}-${status.toUpperCase()}${cleanup?"":"-CLEANUP"}`;
     const outcome=status==="verified"?"Stato precedente ripristinato e verificato.":status==="incomplete"?"Rollback incompleto o non verificato. Conserva la copia preventiva locale e non effettuare altre operazioni.":"Dati applicativi precedenti non modificati.";
-    return Object.assign(new Error(`Ripristino non completato: fase ${RESTORE_PHASES[phase]||RESTORE_PHASES.COMPLETE}; ${labels[category]}. ${outcome} Codice ${code}.${cleanup?"":" Pulizia dell’area temporanea non completata."}`),{code,restoreDiagnostic:true});
+    return Object.assign(new Error(`Ripristino non completato: fase ${RESTORE_PHASES[phase]||RESTORE_PHASES.COMPLETE}; ${labels[category]}.${detail} ${outcome} Codice ${code}.${cleanup?"":" Pulizia dell’area temporanea non completata."}`),{code,restoreDiagnostic:true});
   }
   async function cleanupRestoreStaging(){try{await clearStaging();return true}catch{return false}}
 
@@ -229,11 +240,46 @@
   async function putStoreRecord(openDatabase,storeName,record){const db=await openDatabase();await new Promise((resolve,reject)=>{const transaction=db.transaction(storeName,"readwrite");transaction.objectStore(storeName).put(record);transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)});db.close()}
   async function readStoreKeys(openDatabase,storeName){const db=await openDatabase(),keys=await new Promise((resolve,reject)=>{const transaction=db.transaction(storeName,"readonly"),request=transaction.objectStore(storeName).getAllKeys();request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});db.close();return keys}
   async function readStoreRecord(openDatabase,storeName,key){const db=await openDatabase(),record=await new Promise((resolve,reject)=>{const transaction=db.transaction(storeName,"readonly"),request=transaction.objectStore(storeName).get(key);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});db.close();return record}
+  function documentTransaction(db,storeName,mode,operation){
+    return new Promise((resolve,reject)=>{
+      let transaction,request,firstError;
+      try{
+        transaction=db.transaction(storeName,mode);
+        transaction.oncomplete=()=>resolve(request?.result);
+        // Request.error is available before Transaction.error during bubbling.
+        // Remember it, but wait for abort before starting compensation.
+        transaction.onerror=event=>{firstError=firstError||event.target?.error||transaction.error};
+        transaction.onabort=()=>reject(firstError||transaction.error||new DOMException("Transazione documenti annullata.","AbortError"));
+        request=operation(transaction.objectStore(storeName));
+        request.onerror=()=>{firstError=firstError||request.error};
+      }catch(error){
+        firstError=error;
+        if(transaction)try{transaction.abort();return}catch{}
+        reject(error);
+      }
+    });
+  }
   async function replaceDocumentsFromStore(openSource,sourceStore,onProgress){
-    const keys=await readStoreKeys(openSource,sourceStore),target=await openDocumentDatabase();
-    await new Promise((resolve,reject)=>{const transaction=target.transaction(DOCUMENT_STORE,"readwrite");transaction.objectStore(DOCUMENT_STORE).clear();transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)});
-    target.close();
-    for(let index=0;index<keys.length;index++){const record=await readStoreRecord(openSource,sourceStore,keys[index]);if(!record)throw new Error("Documento temporaneo mancante.");const db=await openDocumentDatabase();await new Promise((resolve,reject)=>{const transaction=db.transaction(DOCUMENT_STORE,"readwrite");transaction.objectStore(DOCUMENT_STORE).put(record);transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error)});db.close();onProgress?.(index+1,keys.length);await idlePause()}
+    let db,context={subphase:"SOURCE_OPEN",index:0,total:null};
+    try{
+      db=await openSource();context.subphase="SOURCE_KEYS";
+      const keys=await documentTransaction(db,sourceStore,"readonly",store=>store.getAllKeys());
+      db.close();db=null;context={subphase:"TARGET_OPEN",index:0,total:keys.length};
+      db=await openDocumentDatabase();context.subphase="TARGET_CLEAR";
+      await documentTransaction(db,DOCUMENT_STORE,"readwrite",store=>store.clear());
+      db.close();db=null;
+      for(let index=0;index<keys.length;index++){
+        context={subphase:"SOURCE_OPEN",index:index+1,total:keys.length};db=await openSource();context.subphase="SOURCE_READ";
+        const record=await documentTransaction(db,sourceStore,"readonly",store=>store.get(keys[index]));
+        db.close();db=null;context.subphase="PREPARE";
+        if(!record||record.id!==keys[index])throw new DOMException("Documento temporaneo o chiave non valido.","DataError");
+        if(!(record.blob instanceof Blob)||record.blob.size!==record.size)throw new TypeError("Blob temporaneo non valido.");
+        context.subphase="TARGET_OPEN";db=await openDocumentDatabase();context.subphase="TARGET_WRITE";
+        // Preparation precedes the transaction. No non-IDB await between creation and put.
+        await documentTransaction(db,DOCUMENT_STORE,"readwrite",store=>store.put(record));
+        db.close();db=null;onProgress?.(index+1,keys.length);await idlePause();
+      }
+    }catch(error){throw documentFailure(error,context)}finally{db?.close()}
   }
 
   async function writeSafetyCopy(payload){
@@ -717,8 +763,8 @@
         onHeader:header=>{validateBackupHeader(header);payload=header;showProgress("Lettura e validazione",file.size,file.size)},
         onProgress:progress=>showProgress(progress.phase==="reading"?"Lettura file":"Validazione documenti",progress.loaded,progress.total),
         onDocumentStart:async item=>{currentDocument=validateDocumentMetadata(item);currentChunk=0;if(ids.has(currentDocument.id))throw new Error("Il backup contiene documenti duplicati.");ids.add(currentDocument.id)},
-        onDocumentChunk:async(item,bytes)=>{if(!currentDocument||item.id!==currentDocument.id)throw new Error("Sequenza documento non valida.");await putStagingChunk(currentDocument.id,currentChunk++,bytes)},
-        onDocumentEnd:async(item,result)=>{if(!currentDocument||item.id!==currentDocument.id||result.sha256!==currentDocument.sha256)throw new Error("Checksum documento non coerente.");await finishStagingDocument(currentDocument);documentManifest.push({...currentDocument});currentDocument=null}
+        onDocumentChunk:async(item,bytes)=>{if(!currentDocument||item.id!==currentDocument.id)throw new Error("Sequenza documento non valida.");try{await putStagingChunk(currentDocument.id,currentChunk++,bytes)}catch(error){throw documentFailure(error,{subphase:"STAGING_CHUNK",index:documentManifest.length+1,total:payload?.metadata?.documents})}},
+        onDocumentEnd:async(item,result)=>{if(!currentDocument||item.id!==currentDocument.id||result.sha256!==currentDocument.sha256)throw new Error("Checksum documento non coerente.");try{await finishStagingDocument(currentDocument)}catch(error){throw documentFailure(error,{subphase:"STAGING_FINISH",index:documentManifest.length+1,total:payload?.metadata?.documents})}documentManifest.push({...currentDocument});currentDocument=null}
       });
       if(!payload||parsed.count!==payload.metadata.documents)throw new Error(`Conteggio documenti non coerente: attesi ${payload?.metadata?.documents??0}, trovati ${parsed.count}.`);
       return{payload,documentManifest,students:payload.appData.students.length,documents:parsed.count,fileSize:file.size,capacity};
