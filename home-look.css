@@ -124,3 +124,24 @@ body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement
 @media(max-width:600px){#appShell :is(#home,#secretaryHome) .categories>button.auto-hero>.home-student-counts,#appShell :is(#home,#secretaryHome) .categories>button.pro-card>.home-student-counts{grid-template-columns:1fr}}
 
 @media(min-width:601px){#appShell :is(#home,#secretaryHome) .categories>button.auto-hero img{max-width:430px!important;aspect-ratio:2.5;justify-self:end}}
+
+/* Row-local alignment: counters, title/underline and artwork share grid tracks. */
+@supports (grid-template-rows:subgrid){
+ #appShell :is(#home,#secretaryHome) .categories{grid-auto-rows:auto;align-items:stretch}
+ #appShell :is(#home,#secretaryHome) .categories>button:not(.auto-hero){display:grid!important;grid-template-columns:minmax(0,1fr);grid-template-rows:subgrid!important;grid-row:span 3;row-gap:8px;align-self:stretch;min-height:0!important;align-content:normal}
+ #appShell :is(#home,#secretaryHome) .categories>button:not(.auto-hero)>.home-student-counts{grid-column:1;grid-row:1;align-self:stretch;margin:0!important;align-content:start}
+ #appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle .hero-copy,
+ #appShell :is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark):not(.category-icon){grid-column:1;grid-row:2;display:flex!important;flex-direction:column;justify-content:space-between;align-self:stretch;min-width:0;margin:0!important;padding:0;}
+ #appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle .hero-copy::after,
+ #appShell :is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark):not(.category-icon)::after{flex:none}
+ #appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle img{grid-column:1;grid-row:3;align-self:end;justify-self:center;margin:0!important;object-position:center bottom!important}
+ #appShell :is(#home,#secretaryHome) .categories>button.pro-card .home-path-mark,
+ #appShell :is(#home,#secretaryHome) .categories>button.ga-pro img{position:relative!important;inset:auto!important;grid-column:1;grid-row:3;justify-self:end;align-self:end;margin:0!important;object-position:center bottom!important}
+ @media(max-width:900px){
+  #appShell :is(#home,#secretaryHome) .categories>button.pro-card{grid-row:auto;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto!important;column-gap:12px;row-gap:8px;align-items:center}
+  #appShell :is(#home,#secretaryHome) .categories>button.pro-card>.home-student-counts{grid-column:1/-1;grid-row:1}
+  #appShell :is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark):not(.category-icon){grid-column:1;grid-row:2;align-self:center}
+  #appShell :is(#home,#secretaryHome) .categories>button.pro-card .home-path-mark,
+  #appShell :is(#home,#secretaryHome) .categories>button.ga-pro img{grid-column:2;grid-row:2;align-self:center}
+ }
+}
