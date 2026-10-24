@@ -185,3 +185,44 @@
 }
 
 @media screen{#appShell #lesson .gps-local-diagnostics{margin:10px 0;border:1px solid var(--mr-border);border-radius:11px;padding:0 12px}#appShell #lesson .gps-local-diagnostics>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:14px;font-weight:800;list-style:disclosure-closed}#appShell #lesson .gps-local-diagnostics[open]>summary{border-bottom:1px solid var(--mr-border)}#appShell #lesson #gpsDiagnosticData{font-size:14px;line-height:1.5;overflow-wrap:anywhere}}
+
+/* Local student list filters only; existing reports and print layouts unchanged. */
+#printStudentList[hidden],#studentListPrintFallback[hidden]{display:none!important}
+#studentListPrintDialog{box-sizing:border-box;width:min(680px,calc(100% - 24px));max-width:calc(100% - 24px);max-height:calc(100dvh - 32px);overflow:auto;padding:22px;border:1px solid #6ba4af;border-radius:18px;background:#075464;color:#fff7e8;font:15px/1.45 'Nunito Sans',system-ui,sans-serif}
+#studentListPrintDialog::backdrop{background:#002a36b8}
+#studentListPrintDialog h2{margin:0 0 12px;font-size:21px;color:#fff7e8}
+#studentListPrintDialog .student-list-local-note{font-size:13px;color:#d9e9e7}
+#studentListPrintDialog fieldset{border:1px solid #699eaa;border-radius:12px;padding:12px;min-width:0}
+#studentListPrintDialog legend{padding:0 6px;font-weight:800}
+#studentListPrintDialog .student-list-tools,#studentListPrintDialog .student-list-actions{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}
+#studentListPrintDialog .student-list-sites,#studentListPrintDialog .student-list-selects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+#studentListPrintDialog .student-list-sites label{display:flex;align-items:center;gap:10px;min-height:44px;margin:0;overflow-wrap:anywhere}
+#studentListPrintDialog .student-list-sites input{width:22px;height:22px;min-height:22px;margin:0;flex:none;accent-color:#ffd29a}
+#studentListPrintDialog .student-list-selects{margin-top:16px}
+#studentListPrintDialog .student-list-selects label{display:grid;gap:6px;font-weight:700;min-width:0}
+#studentListPrintDialog select{box-sizing:border-box;width:100%;min-width:0;min-height:44px;font:16px 'Nunito Sans',system-ui,sans-serif;background:#fff7e8;color:#173d46;border:1px solid #b9d4d6;border-radius:8px;padding:8px}
+#studentListPrintDialog button,#studentListPrintFallback{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;min-height:44px;padding:10px 14px;border:1px solid #d8b381;border-radius:10px;background:#ffd29a;color:#123e49;font:800 14px 'Nunito Sans',system-ui,sans-serif;text-decoration:none}
+#studentListPrintDialog button.secondary,#studentListPrintFallback{background:#0c6475;color:#fff7e8;border-color:#6c9fa8}
+#studentListPrintDialog button:disabled{opacity:.45;cursor:not-allowed}
+#studentListPrintDialog :is(button,input,select,a):focus-visible{outline:3px solid #fff7e8;outline-offset:3px}
+#studentListPrintDialog .mr-interior-icon{width:20px;height:20px;fill:none;stroke:currentColor;flex:none}
+#studentListPrintMessage{color:#ffe0b4}
+@media(max-width:600px){#studentListPrintDialog{padding:16px}#studentListPrintDialog .student-list-selects{grid-template-columns:1fr}#studentListPrintDialog .student-list-tools{gap:8px}#studentListPrintDialog .student-list-tools button{font-size:13px;padding:9px}}
+
+/* Scoped path confirmation and manual lesson exchange. */
+#studentPathChangePanel[hidden],#importPeerLesson[hidden]{display:none!important}
+.path-change-panel{padding:14px;border:1px solid #ffd29a;border-radius:12px;background:#075464;color:#fff7e8;overflow-wrap:anywhere}
+.path-change-actions,.peer-lesson-actions{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}
+.path-change-actions button,.peer-lesson-dialog button{width:auto!important;min-height:44px;padding:10px 14px;border-radius:10px;border:1px solid #d4ae7b;background:#ffd29a;color:#173d46;font:800 14px 'Nunito Sans',system-ui,sans-serif}
+.peer-lesson-dialog{width:min(680px,calc(100% - 24px));max-width:calc(100% - 24px);max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box;background:#075464;color:#fff7e8;border:1px solid #74a8b1;border-radius:18px;padding:20px;font:15px/1.45 'Nunito Sans',system-ui,sans-serif;overflow-wrap:anywhere}
+.peer-lesson-dialog::backdrop{background:#002a36b8}
+.peer-lesson-dialog h2{font-size:21px;color:#fff7e8;margin-top:0}
+.peer-lesson-dialog label{display:grid;gap:7px;margin:12px 0;font-weight:700}
+.peer-lesson-dialog :is(input,select){box-sizing:border-box;width:100%;min-width:0;max-width:100%;min-height:44px;font-size:16px;border:1px solid #8bb4b8;border-radius:8px;padding:8px;background:#fff7e8;color:#173d46}
+.peer-lesson-dialog button.secondary{background:#0b6274;color:#fff7e8;border-color:#8bb4b8}
+.peer-lesson-dialog button:disabled{opacity:.45;cursor:not-allowed}
+.peer-lesson-dialog :is(button,input,select):focus-visible{outline:3px solid #fff7e8;outline-offset:3px}
+#lessons .peer-lesson-share{min-height:44px;width:auto;margin:4px 0 14px}
+@media(max-width:600px){.peer-lesson-dialog{padding:16px}.path-change-actions button{max-width:100%;white-space:normal}}
+
+#appShell #studentPathChangePanel #confirmStudentPathChange{background:#ffd29a!important;color:#173d46!important;border:1px solid #d4ae7b!important;display:inline-flex;align-items:center;justify-content:center;gap:8px}#studentPathChangePanel .mr-interior-icon{width:20px;height:20px;flex:none;stroke:currentColor;fill:none}

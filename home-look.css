@@ -92,31 +92,35 @@ body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement
 #appShell #managerLogout .ui-icon,#appShell #managerLogout svg{display:block;width:25px;height:25px;color:#fff7e8;}
 @media(min-width:601px) and (max-width:900px){#appShell :is(#home,#secretaryHome) .categories>button.ga-pro img{left:12px!important;right:auto!important;bottom:15%!important;width:74px!important;height:70%!important;}}
 
-/* Read-only local archive indicators; scoped to the approved Home cards. */
-#appShell :is(#home,#secretaryHome) .categories>button>.home-student-counts{position:absolute!important;inset:9px 12px auto auto!important;z-index:3;display:flex;align-items:baseline;justify-content:flex-end;gap:5px;width:auto;max-width:calc(100% - 24px);margin:0!important;padding:3px 6px;border:1px solid #84b5bb66;border-radius:8px;background:#074e60;color:#ece8dc;font:700 11px/1.2 'Nunito Sans',system-ui,sans-serif;letter-spacing:0!important;white-space:nowrap;pointer-events:none;text-shadow:none;}
+/* Read-only totals and site distributions, derived from the student archive. */
+#appShell :is(#home,#secretaryHome) .categories>button>.home-student-counts{position:relative!important;inset:auto!important;order:-1;align-self:stretch;display:grid;grid-template-columns:1fr;gap:3px;width:100%;max-width:100%;box-sizing:border-box;margin:0 0 7px!important;padding:0;border:0;border-radius:0;background:transparent;color:#ece8dc;font:700 11px/1.35 'Nunito Sans',system-ui,sans-serif;letter-spacing:0!important;white-space:normal;pointer-events:none;text-shadow:none;text-align:left;z-index:3;}
 #appShell :is(#home,#secretaryHome) .home-student-counts[hidden]{display:none!important}
-#appShell :is(#home,#secretaryHome) .home-student-counts span{font:inherit;color:inherit}
+#appShell :is(#home,#secretaryHome) .home-student-counts span{font:inherit;color:inherit;display:block;min-width:0}
 #appShell :is(#home,#secretaryHome) .home-student-counts b{font-size:14px;font-weight:850;font-variant-numeric:tabular-nums}
 #appShell :is(#home,#secretaryHome) .home-student-counts .home-count-active{color:#ffd29a}
+#appShell :is(#home,#secretaryHome) .home-student-counts .home-count-sites{font-size:11px;font-weight:600;line-height:1.4;overflow-wrap:normal;word-break:normal;color:#ece8dc;margin-top:0}
 #appShell :is(#home,#secretaryHome) .home-student-counts::after{content:none!important}
-#appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle .hero-copy{margin-top:30px}
-#appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle img{height:49%!important}
-@media(min-width:901px){
- #appShell :is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark):not(.category-icon){margin-top:29px}
- #appShell :is(#home,#secretaryHome) .categories>button.pro-card .home-path-mark{width:49px;height:49px;bottom:10px}
- #appShell :is(#home,#secretaryHome) .categories>button.ga-pro img{height:44%!important}
-}
-@media(min-width:601px){#appShell :is(#home,#secretaryHome) .categories>button.auto-hero img{height:84%!important}}
-@media(max-width:900px){
- #appShell :is(#home,#secretaryHome) .categories>button.pro-card{padding-right:116px!important}
- #appShell :is(#home,#secretaryHome) .categories>button.pro-card>.home-student-counts{display:grid;grid-template-columns:1fr;gap:3px;right:10px!important;top:8px!important;text-align:right}
- #appShell :is(#home,#secretaryHome) .categories>button.pro-card .home-count-divider{display:none}
- #appShell :is(#home,#secretaryHome) .categories>button.pro-card::after{top:auto!important;bottom:4px!important;font-size:24px}
-}
-@media(max-width:600px){
- #appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle>.home-student-counts{display:grid;grid-template-columns:1fr;gap:1px;top:7px!important;right:9px!important;padding:2px 5px;font-size:10px;text-align:right}
- #appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle .home-count-divider{display:none}
- #appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle .hero-copy{margin-top:38px}
- #appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle img{height:44%!important}
- #appShell :is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark):not(.category-icon){font-size:14px!important}
-}
+#appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle .hero-copy{margin-top:0}
+#appShell :is(#home,#secretaryHome) .categories>button.compact-vehicle img{position:relative!important;inset:auto!important;align-self:center;margin-top:auto;width:100%!important;height:105px!important;flex:none;}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero{justify-content:flex-start!important}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero>.home-student-counts{grid-template-columns:1fr 1fr}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero img{height:62%!important}
+#appShell :is(#home,#secretaryHome) .categories>button.pro-card{justify-content:flex-start!important;padding:14px!important}
+#appShell :is(#home,#secretaryHome) .categories>button.pro-card>span:not(.home-path-mark):not(.category-icon){padding-right:52px}
+#appShell :is(#home,#secretaryHome) .categories>button.pro-card .home-path-mark{left:auto;right:12px;bottom:10px;width:38px;height:38px}
+#appShell :is(#home,#secretaryHome) .categories>button.ga-pro img{left:auto!important;right:8px!important;bottom:7px!important;width:54px!important;height:40px!important}
+@media(max-width:900px){#appShell :is(#home,#secretaryHome) .categories>button.pro-card>.home-student-counts{grid-template-columns:1fr 1fr}#appShell :is(#home,#secretaryHome) .categories>button.pro-card::after{display:none!important}}
+
+/* Compact inline site summaries: no separate box or reserved empty rows. */
+#appShell :is(#home,#secretaryHome) .home-student-counts .home-count-heading,
+#appShell :is(#home,#secretaryHome) .home-student-counts .home-count-sites{display:inline}
+#appShell :is(#home,#secretaryHome) .home-student-counts .home-count-sites::before{content:'\00a0\2014\00a0';color:#ece8dc}
+#appShell :is(#home,#secretaryHome) .categories>button{align-self:start}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero{display:grid!important;grid-template-columns:minmax(0,0.8fr) minmax(0,1.2fr);gap:8px 0;align-content:start}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero>.home-student-counts{grid-column:1/-1;margin-bottom:0!important;gap:4px 16px}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero .hero-copy{grid-column:1;grid-row:2;width:100%;align-self:center}
+#appShell :is(#home,#secretaryHome) .categories>button.auto-hero img{position:relative!important;inset:auto!important;grid-column:2;grid-row:2;width:100%!important;height:auto!important;aspect-ratio:1.65;object-fit:contain;align-self:center}
+@media(min-width:601px){#appShell :is(#home,#secretaryHome) .categories>button>.home-student-counts{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px}}
+@media(max-width:600px){#appShell :is(#home,#secretaryHome) .categories>button.auto-hero>.home-student-counts,#appShell :is(#home,#secretaryHome) .categories>button.pro-card>.home-student-counts{grid-template-columns:1fr}}
+
+@media(min-width:601px){#appShell :is(#home,#secretaryHome) .categories>button.auto-hero img{max-width:430px!important;aspect-ratio:2.5;justify-self:end}}

@@ -125,7 +125,7 @@
       if(!Array.isArray(student.lessons)||!Array.isArray(student.checklist))throw new Error("Scheda allievo incompleta nel backup.");
       if(Object.hasOwn(student,"drivingLicense"))window.StudentLicense.normalize(student.drivingLicense,{strict:true});
       const lessonIds=new Set();
-      for(const lesson of student.lessons){if(!lesson||typeof lesson!=="object"||typeof lesson.id!=="string"||!lesson.id||lessonIds.has(lesson.id)||!Array.isArray(lesson.route)||!Array.isArray(lesson.checklist)||!Array.isArray(lesson.errors||[]))throw new Error("Guida duplicata o non valida nel backup.");if(Object.hasOwn(lesson,"secretaryTransfer")){if(!window.LessonSecretaryTransfer)throw Error("Validazione trasferimenti non disponibile.");window.LessonSecretaryTransfer.metadata(lesson.secretaryTransfer)}lessonIds.add(lesson.id)}
+      for(const lesson of student.lessons){if(!lesson||typeof lesson!=="object"||typeof lesson.id!=="string"||!lesson.id||lessonIds.has(lesson.id)||!Array.isArray(lesson.route)||!Array.isArray(lesson.checklist)||!Array.isArray(lesson.errors||[]))throw new Error("Guida duplicata o non valida nel backup.");if(Object.hasOwn(lesson,"secretaryTransfer")){if(!window.LessonSecretaryTransfer)throw Error("Validazione trasferimenti non disponibile.");window.LessonSecretaryTransfer.metadata(lesson.secretaryTransfer)}if(lesson.lessonContext)window.LessonActivities.validateContext(lesson.lessonContext);if(lesson.instructorTransfer)window.LessonSecretaryTransfer.metadata(lesson.instructorTransfer);lessonIds.add(lesson.id)}
       studentIds.add(student.id);
     }
     const examinerIds=new Set();

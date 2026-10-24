@@ -115,6 +115,8 @@
   <button id="logout" class="home-pro-action logout-action full"><span class="ui-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4"/></svg></span><span class="home-pro-label">ESCI</span></button>
 </section>
 <section id="generalStudentManagement" class="view interior-view"><div class="other-functions-subnav"><button type="button" id="generalStudentsHome">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div><div class="card"><h2>Gestione generale allievi</h2><div class="other-functions-grid">
+  <button id="importPeerLesson" type="button" class="home-pro-action full" hidden><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=interior-mr-1#mr-import"/></svg></span> IMPORTA LEZIONE</button>
+  <button id="printStudentList" type="button" class="home-pro-action full" hidden><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=interior-mr-1#mr-print"/></svg></span> STAMPA ELENCO ALLIEVI</button>
   <button id="archiveStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#archive-pro"/></svg></span> ARCHIVIA PIÙ ALLIEVI</button>
   <button id="importStudent" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#import-pro"/></svg></span> IMPORTA ALLIEVO</button>
   <button id="importStudents" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#import-pro"/></svg></span> IMPORTA PIÙ ALLIEVI</button>
@@ -346,12 +348,13 @@
 </section>
 <section id="studentForm" class="view interior-view">
   <div class="card form"><h2 id="studentFormTitle">Nuovo allievo</h2>
-    <label>Categoria<select id="category">
+    <label>PERCORSO DELL’ALLIEVO<select id="category">
       <option value="auto">Auto</option><option value="guida-accompagnata">Guida Accompagnata</option><option value="moto">Moto</option>
       <option value="quad-leggero">Quadriciclo leggero AM</option><option value="quad-pesante">Quadriciclo pesante B1</option>
       <option value="corso-moto">Corso moto ad accesso graduale A2 e A</option><option value="perfezionamento">Perfezionamento</option>
       <option value="esame-revisione">Revisioni</option><option value="esame-esperimento">Esperimenti</option>
     </select></label>
+    <section id="studentPathChangePanel" class="path-change-panel" hidden aria-labelledby="studentPathChangeTitle"><h3 id="studentPathChangeTitle">CAMBIO PERCORSO</h3><p id="studentPathChangeSummary"></p><p>Lo storico resta conservato nel percorso originale e non viene riclassificato automaticamente. Le nuove guide useranno il percorso di destinazione.</p><div class="path-change-actions"><button id="confirmStudentPathChange" type="button"><svg class="mr-interior-icon" aria-hidden="true"><use href="ui-icons.svg?v=interior-mr-1#mr-activity"/></svg>CONFERMA CAMBIO PERCORSO</button><button id="cancelStudentPathChange" type="button" class="secondary">ANNULLA</button></div><p id="studentPathChangeMessage" role="status"></p></section>
     <label>Nome<input id="firstName"></label><label>Cognome<input id="lastName"></label>
     <label>Sede di appartenenza<select id="studentSite"></select></label><button id="manageStudentSites" type="button" class="secondary">GESTISCI SEDI</button>
     <label>Telefono<input id="phone" type="tel"></label><label>Patente<input id="license" placeholder="Es. B, A1, A2, AM"></label>
@@ -372,7 +375,7 @@
     <label>Note<textarea id="studentNotes" rows="5"></textarea></label>
     <button id="saveStudent" class="full">Salva</button>
   </div>
-  <button id="backStudentForm" class="secondary full">Indietro</button>
+  <button id="backStudentForm" class="secondary full">ANNULLA / INDIETRO</button>
 </section>
 
 <section id="studentMultiShare" class="view interior-view">
@@ -644,5 +647,17 @@
     </div>
   </form>
 </div>
+
+<dialog id="studentListPrintDialog" aria-labelledby="studentListPrintTitle">
+  <form id="studentListPrintForm">
+    <h2 id="studentListPrintTitle">STAMPA ELENCO ALLIEVI</h2>
+    <p class="student-list-local-note">Archivio locale attuale di questo account e dispositivo. Non rappresenta il totale aziendale sul server.</p>
+    <fieldset><legend>Sedi</legend><div class="student-list-tools"><button id="studentListSelectAll" type="button" class="secondary">SELEZIONA TUTTE</button><button id="studentListSelectNone" type="button" class="secondary">DESELEZIONA TUTTE</button></div><div id="studentListSites" class="student-list-sites"></div></fieldset>
+    <div class="student-list-selects"><label>Stato<select id="studentListStatus"><option value="active">ATTIVI</option><option value="archived">ARCHIVIATI</option><option value="both">ENTRAMBI</option></select></label><label>Categoria / percorso<select id="studentListCategory"></select></label></div>
+    <p id="studentListMatchCount" role="status" aria-live="polite"></p><p id="studentListPrintMessage" role="status" aria-live="polite"></p>
+    <div class="student-list-actions"><button id="studentListPreview" type="submit"><svg class="mr-interior-icon" aria-hidden="true"><use href="ui-icons.svg?v=interior-mr-1#mr-print"/></svg>ANTEPRIMA</button><button id="studentListPrintCancel" type="button" class="secondary">ANNULLA</button></div>
+    <a id="studentListPrintFallback" target="_blank" rel="noopener" hidden>APRI DOCUMENTO STAMPABILE</a>
+  </form>
+</dialog>
 <script src="auth-client.js?v=interior-mr-1"></script>
 </body></html>

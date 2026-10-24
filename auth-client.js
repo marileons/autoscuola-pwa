@@ -157,7 +157,7 @@
       void lockRegisterVault();
       window.ExaminerRoutesUI?.stopAll?.();
     }
-    if(previousId!==nextId){window.LessonSecretaryTransferUI?.reset();authEpoch++;}
+    if(previousId!==nextId){window.StudentListPrint?.reset();window.LocalLessonActions?.reset();window.LessonSecretaryTransferUI?.reset();authEpoch++;}
     currentUser = user;
     if(!user?.sharedCalendarEnabled || previousId!==nextId)window.SharedCalendar?.dispose?.();
     syncAdminPresence();
