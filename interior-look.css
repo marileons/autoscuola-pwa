@@ -226,3 +226,23 @@
 @media(max-width:600px){.peer-lesson-dialog{padding:16px}.path-change-actions button{max-width:100%;white-space:normal}}
 
 #appShell #studentPathChangePanel #confirmStudentPathChange{background:#ffd29a!important;color:#173d46!important;border:1px solid #d4ae7b!important;display:inline-flex;align-items:center;justify-content:center;gap:8px}#studentPathChangePanel .mr-interior-icon{width:20px;height:20px;flex:none;stroke:currentColor;fill:none}
+
+/* Error symbols are descriptive, independent of the assessment colours. */
+.interior-view .driving-error-symbol{width:32px!important;height:32px!important;flex:0 0 32px;vertical-align:middle;color:#fff1dc}
+.interior-view .driving-error-specific-option{gap:10px;min-height:44px;align-items:center}
+.interior-view .driving-error-symbol-slot{display:inline-flex;flex:0 0 32px}
+.interior-view .driving-error-specific-option>span:last-child{min-width:0;overflow-wrap:anywhere}
+.interior-view .driving-error-specific-list{padding:0;list-style:none}
+.interior-view .driving-error-specific-list li{display:flex;align-items:center;gap:10px;margin:8px 0;text-transform:uppercase}
+.interior-view .driving-error-catalog-items>div>span{display:flex;align-items:center;gap:10px;min-width:0;overflow-wrap:anywhere}
+.interior-view .driving-error-symbol-editor{grid-column:1/-1;flex:1 0 100%;padding:12px;border:1px solid #ffc77d;border-radius:12px;min-width:0}
+.interior-view .driving-error-symbol-editor select{min-height:44px;width:100%;max-width:100%}
+.interior-view .driving-error-symbol-editor .driving-error-catalog-actions{gap:12px;margin-top:12px}
+
+.interior-view .driving-error-specific-option{grid-template-columns:22px 32px minmax(0,1fr)}
+.interior-view .driving-error-catalog-items>div{flex-wrap:wrap}
+.interior-view .driving-error-catalog-items button{min-height:44px;min-width:44px}
+
+.interior-view .driving-error-symbol-select-line{display:flex;align-items:center;gap:12px;margin-top:8px}
+.interior-view .driving-error-symbol-select-line select{flex:1;min-width:0;margin:0}
+.interior-view .driving-error-symbol-select-line>span{display:inline-flex;flex:none;padding:8px;border:1px solid #477985;border-radius:10px;background:#0a3641}
