@@ -176,7 +176,18 @@
     }
     async function restoreBackup(accountId, password, source) {
       const inspected = await inspectBackup(accountId, password, source);
-      const result = await vault.replaceSnapshot(inspected.snapshot);
+      let result;
+      try { result = await vault.replaceSnapshot(inspected.snapshot); }
+      catch (error) {
+        // Some storage engines return a DOMException without a message.
+        // Preserve existing actionable errors; never expose record contents.
+        if (typeof error?.message === "string" && error.message.trim()) throw error;
+        const cause = error?.target?.error || error;
+        const category = cause?.name === "QuotaExceededError" ? "STORAGE_QUOTA" : "STORAGE";
+        const detail = category === "STORAGE_QUOTA" ? "spazio locale insufficiente (quota)" : "errore dello storage locale";
+        const code = `RB-APPLY-${category}`;
+        throw Object.assign(new Error(`Ripristino Registro non completato: fase applicazione; ${detail}. Nessun successo confermato. Codice ${code}.`), { code });
+      }
       return { ...result, createdAt: inspected.createdAt };
     }
     return Object.freeze({ exportBackup, inspectBackup, restoreBackup });

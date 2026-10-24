@@ -31,6 +31,18 @@
   const RESTORE_RESULT_KEY="agenda_istruttori_full_restore_result";
   const byId=id=>document.getElementById(id);
   let restoreInProgress=false,restoreReloadScheduled=false,restoreAbortController=null;
+  const RESTORE_PHASES={READ:"lettura e validazione",SAFETY:"preparazione copia preventiva",DOCUMENTS:"applicazione documenti",DATA:"applicazione dati",CATALOGS:"applicazione cataloghi",VERIFY:"verifica del ripristino",COMPLETE:"completamento",RESTART:"verifica dopo riavvio"};
+  function restoreDiagnostic(error,phase,status="unchanged",cleanup=true){
+    if(error?.restoreDiagnostic)return error;
+    const cause=error?.target?.error||error, name=cause?.name||"";
+    const category=name==="QuotaExceededError"?"STORAGE_QUOTA":["SecurityError","NotAllowedError"].includes(name)?"STORAGE_ACCESS":["InvalidStateError","TransactionInactiveError","AbortError","UnknownError","NotFoundError","VersionError"].includes(name)?"STORAGE":phase==="READ"?"VALIDATION":phase==="VERIFY"||phase==="RESTART"?"VERIFICATION":"APPLICATION";
+    const labels={STORAGE_QUOTA:"spazio locale insufficiente (quota)",STORAGE_ACCESS:"accesso allo storage non disponibile",STORAGE:"errore dello storage locale",VALIDATION:"file non valido o non leggibile",VERIFICATION:"verifica dei dati non riuscita",APPLICATION:"errore di applicazione"};
+    const code=`FB-${phase}-${category}-${status.toUpperCase()}${cleanup?"":"-CLEANUP"}`;
+    const outcome=status==="verified"?"Stato precedente ripristinato e verificato.":status==="incomplete"?"Rollback incompleto o non verificato. Conserva la copia preventiva locale e non effettuare altre operazioni.":"Dati applicativi precedenti non modificati.";
+    return Object.assign(new Error(`Ripristino non completato: fase ${RESTORE_PHASES[phase]||RESTORE_PHASES.COMPLETE}; ${labels[category]}. ${outcome} Codice ${code}.${cleanup?"":" Pulizia dell’area temporanea non completata."}`),{code,restoreDiagnostic:true});
+  }
+  async function cleanupRestoreStaging(){try{await clearStaging();return true}catch{return false}}
+
   localStorage.removeItem("agenda_istruttori_full_backup_diagnostic_v1");
 
   function showMessage(text,isError=false){
@@ -242,9 +254,18 @@
     });
     db.close();
     if(!saved||!saved.payload||saved.payload.version!==1)throw new Error("Copia di sicurezza non verificabile.");
-    const keys=await readDocumentKeys();
-    for(let index=0;index<keys.length;index++){const record=await readDocumentByKey(keys[index]);await putStoreRecord(openSafetyDatabase,SAFETY_DOCUMENT_STORE,record);showProgress("Copia di sicurezza",index+1,keys.length);await idlePause()}
-    return saved.payload;
+    const keys=await readDocumentKeys();payload.documentManifest=[];
+    for(let index=0;index<keys.length;index++){
+      const record=await readDocumentByKey(keys[index]);
+      if(!record)throw new Error("Copia preventiva documenti incompleta.");
+      const {blob,...metadata}=record;payload.documentManifest.push({...metadata,sha256:await sha256Blob(blob)});
+      await putStoreRecord(openSafetyDatabase,SAFETY_DOCUMENT_STORE,record);
+      const copied=await readStoreRecord(openSafetyDatabase,SAFETY_DOCUMENT_STORE,record.id);
+      if(!copied||await sha256Blob(copied.blob)!==payload.documentManifest[index].sha256)throw new Error("Copia preventiva documenti non verificata.");
+      showProgress("Copia di sicurezza",index+1,keys.length);await idlePause();
+    }
+    await putStoreRecord(openSafetyDatabase,SAFETY_STORE,{id:SAFETY_KEY,createdAt:Date.now(),payload});
+    return payload;
   }
 
   async function readSafetyCopy(){
@@ -266,17 +287,26 @@
     const appData={studentSites:await window.AgendaStudentArchiveStore.snapshotSites(),students:await storedStudentsWithDrivingLicenses(),studentTrash:await storedTrashWithDrivingLicenses(),checklists:parsedStorageValue(DATA_KEYS.checklists,{}),examiners:parsedStorageValue(DATA_KEYS.examiners,[]),exams:examData.exams,examLocations:examData.locations};
     validateAppData(appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
-    return{version:1,appData,examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId),examReports:window.SharedCalendarExamReport.createStore(localStorage).snapshot(accountId)};
+    return{version:1,accountId,localValues:Object.fromEntries([DATA_KEYS.checklists,DATA_KEYS.examiners].map(key=>[key,localStorage.getItem(key)])),appData,examinerRoutes:window.ExaminerRoutesUI?.snapshot?.(accountId)||null,drivingErrorCatalog:window.DrivingErrors.createCatalogStore(localStorage).snapshot(accountId),examReports:window.SharedCalendarExamReport.createStore(localStorage).snapshot(accountId)};
   }
   async function restoreSafetySnapshot(snapshot){
     if(!snapshot||snapshot.version!==1)throw new Error("Copia di sicurezza locale non valida.");
     validateAppData(snapshot.appData);
+    if(snapshot.accountId!==undefined&&snapshot.accountId!==String(window.AgendaAuth?.currentUser?.()?.id||""))throw new Error("Contesto account cambiato durante il ripristino.");
     await replaceDocumentsFromStore(openSafetyDatabase,SAFETY_DOCUMENT_STORE,(done,total)=>showProgress("Rollback documenti",done,total));
     await writeAppData(snapshot.appData);
     const accountId=String(window.AgendaAuth?.currentUser?.()?.id||"");
     if(snapshot.examinerRoutes)window.ExaminerRoutesUI.restore(accountId,{...snapshot.examinerRoutes,accountId});
     window.DrivingErrors.createCatalogStore(localStorage).restore(accountId,snapshot.drivingErrorCatalog||window.DrivingErrors.defaultCatalog());
     if(snapshot.examReports)window.SharedCalendarExamReport.createStore(localStorage).restore(accountId,snapshot.examReports);
+    if(snapshot.localValues)for(const key of [DATA_KEYS.checklists,DATA_KEYS.examiners]){const value=snapshot.localValues[key];if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);if(localStorage.getItem(key)!==value)throw new Error("Verifica storage precedente non riuscita.")}
+    const documentManifest=snapshot.documentManifest?[...snapshot.documentManifest]:[];
+    if(!snapshot.documentManifest)for(const key of await readStoreKeys(openSafetyDatabase,SAFETY_DOCUMENT_STORE)){
+      const record=await readStoreRecord(openSafetyDatabase,SAFETY_DOCUMENT_STORE,key);
+      documentManifest.push({id:record.id,size:record.size,mimeType:record.mimeType,sha256:await sha256Blob(record.blob)});
+    }
+    await verifyRestoredData({payload:{formatVersion:4,...snapshot},documentManifest});
+
   }
 
   function arrayBufferToBase64(buffer){
@@ -688,7 +718,7 @@
         onProgress:progress=>showProgress(progress.phase==="reading"?"Lettura file":"Validazione documenti",progress.loaded,progress.total),
         onDocumentStart:async item=>{currentDocument=validateDocumentMetadata(item);currentChunk=0;if(ids.has(currentDocument.id))throw new Error("Il backup contiene documenti duplicati.");ids.add(currentDocument.id)},
         onDocumentChunk:async(item,bytes)=>{if(!currentDocument||item.id!==currentDocument.id)throw new Error("Sequenza documento non valida.");await putStagingChunk(currentDocument.id,currentChunk++,bytes)},
-        onDocumentEnd:async(item,result)=>{if(!currentDocument||item.id!==currentDocument.id||result.sha256!==currentDocument.sha256)throw new Error("Checksum documento non coerente.");await finishStagingDocument(currentDocument);documentManifest.push({id:currentDocument.id,originalName:currentDocument.originalName,mimeType:currentDocument.mimeType,size:currentDocument.size,sha256:currentDocument.sha256});currentDocument=null}
+        onDocumentEnd:async(item,result)=>{if(!currentDocument||item.id!==currentDocument.id||result.sha256!==currentDocument.sha256)throw new Error("Checksum documento non coerente.");await finishStagingDocument(currentDocument);documentManifest.push({...currentDocument});currentDocument=null}
       });
       if(!payload||parsed.count!==payload.metadata.documents)throw new Error(`Conteggio documenti non coerente: attesi ${payload?.metadata?.documents??0}, trovati ${parsed.count}.`);
       return{payload,documentManifest,students:payload.appData.students.length,documents:parsed.count,fileSize:file.size,capacity};
@@ -791,7 +821,8 @@
     if(documentKeys.length!==manifest.documents.length)throw new Error(`Verifica post-riavvio documenti fallita: attesi ${manifest.documents.length}, trovati ${documentKeys.length}.`);
     for(const expected of manifest.documents){
       const actual=await readDocumentByKey(expected.id);
-      if(!actual)throw new Error(`Documento mancante dopo il riavvio: ${expected.originalName}.`);
+      if(!actual)throw new Error("Documento mancante dopo il riavvio.");
+      for(const key of ["originalName","title","section","createdAt"])if(Object.hasOwn(expected,key)&&actual[key]!==expected[key])throw new Error("Metadati del documento diversi dopo il riavvio.");
       if(actual.size!==expected.size||actual.mimeType!==expected.mimeType||actual.blob.size!==expected.size||actual.blob.type!==expected.mimeType)throw new Error(`Dimensione o MIME non valido dopo il riavvio: ${expected.originalName}.`);
       if(await sha256Blob(actual.blob)!==expected.sha256)throw new Error(`SHA-256 non valido dopo il riavvio: ${expected.originalName}.`);
     }
@@ -811,34 +842,34 @@
     if(documentKeys.length!==validated.documentManifest.length)throw new Error("Verifica dei documenti non riuscita.");
     for(const expected of validated.documentManifest){
       const actual=await readDocumentByKey(expected.id);
-      if(!actual||actual.size!==expected.size||actual.mimeType!==expected.mimeType)throw new Error("Verifica dei documenti non riuscita.");
+      if(!actual||actual.size!==expected.size||actual.mimeType!==expected.mimeType||actual.blob.size!==expected.size)throw new Error("Verifica dei documenti non riuscita.");
+      for(const key of ["originalName","title","section","createdAt"])if(Object.hasOwn(expected,key)&&actual[key]!==expected[key])throw new Error("Verifica dei collegamenti e metadati del documento non riuscita.");
       if(await sha256Blob(actual.blob)!==expected.sha256)throw new Error(`Verifica del documento ${expected.originalName} non riuscita.`);
       await idlePause();
     }
   }
 
   async function applyValidatedBackup(validated){
-    const safetySnapshot=await createSafetySnapshot();
-    await writeSafetyCopy(safetySnapshot);
+    let phase="SAFETY",safetySnapshot;
+    try{safetySnapshot=await createSafetySnapshot();await writeSafetyCopy(safetySnapshot)}catch(error){throw restoreDiagnostic(error,phase,"unchanged",await cleanupRestoreStaging())}
+    const accountId=safetySnapshot.accountId;
+    const checkAccount=()=>{if(accountId!==String(window.AgendaAuth?.currentUser?.()?.id||""))throw new Error("Contesto account cambiato.")};
     try{
+      checkAccount();phase="DOCUMENTS";
       await replaceDocumentsFromStore(openStagingDatabase,STAGING_DOCUMENT_STORE,(done,total)=>showProgress("Applicazione documenti",done,total));
-      await writeAppData(validated.payload.appData);
-      if(validated.payload.formatVersion>=3){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.ExaminerRoutesUI.restore(currentAccount,{...validated.payload.examinerRoutes,accountId:currentAccount})}
-      if(validated.payload.formatVersion>=4){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||"");window.DrivingErrors.createCatalogStore(localStorage).restore(currentAccount,validated.payload.drivingErrorCatalog)}
-      if(validated.payload.examReports){const account=String(window.AgendaAuth?.currentUser?.()?.id||""),value=window.SharedCalendarExamReport.normalize(validated.payload.examReports);window.SharedCalendarExamReport.createStore(localStorage).restore(account,value);}
-      await verifyRestoredData(validated);
-      const manifest=await createRestoreManifest(validated);
-      localStorage.setItem(PENDING_RESTORE_KEY,JSON.stringify(manifest));
+      checkAccount();phase="DATA";await writeAppData(validated.payload.appData);
+      checkAccount();phase="CATALOGS";
+      if(validated.payload.formatVersion>=3)window.ExaminerRoutesUI.restore(accountId,{...validated.payload.examinerRoutes,accountId});
+      if(validated.payload.formatVersion>=4)window.DrivingErrors.createCatalogStore(localStorage).restore(accountId,validated.payload.drivingErrorCatalog);
+      if(validated.payload.examReports)window.SharedCalendarExamReport.createStore(localStorage).restore(accountId,window.SharedCalendarExamReport.normalize(validated.payload.examReports));
+      checkAccount();phase="VERIFY";await verifyRestoredData(validated);
+      phase="COMPLETE";const manifest=await createRestoreManifest(validated);
+      checkAccount();localStorage.setItem(PENDING_RESTORE_KEY,JSON.stringify(manifest));
       await clearStaging();
     }catch(error){
-      try{
-        await restoreSafetySnapshot(safetySnapshot);
-      }catch(rollbackError){
-        await clearStaging();
-        throw new Error("Ripristino fallito e rollback non completato. La copia preventiva resta nell'archivio di sicurezza locale.");
-      }
-      await clearStaging();
-      throw new Error(`Ripristino annullato: ${error&&error.message?error.message:"errore imprevisto"}. I dati precedenti sono stati ripristinati.`);
+      let status="incomplete";
+      try{await restoreSafetySnapshot(safetySnapshot);localStorage.removeItem(PENDING_RESTORE_KEY);status="verified"}catch{}
+      throw restoreDiagnostic(error,phase,status,await cleanupRestoreStaging());
     }
   }
 
@@ -850,8 +881,8 @@
     hideProgress();
     byId("restoreFullBackup").disabled=true;
     byId("cancelFullBackupRestore").classList.remove("hidden");
-    localStorage.setItem(INTERRUPTED_RESTORE_KEY,JSON.stringify({startedAt:Date.now(),size:file.size}));
     try{
+      localStorage.setItem(INTERRUPTED_RESTORE_KEY,JSON.stringify({startedAt:Date.now(),size:file.size}));
       const validated=await readBackupFile(file);
       localStorage.removeItem(INTERRUPTED_RESTORE_KEY);
       const preview=await modalChoice("Backup completo Agenda Istruttori",restorePreview(validated),[
@@ -870,8 +901,8 @@
       restoreReloadScheduled=true;
       location.replace(location.href);
     }catch(error){
-      localStorage.removeItem(INTERRUPTED_RESTORE_KEY);
-      showMessage(error?.name==="AbortError"?"Ripristino annullato. I dati esistenti non sono stati modificati.":error&&error.message?error.message:"Non è stato possibile ripristinare il backup completo.",true);
+      try{localStorage.removeItem(INTERRUPTED_RESTORE_KEY)}catch{}
+      showMessage(error?.name==="AbortError"?"Ripristino annullato. I dati esistenti non sono stati modificati.":restoreDiagnostic(error,"READ").message,true);
     }finally{
       restoreAbortController=null;
       byId("cancelFullBackupRestore").classList.add("hidden");
@@ -926,11 +957,11 @@
         const safetySnapshot=await readSafetyCopy();
         await restoreSafetySnapshot(safetySnapshot);
         localStorage.removeItem(PENDING_RESTORE_KEY);
-        localStorage.setItem(RESTORE_RESULT_KEY,JSON.stringify({isError:true,message:`Verifica post-riavvio fallita: ${error&&error.message?error.message:"errore imprevisto"}. È stato ripristinato lo stato precedente.`}));
+        localStorage.setItem(RESTORE_RESULT_KEY,JSON.stringify({isError:true,message:restoreDiagnostic(error,"RESTART","verified").message}));
         location.replace(location.href);
       }catch(rollbackError){
         localStorage.removeItem(PENDING_RESTORE_KEY);
-        displayRestoreResult("Verifica post-riavvio fallita e rollback non completato. La copia preventiva resta nell'archivio di sicurezza locale.",true);
+        displayRestoreResult(restoreDiagnostic(error,"RESTART","incomplete").message,true);
       }
     }
   }
