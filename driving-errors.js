@@ -21,25 +21,132 @@ const slug=value=>text(value,100).normalize("NFD").replace(/[\u0300-\u036f]/g,""
 function safeLabel(value,max=120){const result=text(value,max);if(!result)throw new Error("L’etichetta non può essere vuota.");if(/[<>]/.test(result))throw new Error("L’etichetta non può contenere HTML.");return result}
 
 // Explicit stable-ID associations; labels are never searched to infer a sign.
-const SYMBOLS=Object.freeze({generic:"GENERICO",stop:"STOP",yield:"DARE PRECEDENZA",noentry:"SENSO VIETATO",indicators:"INDICATORI",mirror:"OSSERVAZIONE / SPECCHI",clutch:"FRIZIONE",brake:"FRENO",accelerator:"ACCELERATORE",pedals:"PEDALI",distance:"DISTANZA",lanes:"CORSIE",reverse:"RETROMARCIA",parking:"PARCHEGGIO",attention:"ATTENZIONE",speed:"VELOCITÀ",traffic:"SEMAFORO"});
+const SYMBOLS=Object.freeze({generic:"GENERICO",stop:"STOP",yield:"DARE PRECEDENZA",noentry:"SENSO VIETATO",indicators:"INDICATORI",mirror:"OSSERVAZIONE / SPECCHI",clutch:"FRIZIONE",brake:"FRENO",accelerator:"ACCELERATORE",pedals:"PEDALI",distance:"DISTANZA",lanes:"CORSIE",reverse:"RETROMARCIA",parking:"PARCHEGGIO",attention:"ATTENZIONE",speed:"VELOCITÀ",traffic:"SEMAFORO","priorityright":"PRECEDENZA A DESTRA","junction":"INTERSEZIONE","bicycle":"BICICLETTA","emergency":"VEICOLO DI EMERGENZA","stopline":"LINEA DI ARRESTO","solidline":"LINEA CONTINUA","motothrottle":"ACCELERATORE MOTO","braking":"FUNZIONE FRENANTE","lateralclearance":"SPAZIO LATERALE","roundabout":"ANELLO DELLA ROTATORIA","parkingbrake":"FRENO DI STAZIONAMENTO","engine":"MOTORE","motoclutch":"LEVA FRIZIONE MOTO","gearshift":"LEVA CAMBIO AUTO","motoshift":"SELETTORE CAMBIO MOTO","steeringwheel":"VOLANTE AUTO","handlebar":"MANUBRIO MOTO","hillstart":"PARTENZA IN SALITA","uturn":"INVERSIONE DI MARCIA","maneuverpath":"MANOVRA IN PIÙ FASI","curb":"RUOTA E MARCIAPIEDE","door":"PORTIERA","merge":"IMMISSIONE NEL FLUSSO","overtake":"SORPASSO","seatbelt":"CINTURA DI SICUREZZA","communication":"COMUNICAZIONE"});
 const SYMBOL_IDS=Object.freeze({
-"precedence-stop-non-rispettato":"stop","precedence-arresto-incompleto-allo-stop":"stop","signs-segnale-di-stop-non-rispettato":"stop",
-"precedence-dare-precedenza-non-rispettato":"yield","signs-segnale-di-dare-precedenza-non-rispettato":"yield",
-"roundabout-mancata-precedenza-in-ingresso-in-presenza-dell-apposita-segnaletica":"yield",
-"signs-divieto-di-accesso":"noentry","signs-passaggio-con-semaforo-rosso":"traffic","signs-prosecuzione-con-semaforo-giallo-quando-era-possibile-arrestarsi-in-sicurezza":"traffic",
-"speed-distanza-di-sicurezza-insufficiente":"distance","speed-superamento-del-limite-di-velocita":"speed","speed-velocita-non-adeguata-a-strada-traffico-o-visibilita":"speed","speed-velocita-eccessivamente-ridotta-o-esitazione-pericolosa":"speed",
-"speed-accelerazione-brusca":"accelerator","speed-frenata-brusca-o-tardiva":"brake","controls-frenata-non-controllata":"brake","controls-uso-scorretto-della-frizione":"clutch",
-"attention-behavior-problemi-nello-stacco-della-frizione":"clutch","attention-behavior-piede-pesante-sul-freno":"brake","attention-behavior-piede-pesante-sull-acceleratore":"accelerator","attention-behavior-posizione-non-corretta-dei-piedi-sui-pedali":"pedals",
-"attention-behavior-scarso-utilizzo-degli-indicatori-di-direzione":"indicators","attention-behavior-mancato-controllo-degli-specchietti":"mirror",
-"maneuver-parcheggio-errato":"parking","maneuver-retromarcia-non-sicura":"reverse","observation-osservazione-insufficiente-in-retromarcia":"mirror",
-"attention-behavior-mancato-controllo-prima-dello-spostamento-laterale":"mirror","attention-behavior-mancato-controllo-prima-del-cambio-di-corsia":"mirror",
-"roundabout-mancato-controllo-di-specchi-o-angolo-cieco":"mirror","roundabout-mancato-indicatore-di-direzione-per-il-cambio-corsia":"indicators","roundabout-mancato-indicatore-di-direzione-in-uscita":"indicators"
+  "precedence-stop-non-rispettato": "stop",
+  "precedence-arresto-incompleto-allo-stop": "stop",
+  "precedence-dare-precedenza-non-rispettato": "yield",
+  "precedence-precedenza-a-destra-non-rispettata": "priorityright",
+  "precedence-impegno-scorretto-dell-intersezione": "junction",
+  "precedence-mancata-precedenza-a-pedone": "attention",
+  "precedence-mancata-precedenza-a-ciclista": "bicycle",
+  "precedence-mancata-precedenza-a-veicolo-di-emergenza": "emergency",
+  "signs-passaggio-con-semaforo-rosso": "traffic",
+  "signs-prosecuzione-con-semaforo-giallo-quando-era-possibile-arrestarsi-in-sicurezza": "traffic",
+  "signs-superamento-della-linea-di-arresto": "stopline",
+  "signs-segnale-di-stop-non-rispettato": "stop",
+  "signs-segnale-di-dare-precedenza-non-rispettato": "yield",
+  "signs-divieto-di-accesso": "noentry",
+  "signs-direzione-obbligatoria-non-rispettata": "generic",
+  "signs-divieto-non-rispettato": "generic",
+  "signs-attraversamento-della-linea-continua": "solidline",
+  "signs-frecce-direzionali-sulla-carreggiata-non-rispettate": "lanes",
+  "signs-altra-segnaletica-non-rispettata": "generic",
+  "speed-superamento-del-limite-di-velocita": "speed",
+  "speed-velocita-non-adeguata-a-strada-traffico-o-visibilita": "speed",
+  "speed-velocita-eccessivamente-ridotta-o-esitazione-pericolosa": "speed",
+  "speed-distanza-di-sicurezza-insufficiente": "distance",
+  "speed-frenata-brusca-o-tardiva": "braking",
+  "positioning-corsia-errata": "lanes",
+  "positioning-scelta-errata-della-corsia-prima-dell-intersezione": "lanes",
+  "positioning-invasione-della-corsia-opposta": "lanes",
+  "positioning-posizione-troppo-vicina-al-centro": "lanes",
+  "positioning-posizione-troppo-vicina-al-margine": "lanes",
+  "positioning-distanza-insufficiente-dai-veicoli-parcheggiati": "lateralclearance",
+  "positioning-posizione-errata-in-curva": "lanes",
+  "positioning-cambio-corsia-non-sicuro": "lanes",
+  "roundabout-mancata-precedenza-in-ingresso-in-presenza-dell-apposita-segnaletica": "yield",
+  "roundabout-approccio-dalla-corsia-errata": "lanes",
+  "roundabout-posizione-errata-nell-anello": "roundabout",
+  "roundabout-cambio-corsia-non-sicuro": "lanes",
+  "roundabout-uscita-dalla-corsia-errata": "lanes",
+  "roundabout-taglio-delle-corsie": "lanes",
+  "roundabout-mancato-controllo-di-specchi-o-angolo-cieco": "mirror",
+  "roundabout-mancato-indicatore-di-direzione-per-il-cambio-corsia": "indicators",
+  "roundabout-mancato-indicatore-di-direzione-in-uscita": "indicators",
+  "roundabout-mancata-precedenza-ai-pedoni-in-uscita": "attention",
+  "roundabout-velocita-non-adeguata-nella-rotatoria": "speed",
+  "indicators-indicatore-non-utilizzato": "indicators",
+  "indicators-indicatore-azionato-in-ritardo": "indicators",
+  "indicators-indicatore-errato": "indicators",
+  "indicators-mancato-indicatore-nella-svolta": "indicators",
+  "indicators-mancato-indicatore-nel-cambio-corsia": "indicators",
+  "indicators-mancato-indicatore-durante-un-sorpasso": "indicators",
+  "indicators-mancato-indicatore-prima-di-fermarsi-o-ripartire": "indicators",
+  "indicators-mancato-indicatore-in-uscita-dalla-rotatoria": "indicators",
+  "observation-mancato-controllo-degli-specchi": "mirror",
+  "observation-mancato-controllo-dell-angolo-cieco": "attention",
+  "observation-osservazione-insufficiente-dell-intersezione": "attention",
+  "observation-mancato-controllo-di-pedoni": "attention",
+  "observation-mancato-controllo-di-ciclisti": "bicycle",
+  "observation-osservazione-insufficiente-in-retromarcia": "mirror",
+  "observation-mancato-controllo-prima-dell-apertura-della-portiera": "attention",
+  "controls-partenza-con-freno-a-mano-inserito": "parkingbrake",
+  "controls-mancato-disinserimento-del-freno-di-stazionamento": "parkingbrake",
+  "controls-mancato-inserimento-del-freno-di-stazionamento": "parkingbrake",
+  "controls-spegnimento-del-motore": "engine",
+  "controls-arretramento-nella-partenza-in-salita": "hillstart",
+  "controls-uso-errato-di-luci-o-tergicristalli": "generic",
+  "controls-frenata-non-controllata": "braking",
+  "maneuver-parcheggio-errato": "parking",
+  "maneuver-retromarcia-non-sicura": "reverse",
+  "maneuver-inversione-non-sicura": "uturn",
+  "maneuver-manovra-in-piu-tempi-non-corretta": "maneuverpath",
+  "maneuver-partenza-in-salita-non-corretta": "hillstart",
+  "maneuver-contatto-con-il-marciapiede": "curb",
+  "maneuver-apertura-o-chiusura-non-sicura-della-portiera": "door",
+  "maneuver-partenza-o-reinserimento-nel-traffico-non-sicuro": "merge",
+  "safety-sorpasso-vietato-o-non-sicuro": "overtake",
+  "safety-attraversamento-della-linea-continua": "solidline",
+  "safety-distanza-laterale-insufficiente-da-ciclista": "lateralclearance",
+  "safety-mancato-uso-della-cintura": "seatbelt",
+  "safety-utilizzo-del-telefono-o-distrazione": "attention",
+  "safety-mancata-attenzione-agli-utenti-vulnerabili": "attention",
+  "attention-behavior-piede-pesante-sul-freno": "brake",
+  "attention-behavior-piede-pesante-sull-acceleratore": "accelerator",
+  "attention-behavior-posizione-non-corretta-dei-piedi-sui-pedali": "pedals",
+  "attention-behavior-scarso-utilizzo-degli-indicatori-di-direzione": "indicators",
+  "attention-behavior-confusione-tra-destra-e-sinistra": "indicators",
+  "attention-behavior-mancato-controllo-degli-specchietti": "mirror",
+  "attention-behavior-mancato-controllo-prima-dello-spostamento-laterale": "attention",
+  "attention-behavior-mancato-controllo-prima-del-cambio-di-corsia": "attention",
+  "attention-behavior-attenzione-insufficiente": "attention",
+  "attention-behavior-comunicazione-poco-chiara": "communication",
+  "attention-behavior-ansia": "attention",
+  "attention-behavior-rigidita-nei-movimenti": "attention",
+  "attention-behavior-agitazione": "attention",
+  "attention-behavior-altro-problema-tecnico-o-comportamentale": "generic",
+  "other-altro-errore": "generic",
+  "other-voce-personalizzata": "generic",
+  "other-da-specificare-nella-nota": "generic"
+});
+const CONTEXT_SYMBOL_IDS=Object.freeze({
+  "speed-accelerazione-brusca": {
+    "auto": "accelerator",
+    "moto": "motothrottle"
+  },
+  "controls-uso-scorretto-della-frizione": {
+    "auto": "clutch",
+    "moto": "motoclutch"
+  },
+  "controls-marcia-errata": {
+    "auto": "gearshift",
+    "moto": "motoshift"
+  },
+  "controls-controllo-insufficiente-dello-sterzo": {
+    "auto": "steeringwheel",
+    "moto": "handlebar"
+  },
+  "attention-behavior-problemi-nello-stacco-della-frizione": {
+    "auto": "clutch",
+    "moto": "motoclutch"
+  }
 });
 const STANDARD_SYMBOLS=new Map();
-for(const [category,,labels] of definitions)for(const label of labels){const id=category+"-"+slug(label);STANDARD_SYMBOLS.set(id,{label,symbol:SYMBOL_IDS[id]||(["indicators"].includes(category)?"indicators":category==="observation"?"mirror":category==="positioning"?"lanes":"generic")})}
+for(const [category,,labels] of definitions)for(const label of labels){const id=category+"-"+slug(label);STANDARD_SYMBOLS.set(id,{label,contexts:CONTEXT_SYMBOL_IDS[id],symbol:SYMBOL_IDS[id]||(["indicators"].includes(category)?"indicators":category==="observation"?"mirror":category==="positioning"?"lanes":"generic")})}
 function cleanSymbol(value){return typeof value==="string"&&Object.hasOwn(SYMBOLS,value)?value:""}
-function symbolFor(entry){const chosen=cleanSymbol(entry?.symbol);if(chosen)return chosen;const standard=STANDARD_SYMBOLS.get(entry?.id);return standard&&standard.label===entry?.label?standard.symbol:"generic"}
-function symbolMarkup(entry){return '<svg class="driving-error-symbol" aria-hidden="true" focusable="false" viewBox="0 0 48 48"><use href="ui-icons.svg?v=errors-symbols-2#error-'+symbolFor(entry)+'"></use></svg>'}
+function symbolFor(entry,category=null){const chosen=cleanSymbol(entry?.symbol);if(chosen)return chosen;const standard=STANDARD_SYMBOLS.get(entry?.id);if(!standard||standard.label!==entry?.label)return"generic";if(standard.contexts){const type=category==="auto"?"auto":["moto","corso-moto"].includes(category)?"moto":null;return type?standard.contexts[type]:"generic"}return standard.symbol}
+function symbolMarkup(entry,category=null){return '<svg class="driving-error-symbol" aria-hidden="true" focusable="false" viewBox="0 0 48 48"><use href="ui-icons.svg?v=errors-symbols-3#error-'+symbolFor(entry,category)+'"></use></svg>'}
 
 function defaultCatalog(){return{version:1,categories:definitions.map(([id,label,items],order)=>({id,label,enabled:true,order:order+1,items:items.map((item,itemOrder)=>({id:`${id}-${slug(item)}`,label:item,enabled:true,order:itemOrder+1}))}))}}
 // Extend only the new standard category; never replace personal catalogs or historical snapshots.
@@ -57,5 +164,5 @@ function draftKey(accountId,studentId,lessonContext){return`${DRAFT_PREFIX}:${[a
 function createDraftStore(storage){if(!storage||typeof storage.getItem!=="function"||typeof storage.setItem!=="function"||typeof storage.removeItem!=="function")throw new TypeError("Storage locale non disponibile");return{load(accountId,studentId,lessonContext){try{const parsed=JSON.parse(storage.getItem(draftKey(accountId,studentId,lessonContext))||"null");if(!parsed||parsed.accountId!==String(accountId)||parsed.studentId!==String(studentId)||parsed.lessonContext!==String(lessonContext))return null;return{...parsed,errors:normalizeErrors(parsed.errors)}}catch{return null}},save(accountId,studentId,lessonContext,payload){const draft={version:1,accountId:String(accountId),studentId:String(studentId),lessonContext:String(lessonContext),draftLessonId:identifier(payload?.draftLessonId,makeId()),updatedAt:finite(payload?.updatedAt)??Date.now(),errors:normalizeErrors(payload?.errors)};storage.setItem(draftKey(accountId,studentId,lessonContext),JSON.stringify(draft));return draft},remove(accountId,studentId,lessonContext){storage.removeItem(draftKey(accountId,studentId,lessonContext))},key:draftKey}}
 function catalogKey(accountId){return`${CATALOG_PREFIX}:${encodeURIComponent(identifier(accountId,"missing"))}`}
 function createCatalogStore(storage){if(!storage?.getItem||!storage?.setItem)throw new TypeError("Storage locale non disponibile");const clone=value=>typeof structuredClone==="function"?structuredClone(value):JSON.parse(JSON.stringify(value)),load=accountId=>{try{const raw=storage.getItem(catalogKey(accountId));return raw?normalizeCatalog(JSON.parse(raw),{strict:true}):defaultCatalog()}catch{return defaultCatalog()}},save=(accountId,catalog)=>{const clean=normalizeCatalog(catalog,{strict:true});storage.setItem(catalogKey(accountId),JSON.stringify(clean));return clean},update=(accountId,mutator)=>{const next=clone(load(accountId));mutator(next);next.categories.forEach((category,index)=>{category.order=index+1;category.items.forEach((item,itemIndex)=>item.order=itemIndex+1)});return save(accountId,next)},unique=(items,label,except="")=>{const key=label.toLocaleLowerCase("it");if(items.some(item=>item.id!==except&&item.label.toLocaleLowerCase("it")===key))throw new Error("Esiste già un’etichetta uguale.")};return{load,save,snapshot:load,restore:save,reset(accountId){return save(accountId,defaultCatalog())},addCategory(accountId,label){label=safeLabel(label);return update(accountId,c=>{unique(c.categories,label);c.categories.push({id:`custom-category-${makeId()}`,label,enabled:true,order:c.categories.length+1,items:[]})})},renameCategory(accountId,id,label){label=safeLabel(label);return update(accountId,c=>{unique(c.categories,label,id);const item=c.categories.find(x=>x.id===id);if(!item)throw new Error("Categoria non trovata.");item.label=label})},setCategoryEnabled(accountId,id,enabled){return update(accountId,c=>{const item=c.categories.find(x=>x.id===id);if(!item)throw new Error("Categoria non trovata.");item.enabled=!!enabled})},moveCategory(accountId,id,direction){return update(accountId,c=>{const from=c.categories.findIndex(x=>x.id===id),to=from+direction;if(from<0||to<0||to>=c.categories.length)return;[c.categories[from],c.categories[to]]=[c.categories[to],c.categories[from]]})},addItem(accountId,categoryId,label){label=safeLabel(label);return update(accountId,c=>{const category=c.categories.find(x=>x.id===categoryId);if(!category)throw new Error("Categoria non trovata.");unique(category.items,label);category.items.push({id:`custom-item-${makeId()}`,label,enabled:true,order:category.items.length+1})})},renameItem(accountId,categoryId,id,label){label=safeLabel(label);return update(accountId,c=>{const category=c.categories.find(x=>x.id===categoryId);if(!category)throw new Error("Categoria non trovata.");unique(category.items,label,id);const item=category.items.find(x=>x.id===id);if(!item)throw new Error("Voce non trovata.");item.label=label})},setItemSymbol(accountId,categoryId,id,symbol){if(!cleanSymbol(symbol)&&symbol!=="")throw Error("Simbolo non valido.");return update(accountId,c=>{const item=c.categories.find(x=>x.id===categoryId)?.items.find(x=>x.id===id);if(!item||!id.startsWith("custom-item-"))throw Error("Scelta disponibile per le voci personalizzate.");if(symbol)item.symbol=symbol;else delete item.symbol})},setItemEnabled(accountId,categoryId,id,enabled){return update(accountId,c=>{const item=c.categories.find(x=>x.id===categoryId)?.items.find(x=>x.id===id);if(!item)throw new Error("Voce non trovata.");item.enabled=!!enabled})},moveItem(accountId,categoryId,id,direction){return update(accountId,c=>{const items=c.categories.find(x=>x.id===categoryId)?.items;if(!items)throw new Error("Categoria non trovata.");const from=items.findIndex(x=>x.id===id),to=from+direction;if(from<0||to<0||to>=items.length)return;[items[from],items[to]]=[items[to],items[from]]})}}}
-return{SYMBOLS,SYMBOL_IDS,cleanSymbol,symbolFor,symbolMarkup,CATEGORIES,MAX_NOTE_LENGTH,FIX_MAX_AGE_MS,DOUBLE_TAP_GUARD_MS,defaultCatalog,normalizeCatalog,catalogCategory,categoryLabel,normalizeError,normalizeErrors,createError,canSignal,draftKey,createDraftStore,catalogKey,createCatalogStore};
+return{SYMBOLS,SYMBOL_IDS,CONTEXT_SYMBOL_IDS,cleanSymbol,symbolFor,symbolMarkup,CATEGORIES,MAX_NOTE_LENGTH,FIX_MAX_AGE_MS,DOUBLE_TAP_GUARD_MS,defaultCatalog,normalizeCatalog,catalogCategory,categoryLabel,normalizeError,normalizeErrors,createError,canSignal,draftKey,createDraftStore,catalogKey,createCatalogStore};
 });
