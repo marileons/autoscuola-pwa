@@ -246,3 +246,6 @@
 .interior-view .driving-error-symbol-select-line{display:flex;align-items:center;gap:12px;margin-top:8px}
 .interior-view .driving-error-symbol-select-line select{flex:1;min-width:0;margin:0}
 .interior-view .driving-error-symbol-select-line>span{display:inline-flex;flex:none;padding:8px;border:1px solid #477985;border-radius:10px;background:#0a3641}
+
+/* Follow mode locks map panning while retaining page scrolling and zoom controls. */
+@media screen{#appShell #lesson .map.follow-position-locked{touch-action:pan-y pinch-zoom}}

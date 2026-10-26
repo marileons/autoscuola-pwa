@@ -324,7 +324,7 @@
     const base=studentReportHtmlBase(current);
     const drivingLicense=window.StudentLicense.normalize(current.drivingLicense),licenseHtml=drivingLicense?`<section class="lesson license-report"><h2>PATENTE CONSEGUITA</h2><dl><div><dt>Categoria patente</dt><dd>${esc(drivingLicense.category||"Non inserita (dato storico)")}</dd></div><div><dt>Numero patente</dt><dd>${esc(drivingLicense.number)}</dd></div><div><dt>Data di rilascio</dt><dd>${formatStoredDate(drivingLicense.issueDate)}</dd></div><div><dt>Data di scadenza</dt><dd>${formatStoredDate(drivingLicense.expiryDate)}</dd></div></dl></section>`:"";
     const notes=base.match(/<h2>Note<\/h2><p>[\s\S]*?<\/p>/)?.[0]||"";
-    let report=base.replace('<h2>Note</h2>',`<p><strong>Sede:</strong> ${esc(current.siteName||"Non inserita")}</p><h2>Note</h2>`)
+    let report=base.replace('<h2>Note</h2>',`<p><strong>Sede:</strong> ${esc(window.StudentArchiveStore.siteNames.label(current.siteName)||"Non inserita")}</p><h2>Note</h2>`)
       .replace(notes,"")
       .replace(/<h2>Percorso didattico<\/h2><table>[\s\S]*?<\/table>/,"")
       .replace("<h2>Storico guide (",`${licenseHtml}<h2>STORICO GUIDE (`)
