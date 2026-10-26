@@ -28,6 +28,7 @@ function employmentFields(referenceDate = today()) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/home-sections-api.js") return json({error:"Risorsa non disponibile."},404);
     const calendarEnabled = env.SHARED_CALENDAR_ENABLED === "true" || env.SHARED_CALENDAR_ENABLED === true;
     if (url.pathname==="/shared-calendar-secretary-reminders.js") return json({error:"Risorsa non disponibile."},404);
     if(url.pathname==="/api/exam-report/scope"){
@@ -50,7 +51,7 @@ export default {
       const session = await requireSession(request, env);
       if (session.response) return session.response;
       const role=effectiveRole(session.user);
-      const secretaryAssets=new Set(["/shared-calendar-exam-report.js","/student-license.js","/student-license-store.js","/student-archive-store.js","/lesson-drafts.js","/lesson-activities.js","/lesson-secretary-transfer.js","/lesson-secretary-transfer-ui.js","/student-report-print.js","/driving-errors.js","/student-multi-actions.js","/student-multi-import.js","/exams.js","/app.js","/documents.js","/r10-features.js","/ui-icons.svg"]);
+      const secretaryAssets=new Set(["/home-sections.js","/shared-calendar-exam-report.js","/student-license.js","/student-license-store.js","/student-archive-store.js","/lesson-drafts.js","/lesson-activities.js","/lesson-secretary-transfer.js","/lesson-secretary-transfer-ui.js","/student-report-print.js","/driving-errors.js","/student-multi-actions.js","/student-multi-import.js","/exams.js","/app.js","/documents.js","/r10-features.js","/ui-icons.svg"]);
       if (session.purpose !== "NORMAL" || role === "USER_MANAGER" || (role === "SEGRETERIA" && !secretaryAssets.has(url.pathname))) return json({ error: "Risorsa non autorizzata." }, 403);
       return env.ASSETS.fetch(request);
     }
@@ -64,6 +65,10 @@ export default {
       const session = await requireSession(request, env, url.pathname !== "/api/exams/instructors");
       if (session.response) return session.response;
       if (session.purpose === "PASSWORD_CHANGE" && !["/api/auth/password", "/api/auth/logout"].includes(url.pathname)) return json({ error: "Prima di continuare devi scegliere una nuova password personale." }, 403);
+      if (url.pathname === "/api/home-sections") {
+        const {handleHomeSections}=await import("./home-sections-api.js");
+        return handleHomeSections(request,env,session,effectiveRole(session.user),isPrimaryAdmin(session.user));
+      }
       if (url.pathname === "/api/auth/password" && request.method === "POST") return changeOwnPassword(request, env, session);
       if (url.pathname === "/api/auth/presence" && request.method === "POST") return adminPresence(request, env, session);
       // Sole new network read for the exam instructor picker: no application data.

@@ -145,3 +145,37 @@ body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement
   #appShell :is(#home,#secretaryHome) .categories>button.ga-pro img{grid-column:2;grid-row:2;align-self:center}
  }
 }
+
+/* Global sections: approved AUTO/MOTO layout, other combinations retain MR grid. */
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories{grid-template-columns:minmax(0,1fr)!important;gap:16px!important}
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f]{grid-column:auto!important;grid-row:auto!important;display:grid!important;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)!important;grid-template-rows:auto auto!important;gap:14px 18px!important;min-height:0!important;padding:20px!important;align-content:stretch!important}
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f]>.home-student-counts{grid-column:1/-1!important;grid-row:1!important;margin:0!important;align-self:start!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;font-size:12px!important;line-height:1.5!important}
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f] .hero-copy{grid-column:1!important;grid-row:2!important;width:auto!important;margin:0!important;align-self:center!important;justify-self:start;display:flex!important;flex-direction:column}
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f] .hero-copy strong{font-size:46px!important;line-height:1.12}
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f=moto] .hero-copy strong{font-size:36px!important}
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f] img{position:relative!important;inset:auto!important;grid-column:2!important;grid-row:2!important;justify-self:center!important;align-self:end!important;margin:0!important;width:100%!important;max-width:430px!important;height:auto!important;max-height:180px!important;object-fit:contain!important;object-position:center bottom!important;aspect-ratio:auto!important}
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f] .hero-copy::after{flex:none}
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f=auto] .hero-copy small{font-size:17px;max-width:240px;margin-top:18px}
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f=moto] img{max-width:390px!important;max-height:155px!important}
+@media(min-width:1000px){body.only-two-paths #appShell :is(#home,#secretaryHome) .categories{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)!important}body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f]{grid-row:span 2!important;grid-template-rows:subgrid!important;row-gap:20px!important}body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f] img{max-height:145px!important}}
+#appShell :is(#home,#secretaryHome) .categories>[data-f][hidden],#manageHomeSections[hidden],.check-tabs [hidden]{display:none!important}
+.home-sections-status{margin:12px 0;color:#fff4e1}.home-sections-status[hidden]{display:none}.home-sections-status button{min-height:44px}
+#homeSectionsDialog{box-sizing:border-box;width:min(620px,calc(100% - 28px));max-height:90dvh;overflow:auto;border:1px solid #4c8790;border-radius:22px;padding:24px;background:#064653;color:#fff4e1;font-family:inherit}
+#homeSectionsDialog::backdrop{background:#002b36ba}#homeSectionsDialog h2{font-size:22px;color:#ffd18b}
+.home-sections-list{display:grid;gap:10px}.home-sections-list label{display:grid;grid-template-columns:minmax(0,1fr) 52px;align-items:center;gap:4px 14px;padding:10px 12px;border:1px solid #4b7a81;border-radius:12px;background:#0a5968;min-height:44px}
+.home-sections-list label>span{overflow-wrap:anywhere}.home-sections-list input{grid-column:2;grid-row:1/3;width:44px;height:44px;accent-color:#ffcf87;cursor:pointer}.home-sections-list small{font-size:12px;color:#ffdb9e}
+.home-sections-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}.home-sections-actions button{min-height:44px;padding:10px 20px;border-radius:12px;border:1px solid #4b8590;background:#ffd18b;color:#063c49;font-weight:800;font-family:inherit}.home-sections-actions button.secondary{background:#073e4b;color:#fff4e1}
+#homeSectionsDialog :focus-visible{outline:3px solid #fff4e1;outline-offset:3px}#homeSectionsDialog button:disabled{opacity:.55;cursor:wait}
+
+@media(max-width:600px){body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f]{padding:16px!important;gap:14px 8px!important;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)!important}body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f]>.home-student-counts{grid-template-columns:minmax(0,1fr)!important;gap:6px!important}body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f] .hero-copy strong{font-size:34px!important}body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f=moto] .hero-copy strong{font-size:28px!important}body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f=auto] .hero-copy small{font-size:14px;max-width:130px;margin-top:12px}body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f] img{max-height:125px!important}body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f=moto] img{max-height:110px!important}body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f=auto] .hero-copy::after{width:54px!important}}
+#documentSections [data-section][hidden]{display:none!important}
+.home-sections-list input{appearance:none;-webkit-appearance:none;position:relative;background:none;border:0;padding:0;margin:0;width:52px;height:44px;min-height:44px}
+.home-sections-list input::before{content:'';position:absolute;box-sizing:border-box;top:8px;left:0;width:50px;height:28px;border:1px solid #9cb8bd;border-radius:999px;background:#173d48}
+.home-sections-list input::after{content:'';position:absolute;width:20px;height:20px;top:12px;left:4px;border-radius:50%;background:#d4e2e1;transition:left .15s}
+.home-sections-list input:checked::before{background:#ffd29a;border-color:#ffd29a}.home-sections-list input:checked::after{left:26px;background:#123f4c}
+
+/* Author grid rules use !important: hidden must also win in the two-path layout. */
+body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-f][hidden],body #appShell :is(#home,#secretaryHome) .categories>button[data-f][hidden],#appShell #otherFunctions #manageHomeSections[hidden],#appShell #checklistManager .check-tabs button[hidden],#appShell #documentsView #documentSections [hidden]{display:none!important}
+
+/* Display name only: keep the final words together when the brand wraps. */
+.home-wordmark{white-space:normal;overflow-wrap:normal;min-width:0}.home-wordmark .home-name-suffix{white-space:nowrap}

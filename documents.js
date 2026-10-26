@@ -111,6 +111,7 @@
       return button;
     });
     byId("documentSections").replaceChildren(...buttons);
+    window.HomeSections?.sync();
   }
 
   function showDocumentCategories(){
@@ -123,6 +124,7 @@
   }
 
   function openDocumentSection(section){
+    if(section!==COMMON_SECTION&&window.HomeSections&&!window.HomeSections.requirePath(section))return;
     currentSection=SECTION_LABELS.has(section)?section:COMMON_SECTION;
     selectedDocumentIds.clear();
     byId("documentSectionTitle").textContent=SECTION_LABELS.get(currentSection);
@@ -474,14 +476,15 @@
         option.textContent=label;
         return option;
       }));
-      select.value=currentSection===COMMON_SECTION?"auto":COMMON_SECTION;
+      window.HomeSections?.sync();
+      select.value=currentSection===COMMON_SECTION&&(!window.HomeSections||window.HomeSections.isEnabled("auto"))?"auto":COMMON_SECTION;
       const finish=value=>{
         modal.classList.add("hidden");
         form.onsubmit=null;
         byId("cancelDocumentMove").onclick=null;
         resolve(value);
       };
-      form.onsubmit=event=>{event.preventDefault();finish(select.value)};
+      form.onsubmit=event=>{event.preventDefault();if(select.value!==COMMON_SECTION&&window.HomeSections&&!window.HomeSections.requirePath(select.value))return;finish(select.value)};
       byId("cancelDocumentMove").onclick=()=>finish(null);
       modal.classList.remove("hidden");
     });

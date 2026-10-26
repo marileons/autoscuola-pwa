@@ -1,6 +1,6 @@
 {
-  "name": "Agenda Istruttori",
-  "short_name": "Agenda Istruttori",
+  "name": "Agenda Istruttori di Guida",
+  "short_name": "Agenda Guida",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
