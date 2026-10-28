@@ -1,0 +1,15 @@
+Dati cartografici: © OpenStreetMap contributors.
+Licenza del database e del pacchetto derivato: Open Database License 1.0 (ODbL).
+https://www.openstreetmap.org/copyright
+https://opendatacommons.org/licenses/odbl/1-0/
+
+Pacchetto limitato al corridoio Genova Aeroporto–Rapallo e Genova Bolzaneto.
+Geometrie OSM reali, entrambe le direzioni e raccordi compresi nel grafo.
+Dati acquisiti tramite https://overpass-api.de/api/interpreter.
+Query: [out:json][timeout:180];way["highway"](44.30,8.76,44.54,9.31);(._;>;);out body qt;
+Timestamp OSM e SHA-256 dell'estratto originale sono incorporati in tunnel-map-data.js.
+Builder riproducibile: tests/tunnel-map-build.py (eseguito sul JSON pubblico scaricato).
+Nessun punto di una traccia personale è stato inviato o usato per creare il pacchetto.
+Il pacchetto e i suoi dati possono essere riutilizzati secondo ODbL 1.0.
+Le attribuzioni alla cartografia raster e ai dati vettoriali restano dovute.
+Il database non è una certificazione di completezza o dell'effettivo percorso seguito.

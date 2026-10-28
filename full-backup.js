@@ -111,6 +111,7 @@
   }
 
   function validateAppData(appData){
+    tunnelSnapshot(appData);
     if(Object.hasOwn(appData||{},"studentSites"))window.StudentArchiveStore.normalizeSites(appData.studentSites);
     if(!appData||typeof appData!=="object")throw new Error("Dati applicativi mancanti.");
     if(!Array.isArray(appData.students))throw new Error("Archivio allievi non valido.");
@@ -786,6 +787,7 @@
     }
   }
 
+  function tunnelSnapshot(appData){const out=[];for(const student of [...(appData.students||[]),...(appData.studentTrash||[]).map(e=>e.student)])for(const lesson of student.lessons||[])if(Object.hasOwn(lesson,"tunnelReconstructions")){if(!window.TunnelReconstruction)throw Error("Validazione delle ricostruzioni galleria non disponibile: riprova dopo il caricamento dell’app.");window.TunnelReconstruction.validate(lesson.tunnelReconstructions);out.push({studentId:student.id,lessonId:lesson.id,records:lesson.tunnelReconstructions})}return out.sort((a,b)=>(a.studentId+"/"+a.lessonId).localeCompare(b.studentId+"/"+b.lessonId))}
   function canonicalAppData(appData,checklistKeys=null){
     const cleanItems=items=>(Array.isArray(items)?items:[]).map(item=>({label:String(item&&item.label||""),status:String(item&&item.status?item.status:item&&item.done?"good":"none"),...(item?.checklistDetails?{checklistDetails:{...item.checklistDetails}}:{})})).filter(item=>item.status!=="none"||item.checklistDetails);
     const cleanRoute=route=>(Array.isArray(route)?route:[]).map(point=>({
@@ -836,6 +838,7 @@
       examiners:canonical.examiners.length,
       checklistKeys,
       appDataSha256:await textSha256(JSON.stringify(canonical)),
+      ...(tunnelSnapshot(validated.payload.appData).length?{tunnelSha256:await textSha256(JSON.stringify(tunnelSnapshot(validated.payload.appData)))}:{}),
       studentSitesSha256:Object.hasOwn(validated.payload.appData,"studentSites")?await textSha256(JSON.stringify(window.StudentArchiveStore.normalizeSites(validated.payload.appData.studentSites))):null,
       examinerRoutesSha256:examinerRoutes?await textSha256(JSON.stringify(examinerRoutes)):null,
       drivingErrorCatalogSha256:await textSha256(JSON.stringify(drivingErrorCatalog)),
@@ -854,6 +857,7 @@
     const examData=await window.AgendaExamStore.snapshot();appData.exams=examData.exams;appData.examLocations=examData.locations;
     validateAppData(appData);
     const canonical=canonicalAppData(appData,manifest.checklistKeys);
+    if(manifest.tunnelSha256&&await textSha256(JSON.stringify(tunnelSnapshot(appData)))!==manifest.tunnelSha256)throw Error("Verifica delle ricostruzioni in galleria non riuscita.");
     if(canonical.students.length!==manifest.students)throw new Error(`Verifica post-riavvio allievi fallita: attesi ${manifest.students}, trovati ${canonical.students.length}.`);
     const lessons=canonical.students.reduce((total,student)=>total+student.lessons.length,0);
     if(lessons!==manifest.lessons)throw new Error(`Verifica post-riavvio guide fallita: attese ${manifest.lessons}, trovate ${lessons}.`);
@@ -879,6 +883,7 @@
     const currentChecklists=parsedStorageValue(DATA_KEYS.checklists,{});
     const currentExaminers=parsedStorageValue(DATA_KEYS.examiners,[]),examData=await window.AgendaExamStore.snapshot(),currentExams=examData.exams,currentExamLocations=examData.locations;
     const currentCanonical=canonicalAppData({students:currentStudents,studentTrash:await storedTrashWithDrivingLicenses(),checklists:currentChecklists,examiners:currentExaminers,exams:currentExams,examLocations:currentExamLocations}),expectedCanonical=canonicalAppData(validated.payload.appData);
+    if(JSON.stringify(tunnelSnapshot({students:currentStudents,studentTrash:await storedTrashWithDrivingLicenses()}))!==JSON.stringify(tunnelSnapshot(validated.payload.appData)))throw Error("Verifica delle ricostruzioni in galleria non riuscita.");
     if(JSON.stringify(currentCanonical)!==JSON.stringify(expectedCanonical))throw new Error("Verifica dei dati applicativi non riuscita.");
     if(Object.hasOwn(validated.payload.appData,"studentSites")&&JSON.stringify(await window.AgendaStudentArchiveStore.snapshotSites())!==JSON.stringify(window.StudentArchiveStore.normalizeSites(validated.payload.appData.studentSites)))throw new Error("Verifica del catalogo sedi non riuscita.");
     if(validated.payload.examinerRoutes){const currentAccount=String(window.AgendaAuth?.currentUser?.()?.id||""),expected={...validated.payload.examinerRoutes,accountId:currentAccount},actual=window.ExaminerRoutesUI.snapshot(currentAccount);if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("Verifica dei percorsi esaminatori non riuscita.")}

@@ -279,3 +279,6 @@
 #appShell #lessonChecklist .checklist-choice input[type="checkbox"]:checked { background: #ffd195!important; }
 #appShell #lessonChecklist .checklist-choice input[type="checkbox"]:checked::after { content: ""; position: absolute; left: 7px; top: 2px; width: 6px; height: 13px; border: solid #123f4a; border-width: 0 3px 3px 0; transform: rotate(45deg); }
 #appShell #lessonChecklist .checklist-completion { flex: 0 0 44px; width: 44px; text-align: center; color: #ffd195; font-size: 1.4rem; }
+
+/* Estimated tunnel geometry is visibly separate from real GPS samples. */
+#appShell .tunnel-estimate-notice{padding:10px 12px;border:1px dashed #ff8892;border-radius:10px;color:#fff7e8;background:#123f4a;font-size:.9rem;line-height:1.45;overflow-wrap:anywhere}
