@@ -787,7 +787,7 @@
   }
 
   function canonicalAppData(appData,checklistKeys=null){
-    const cleanItems=items=>(Array.isArray(items)?items:[]).map(item=>({label:String(item&&item.label||""),status:String(item&&item.status?item.status:item&&item.done?"good":"none")})).filter(item=>item.status!=="none");
+    const cleanItems=items=>(Array.isArray(items)?items:[]).map(item=>({label:String(item&&item.label||""),status:String(item&&item.status?item.status:item&&item.done?"good":"none"),...(item?.checklistDetails?{checklistDetails:{...item.checklistDetails}}:{})})).filter(item=>item.status!=="none"||item.checklistDetails);
     const cleanRoute=route=>(Array.isArray(route)?route:[]).map(point=>({
       lat:Number(point&&point.lat),lng:Number(point&&point.lng),accuracy:Number(point&&point.accuracy),time:Number(point&&point.time),breakBefore:point&&point.breakBefore===true
     }));
@@ -797,7 +797,7 @@
         checklist:cleanItems(student&&student.checklist),
         lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>{
           const canonicalLesson={id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist),errors:window.DrivingErrors.normalizeErrors(lesson&&lesson.errors)};
-          for(const key of ["activityBaseline","activitySnapshot","lessonActivities"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key].map(item=>({id:String(item.id),label:String(item.label),status:String(item.status)}));
+          for(const key of ["activityBaseline","activitySnapshot","lessonActivities"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key].map(item=>({id:String(item.id),label:String(item.label),status:String(item.status),...(item.checklistDetails?{checklistDetails:{...item.checklistDetails}}:{})}));
           for(const key of ["instructorId","instructorName","completedDraftSignature"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key];
           if(typeof lesson?.duration==="string"&&lesson.duration.trim())canonicalLesson.duration=lesson.duration.trim();
           if(Object.hasOwn(lesson,"secretaryTransfer"))canonicalLesson.secretaryTransfer=window.LessonSecretaryTransfer.metadata(lesson.secretaryTransfer);
