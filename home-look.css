@@ -179,3 +179,10 @@ body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-
 
 /* Display name only: keep the final words together when the brand wraps. */
 .home-wordmark{white-space:normal;overflow-wrap:normal;min-width:0}.home-wordmark .home-name-suffix{white-space:nowrap}
+
+/* Personal Home settings: scoped to the existing management dialog. */
+#homeSectionsDialog{max-width:760px;width:calc(100% - 28px);max-height:calc(100dvh - 28px);overflow-y:auto;overflow-x:hidden}
+#homeSectionsDialog .home-sections-user{display:grid;gap:8px;margin:16px 0}
+#homeSectionsUser{min-height:44px;width:100%;max-width:100%;font:inherit;background:#073e4b;color:#fff4e1;border:1px solid #60929b;border-radius:10px;padding:10px}
+#homeSectionsTarget{overflow-wrap:anywhere}#homeSectionsDialog .home-sections-source{color:#ffd18b;font-weight:800}
+#homeSectionsDialog .home-sections-actions button{max-width:100%;white-space:normal}

@@ -65,9 +65,9 @@ export default {
       const session = await requireSession(request, env, url.pathname !== "/api/exams/instructors");
       if (session.response) return session.response;
       if (session.purpose === "PASSWORD_CHANGE" && !["/api/auth/password", "/api/auth/logout"].includes(url.pathname)) return json({ error: "Prima di continuare devi scegliere una nuova password personale." }, 403);
-      if (url.pathname === "/api/home-sections") {
+      if (url.pathname === "/api/home-sections" || url.pathname.startsWith("/api/home-sections/")) {
         const {handleHomeSections}=await import("./home-sections-api.js");
-        return handleHomeSections(request,env,session,effectiveRole(session.user),isPrimaryAdmin(session.user));
+        return handleHomeSections(request,env,session,effectiveRole(session.user),isPrimaryAdmin(session.user),effectiveRole);
       }
       if (url.pathname === "/api/auth/password" && request.method === "POST") return changeOwnPassword(request, env, session);
       if (url.pathname === "/api/auth/presence" && request.method === "POST") return adminPresence(request, env, session);

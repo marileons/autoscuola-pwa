@@ -33,3 +33,45 @@ SQL eseguito su SQLite in memoria tramite tests/shared-calendar-support.js, con 
 Browser isolato Chromium, richieste intercettate localmente; resa a 390×844, 820×1180, 1180×820 e avvio dell’app reale con moduli locali. Anteprime con dati fittizi fuori dal repository. Sintassi dei JavaScript coinvolti e git diff --check positivi.
 
 Nome visualizzato: Agenda Istruttori di Guida; short_name: Agenda Guida. Nessuna modifica a start_url, scope, icone, chiavi o discriminanti tecnici dei backup. Manuale PDF esterno non modificato.
+
+## Estensione locale: Home per utente (non pubblicata)
+
+Migrazione successiva verificata disponibile: `0022_app_home_sections_users.sql`.
+Crea solo `app_home_sections_users`; non modifica tabelle esistenti né inserisce preferenze.
+La tabella globale `app_home_sections` resta il predefinito. Una lista personale (anche vuota)
+sostituisce il predefinito senza intersezione. Un valore personale NULL significa assegnazione
+rimossa: la revisione viene conservata per impedire a un editor obsoleto di ricrearla (problema ABA).
+L'ID utente è chiave esterna con eliminazione a cascata; nome o email non sono mai chiavi.
+
+### Accessi e concorrenza
+- GET `/api/home-sections` e POST sullo stesso endpoint restano dedicati al predefinito, compatibili con il flusso precedente.
+- GET `/api/home-sections/self` legge esclusivamente la visibilità effettiva dell'account autenticato.
+- GET `/api/home-sections/users` e GET/POST `/api/home-sections/users/:id` sono riservati al principale.
+- L'elenco restituisce solo ID, nome, ruolo effettivo e stato attivo; utenti disattivati o senza percorsi non possono essere destinatari.
+- POST personale: `{enabled:[...],version:N}`; `{enabled:null,version:N}` rimuove la deroga.
+- Scritture condizionate da versione e stato/ruolo del destinatario. Conflitto: 409, nessun successo simulato.
+- Origine, sessione normale e ruolo principale sono verificati dal Worker esistente. Nessuna autorizzazione ai dati viene ampliata.
+- Nessuna preferenza viene persistita nel dispositivo o nel backup personale; stato UI in memoria azzerato al cambio account.
+
+### Collaudo del principale
+ALTRE FUNZIONI -> GESTIONE FUNZIONI -> selezionare utente (anche se stesso) -> nove interruttori -> SALVA.
+ANNULLA chiude senza salvare. USA IMPOSTAZIONI PREDEFINITE richiede conferma e prepara il ripristino:
+serve comunque SALVA. L'opzione IMPOSTAZIONI PREDEFINITE GLOBALI modifica solo chi eredita il predefinito.
+L'accesso alla gestione resta visibile al principale anche se nasconde tutti i propri percorsi.
+Registro, gestione generale e backup conservano i permessi precedenti.
+
+### Ordine per una futura pubblicazione, non autorizzata da questo intervento
+1. Controllare perimetro, versioni attive e migrazioni; effettuare il backup secondo la procedura abituale prima di modificare D1.
+2. Applicare esclusivamente 0022 al database esistente prima del nuovo Worker, verificando struttura e dati preesistenti.
+3. Pubblicare Worker, markup e asset versionati insieme, senza cambiare binding, variabili o interruttori.
+4. Collaudare con account autorizzati su dispositivi reali. Nessuno di questi passi remoti è stato eseguito qui.
+
+Tabella personale mancante o dati invalidi: 503 HOME_SECTIONS_STORAGE_UNAVAILABLE, mai interpretati come assenza di deroga.
+Il Worker precedente ignora la nuova tabella e usa solo il predefinito globale; le deroghe restano conservate ma non applicate.
+Il ritorno al codice precedente non offre dunque la stessa visibilità individuale. Nessun ripristino automatico.
+
+### Verifiche locali dell'estensione
+SQLite `:memory:` della fixture, tutti dati sintetici, nessun database locale persistente aperto/sovrascritto.
+Controlli mirati di schema additivo, integrità/FK, ruoli, versioni, configurazioni personali/predefinite,
+errori/offline, separazione account e due sessioni; browser isolato con richieste intercettate localmente.
+Non sono stati eseguiti test estranei o una suite completa. Le anteprime sono esterne al repository.

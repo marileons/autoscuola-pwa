@@ -118,3 +118,33 @@ Nessuna promessa di continuità del segnale in galleria.
 | osm-24885449-270403941 | Galleria Sessarego | 24885449 | Valutabile solo dopo tutte le verifiche |
 
 Il tag tunnel=yes non è una certificazione del percorso; eventuali gallerie mancanti o mal classificate in OSM restano non ricostruite. Nessun dato è stato dedotto dai pixel. Il pacchetto è di circa7,6MB, sotto il limite attuale25MiB per asset; non è stato attivato alcun servizio o piano aggiuntivo.
+
+## Estensione diagnostica locale (non pubblicata)
+
+COPIA DIAGNOSI GPS include stato modulo e pacchetto, formato e impronta tecnica del contenuto,
+caricamento fallito con codice fisso, contatori di sessione ed esiti aggregati. Nessun nome di galleria,
+coordinata, dato personale o orario assoluto viene aggiunto. Nessun dato diagnostico viene salvato o inviato.
+Lo storico riaperto non possiede queste statistiche: indica "non disponibile".
+
+Definizioni:
+- rilevate: nuovi `breakBefore` nei punti registrati della sessione;
+- escluse iniziali: rilevate senza tre ancoraggi precedenti nella sessione;
+- candidate: interruzioni entrate nell'insieme pendente;
+- valutate: candidate sottoposte all'unico tentativo già previsto dall'algoritmo;
+- accettate, rifiutate ed errori: esiti delle valutazioni;
+- in attesa: candidate senza ancora tre punti successivi;
+- attese terminate: pendenti abbandonate allo stop della sessione.
+
+Invarianti: candidate = valutate + in attesa + attese terminate;
+valutate = accettate + rifiutate + errori. I motivi di rifiuto contano il primo controllo che impedisce
+il riconoscimento, non tutte le condizioni contemporaneamente non soddisfatte.
+L'assenza di compatibilità portali/direzione include anche l'esclusione delle catene ramificate e il limite
+fisico di lunghezza già presente: non attribuisce arbitrariamente un motivo più preciso.
+
+Le eccezioni di elaborazione sono conteggiate per categoria tecnica consentita e continuano a propagarsi
+come prima; messaggi e stack originali non vengono copiati. Gli esiti null rimangono null e le ricostruzioni
+restano identiche. Frequenza dei tentativi, soglie, filtri, pacchetto e dati salvati sono invariati.
+Questo intervento non dichiara risolto il mancato tratteggio reale.
+
+Controlli sintetici direttamente pertinenti confrontano decisioni, geometrie e punti con l'HEAD di partenza
+37e497e07a2c0e2708b71093265387934a43088b, senza ripetere prove GPS estranee o accedere alla produzione.

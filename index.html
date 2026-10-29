@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="register-ui.css?v=register-mr-1">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/home-petrol/favicon-32.png?v=1">
 <link rel="stylesheet" href="assets/home-petrol/home-font.css?v=1">
-<link rel="stylesheet" href="home-look.css?v=home-sections-1">
+<link rel="stylesheet" href="home-look.css?v=users-2-home-sections-1">
 <link rel="stylesheet" href="interior-look.css?v=tunnels-1">
 </head>
 <body>
@@ -109,7 +109,7 @@
   <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#checklist-pro"/></svg></span><span class="home-pro-label">PERCORSO DIDATTICO</span></button>
   <button id="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#documents-pro"/></svg></span><span class="home-pro-label">DOCUMENTI VARI</span></button>
   <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#settings-pro"/></svg></span><span class="home-pro-label">IMPOSTAZIONI</span></button>
-  <button id="manageHomeSections" type="button" class="home-pro-action full" hidden><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#settings-pro"/></svg></span><span class="home-pro-label">GESTISCI SEZIONI</span></button>
+  <button id="manageHomeSections" type="button" class="home-pro-action full" hidden><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#settings-pro"/></svg></span><span class="home-pro-label">GESTIONE FUNZIONI</span></button>
   <button id="openRegister" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#schedule-pro"/></svg></span><span class="home-pro-label">REGISTRO ORE E COMPENSI</span></button>
   <button id="openUserManagement" class="user-management-entry home-pro-action full hidden"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#settings-pro"/></svg></span><span class="home-pro-label">AREA RISERVATA</span></button>
   </div></div>
@@ -660,6 +660,6 @@
     <a id="studentListPrintFallback" target="_blank" rel="noopener" hidden>APRI DOCUMENTO STAMPABILE</a>
   </form>
 </dialog>
-<dialog id="homeSectionsDialog" aria-labelledby="homeSectionsTitle"><h2 id="homeSectionsTitle">GESTISCI SEZIONI</h2><p>Visibilità globale per tutti gli istruttori</p><div id="homeSectionsList" class="home-sections-list"></div><p id="homeSectionsMessage" role="status"></p><div class="home-sections-actions"><button id="homeSectionsCancel" type="button" class="secondary">ANNULLA</button><button id="homeSectionsSave" type="button">SALVA</button></div></dialog>
-<script src="auth-client.js?v=tunnels-1"></script>
+<dialog id="homeSectionsDialog" aria-labelledby="homeSectionsTitle"><h2 id="homeSectionsTitle">GESTIONE FUNZIONI</h2><p>Sezioni per singolo utente · solo Amministratore principale</p><label class="home-sections-user">UTENTE<select id="homeSectionsUser" aria-label="Seleziona utente"></select></label><h3 id="homeSectionsTarget"></h3><p id="homeSectionsSource" class="home-sections-source"></p><div id="homeSectionsList" class="home-sections-list"></div><p id="homeSectionsMessage" role="status"></p><div class="home-sections-actions"><button id="homeSectionsCancel" type="button" class="secondary">ANNULLA</button><button id="homeSectionsSave" type="button">SALVA</button><button id="homeSectionsDefaults" type="button" class="secondary">USA IMPOSTAZIONI PREDEFINITE</button></div><p class="muted">La visibilità non cambia autorizzazioni, allievi o backup. Registro e altri strumenti comuni conservano le regole attuali.</p></dialog>
+<script src="auth-client.js?v=home-users-tunnel-diagnostics-2"></script>
 </body></html>

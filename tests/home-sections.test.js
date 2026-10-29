@@ -39,7 +39,7 @@ test('modulo server escluso dagli asset; modulo UI resta protetto e accessibile 
  a.ok(read('.assetsignore').includes('home-sections-api.js'));a.ok(read('.assetsignore').includes('migrations'));a.ok(read('.assetsignore').includes('tests/'));
  a.equal((await f.worker.fetch(f.request(null,'/home-sections-api.js'),f.env)).status,404);a.equal((await f.worker.fetch(f.request(null,'/home-sections.js'),f.env)).status,401);
  a.equal((await f.worker.fetch(f.request('secretary','/home-sections.js'),f.env)).status,200);
- const auth=read('auth-client.js');a.ok(auth.indexOf('"home-sections.js?v=1"')<auth.indexOf('"app.js?v=home-sections-1"'));
+ const auth=read('auth-client.js');a.ok(auth.indexOf('"home-sections.js?v=users-2"')<auth.indexOf('"app.js?v=home-users-tunnel-diagnostics-2"'));
 }));
 
 const {chromium}=require('C:/Users/HP/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
@@ -51,11 +51,11 @@ async function ui(who='principal',width=390,height=844){
  await p.route('**/*',async route=>{
   const req=route.request(),u=new URL(req.url());if(u.hostname!=='local.test')return route.abort();
   if(u.pathname==='/')return route.fulfill({contentType:'text/html',body:read('index.html').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')});
-  if(u.pathname==='/api/home-sections'){
+  if(u.pathname==='/api/home-sections'||u.pathname.startsWith('/api/home-sections/')){
    requests++;const post=req.method()==='POST';if(post)posts++;
    if(hold&&!post)await new Promise(r=>release=r);
    if(readFail&&!post||saveFail&&post)return route.fulfill({status:503,json:{error:'ERRORE STORAGE SIMULATO',code:'HOME_SECTIONS_STORAGE_UNAVAILABLE'}});
-   const r=await call(f,who,post?JSON.parse(req.postData()):undefined);return route.fulfill({status:r.status,json:await r.json()});
+   const r=await f.worker.fetch(f.request(who,u.pathname,post?JSON.parse(req.postData()):undefined),f.env);return route.fulfill({status:r.status,json:await r.json()});
   }
   const file=path.resolve(root,'.'+u.pathname);if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&/\.(css|svg|png|webp)$/.test(file))return route.fulfill({path:file});return route.abort();
  });
@@ -83,9 +83,9 @@ const visible=p=>p.locator('#home .categories [data-f]:visible').evaluateAll(ns=
 test('UI: SALVA, ANNULLA, persistenza condivisa, errore salvataggio e doppio tocco',async()=>{
  const h=await ui();try{
   a.deepEqual(await visible(h.p),['auto','moto']);await h.p.evaluate(()=>show('otherFunctions'));
-  await h.p.locator('#manageHomeSections').click();await h.p.waitForFunction(()=>document.querySelectorAll('#homeSectionsList input').length===9);a.equal(await h.p.locator('#homeSectionsList input').count(),9);
+  await h.p.locator('#manageHomeSections').click();await h.p.locator('#homeSectionsUser option[value="global:"]').waitFor({state:'attached'});await h.p.locator('#homeSectionsUser').selectOption('global:');await h.p.waitForFunction(()=>document.querySelectorAll('#homeSectionsList input').length===9);await h.p.waitForFunction(()=>document.querySelectorAll('#homeSectionsList input').length===9);a.equal(await h.p.locator('#homeSectionsList input').count(),9);
   await h.p.locator('#homeSectionsList input[value="quad-leggero"]').check();await h.p.locator('#homeSectionsCancel').click();a.equal(h.posts,0);a.deepEqual(await visible(h.p),[]);
-  await h.p.locator('#manageHomeSections').click();a.equal(await h.p.locator('#homeSectionsList input[value="quad-leggero"]').isChecked(),false);
+  await h.p.locator('#manageHomeSections').click();await h.p.locator('#homeSectionsUser option[value="global:"]').waitFor({state:'attached'});await h.p.locator('#homeSectionsUser').selectOption('global:');await h.p.waitForFunction(()=>document.querySelectorAll('#homeSectionsList input').length===9);a.equal(await h.p.locator('#homeSectionsList input[value="quad-leggero"]').isChecked(),false);
   await h.p.locator('#homeSectionsList input[value="quad-leggero"]').check();h.failSave(true);await h.p.locator('#homeSectionsSave').click();await h.p.getByText('ERRORE STORAGE SIMULATO',{exact:true}).waitFor();a.equal(await h.p.locator('#homeSectionsDialog').evaluate(n=>n.open),true);a.deepEqual((await ok(await call(h.f,'i1'))).enabled,['auto','moto']);
   h.failSave(false);await h.p.evaluate(()=>{homeSectionsSave.click();homeSectionsSave.click()});await h.p.waitForFunction(()=>!homeSectionsDialog.open);a.equal(h.posts,2);
   a.deepEqual((await ok(await call(h.f,'i1'))).enabled,['auto','moto','quad-leggero']);await h.p.evaluate(()=>show('home'));a.deepEqual(await visible(h.p),['auto','moto','quad-leggero']);a.deepEqual(h.errors,[]);
@@ -116,7 +116,7 @@ for(const [name,w,height]of [['iphone',390,844],['tablet-verticale',820,1180],['
    a.equal((await visible(h.p)).length,paths.length);const layout=await h.p.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth+1,small:[...document.querySelectorAll('#home .categories button:not([hidden])')].some(b=>b.getBoundingClientRect().height<44)}));a.deepEqual(layout,{overflow:false,small:false});
    if(label==='auto-moto')await h.p.screenshot({path:path.join(out,name+'-home.png'),fullPage:true});
   }
-  await h.p.evaluate(()=>show('otherFunctions'));await h.p.locator('#manageHomeSections').click();await h.p.screenshot({path:path.join(out,name+'-sezioni.png'),fullPage:true});a.equal(await h.p.locator('#homeSectionsDialog').evaluate(n=>n.scrollWidth>n.clientWidth+1),false);
+  await h.p.evaluate(()=>show('otherFunctions'));await h.p.locator('#manageHomeSections').click();await h.p.locator('#homeSectionsUser option[value="global:"]').waitFor({state:'attached'});await h.p.locator('#homeSectionsUser').selectOption('global:');await h.p.waitForFunction(()=>document.querySelectorAll('#homeSectionsList input').length===9);await h.p.screenshot({path:path.join(out,name+'-sezioni.png'),fullPage:true});a.equal(await h.p.locator('#homeSectionsDialog').evaluate(n=>n.scrollWidth>n.clientWidth+1),false);
   a.deepEqual(h.errors,[]);
  }finally{await h.close()}
 });
@@ -141,7 +141,7 @@ test('backup completo reale: percorsi nascosti, lezioni e documento conservati d
 test('pannello gestione pronto: controlli e anteprime con interruttori caricati, telefono/tablet',async()=>{
  for(const[name,w,height]of [['iphone',390,844],['tablet-verticale',820,1180],['tablet-orizzontale',1180,820]]){
   const h=await ui('principal',w,height);try{
-   await h.p.evaluate(()=>show('otherFunctions'));await h.p.locator('#manageHomeSections').click();await h.p.waitForFunction(()=>document.querySelectorAll('#homeSectionsList input').length===9);
+   await h.p.evaluate(()=>show('otherFunctions'));await h.p.locator('#manageHomeSections').click();await h.p.locator('#homeSectionsUser option[value="global:"]').waitFor({state:'attached'});await h.p.locator('#homeSectionsUser').selectOption('global:');await h.p.waitForFunction(()=>document.querySelectorAll('#homeSectionsList input').length===9);await h.p.waitForFunction(()=>document.querySelectorAll('#homeSectionsList input').length===9);
    a.equal(await h.p.locator('#homeSectionsDialog').evaluate(n=>n.scrollWidth>n.clientWidth+1),false);
    a.equal(await h.p.locator('#homeSectionsList input').evaluateAll(ns=>ns.some(n=>n.getBoundingClientRect().width<44||n.getBoundingClientRect().height<44)),false);
    await h.p.screenshot({path:path.join(out,name+'-sezioni.png'),fullPage:true});a.deepEqual(h.errors,[]);
@@ -154,7 +154,7 @@ test('integrazione avvio app reale: Home, funzioni comuni, riapertura e nessun d
   await p.route('**/*',async route=>{
    const u=new URL(route.request().url());if(u.hostname!=='integration.test')return route.abort();
    if(u.pathname==='/')return route.fulfill({contentType:'text/html',body:read('index.html').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')});
-   if(u.pathname==='/api/home-sections'){reads++;const response=await call(f,'principal');return route.fulfill({status:response.status,json:await response.json()})}
+   if(u.pathname==='/api/home-sections'||u.pathname.startsWith('/api/home-sections/')){reads++;const response=await f.worker.fetch(f.request('principal',u.pathname),f.env);return route.fulfill({status:response.status,json:await response.json()})}
    const file=path.resolve(root,'.'+u.pathname);if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&/\.(css|svg|png|webp|js)$/.test(file))return route.fulfill({path:file});return route.abort();
   });
   await p.goto('https://integration.test');await p.evaluate(()=>{window.AgendaAuth={currentUser:()=>({id:'principal',name:'AMMINISTRATORE FITTIZIO',role:'ADMIN',active:true,capabilities:{managePrivilegedUsers:true}}),can:()=>true,applicationReady:(show,login)=>{window.integrationShow=show;window.integrationLogout=login}}});
