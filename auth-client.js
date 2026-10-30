@@ -240,7 +240,7 @@
       await loadScript("student-archive-store.js?v=site-labels-1");
       await loadScript("lesson-drafts.js?v=1.21-lesson-drafts-v1");
       await loadScript("lesson-activities.js?v=checklist-parts-1");
-      await loadScript("lesson-secretary-transfer.js?v=checklist-parts-1");
+      await loadScript("lesson-secretary-transfer.js?v=checklist-parts-1-place-1");
       if(currentUser?.role!=="SEGRETERIA")await loadScript("lesson-gps.js?v=1.21-gps-missing-speed-1");
       if(currentUser?.role!=="SEGRETERIA"){
         const status=window.TunnelLoadStatus={module:"loading",package:"not_loaded",error:null};
@@ -249,7 +249,7 @@
       }
       await loadScript("shared-calendar-exam-report.js?v=site-labels-1");
       await loadScript("student-report-print.js?v=1.21-student-report-print-v1");
-      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-economic-engine.js?v=1.21-register-v2", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2", "register-report.js?v=1.21-register-report-v3", "register-backup.js?v=1.21-register-backup-v2", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6", "driving-errors.js?v=1.21-error-symbols-3", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); }
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-economic-engine.js?v=1.21-register-v2", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2", "register-report.js?v=1.21-register-report-v3", "register-backup.js?v=1.21-register-backup-v2", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6", "driving-errors.js?v=1.21-error-symbols-3-place-1", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); }
       if (window.AgendaAppReady) await window.AgendaAppReady;
       await loadScript("shared-calendar-store.js?v=1");
       await loadScript("lesson-secretary-transfer-ui.js?v=site-labels-1");

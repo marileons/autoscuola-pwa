@@ -9,7 +9,7 @@
   const text=value=>typeof value==="string"?value.replace(/\r\n?/g,"\n").replace(/[\x00-\x08\x0b-\x1f\x7f]/g,"").trim():"";
   const finite=value=>typeof value==="number"&&Number.isFinite(value);
   function initial(value){return Array.from(text(value))[0]||"";}
-  function defaults(person,lesson){return{includeName:false,firstName:text(person.firstName),surnameInitial:initial(person.lastName),selected:(Array.isArray(lesson.errors)?lesson.errors:[]).map((_,i)=>i),notes:[],links:false};}
+  function defaults(person,lesson){return{includeName:false,firstName:text(person.firstName),surnameInitial:initial(person.lastName),selected:(Array.isArray(lesson.errors)?lesson.errors:[]).map((_,i)=>i),notes:[],links:false,places:false};}
   function displayName(options){if(!options.includeName)return null;const first=text(options.firstName),last=text(options.surnameInitial).replace(/\.$/,"");if(!first)throw Error("Inserisci il nome di battesimo per il solo riepilogo.");if(!/^\p{L}$/u.test(last))throw Error("Inserisci soltanto una lettera come iniziale del cognome.");return first+(last?" "+last.toLocaleUpperCase("it-IT")+".":"");}
   function position(error){
     const available=error.locationStatus==="available"&&finite(error.lat)&&Math.abs(error.lat)<=90&&finite(error.lng)&&Math.abs(error.lng)<=180&&finite(error.accuracy)&&error.accuracy>=0&&error.accuracy<=100;
@@ -28,7 +28,7 @@
   function snapshot(lesson){
     return {legacyChecklist:!Array.isArray(lesson.lessonActivities)&&[...(lesson.checklist||[]),...(lesson.activitySnapshot||[])].some(checklistEntry),createdAt:lesson.createdAt,lessonContext:{category:lesson.lessonContext?.category},
       ...(Array.isArray(lesson.lessonActivities)?{lessonActivities:lesson.lessonActivities.map(item=>({label:item.label,status:item.status,activityKey:item.activityKey,...(item.checklistDetails?{checklistDetails:{...item.checklistDetails}}:{})}))}:{}),
-      errors:(Array.isArray(lesson.errors)?lesson.errors:[]).map(error=>({categoryLabelSnapshot:error.categoryLabelSnapshot,specificErrors:(error.specificErrors||[]).map(entry=>({label:entry.label})),note:error.note,locationStatus:error.locationStatus,lat:error.lat,lng:error.lng,accuracy:error.accuracy,occurredAt:error.occurredAt,createdAt:error.createdAt,routePointTime:error.routePointTime}))};
+      errors:(Array.isArray(lesson.errors)?lesson.errors:[]).map(error=>({categoryLabelSnapshot:error.categoryLabelSnapshot,specificErrors:(error.specificErrors||[]).map(entry=>({label:entry.label})),note:error.note,...(text(error.instructorPlace)?{instructorPlace:text(error.instructorPlace).slice(0,200)}:{}),locationStatus:error.locationStatus,lat:error.lat,lng:error.lng,accuracy:error.accuracy,occurredAt:error.occurredAt,createdAt:error.createdAt,routePointTime:error.routePointTime}))};
   }
   function buildModel(person,lesson,options,labels={}){
     if(!person||!lesson)throw Error("Guida salvata non disponibile.");
@@ -48,7 +48,7 @@
     for(const [i,error]of (Array.isArray(lesson.errors)?lesson.errors:[]).entries())if(selected.has(i)){
       const names=(Array.isArray(error.specificErrors)?error.specificErrors:[]).map(item=>text(item.label)).filter(Boolean);
       const loc=position(error);
-      errors.push({title:"Errore "+(errors.length+1)+" - "+(names.length?names.join("; "):text(error.categoryLabelSnapshot)||"Da classificare"),note:notes.has(i)?text(error.note):"",position:loc.label,links:options.links?loc.links:[]});
+      errors.push({title:"Errore "+(errors.length+1)+" - "+(names.length?names.join("; "):text(error.categoryLabelSnapshot)||"Da classificare"),note:notes.has(i)?text(error.note):"",place:options.places?text(error.instructorPlace).slice(0,200):"",position:loc.label,links:options.links?loc.links:[]});
     }
     // This allowlist is the ONLY input for both preview and PDF. No raw records/IDs.
     return{title:"RIEPILOGO GUIDA",date,category:text(labels[lesson.lessonContext?.category||person.category])||"Percorso non disponibile",name:displayName(options),privacy:PRIVACY,activities,activityNotice,errors,google:errors.some(error=>error.links.length)?GOOGLE:""};
@@ -78,7 +78,7 @@
     if(model.activityNotice)add(model.activityNotice);
     for(const activity of model.activities)add(activity);
     add("ERRORI SELEZIONATI",{size:13,bold:true});if(!model.errors.length)add("Nessun errore selezionato.");
-    for(const error of model.errors){if(y>height-110)next();add(error.title,{bold:true});add(error.position,{size:10});if(error.note)add("Nota sull’errore: "+error.note);for(const link of error.links)add(link.label,{size:10,bold:true,url:link.url});y+=5;}
+    for(const error of model.errors){if(y>height-110)next();add(error.title,{bold:true});if(error.place)add("Luogo indicato dall’istruttore: "+error.place);add(error.position,{size:10});if(error.note)add("Nota sull’errore: "+error.note);for(const link of error.links)add(link.label,{size:10,bold:true,url:link.url});y+=5;}
     if(model.google)add(model.google,{size:10,gap:10});
     pages.forEach((page,i)=>page.push({text:"Pagina "+(i+1)+" / "+pages.length,x:left,y:818,size:9,bold:false}));
     return{width:595,height,pages};
@@ -116,11 +116,12 @@
     const nameLabel=el("label","Nome/i di battesimo (solo per questo PDF)"),nameInput=el("input"),initialLabel=el("label","Sola iniziale del cognome"),initialInput=el("input");nameInput.value=opts.firstName;nameInput.maxLength=150;initialInput.value=opts.surnameInitial;initialInput.maxLength=2;nameLabel.append(nameInput);initialLabel.append(initialInput);nameFields.append(nameLabel,initialLabel,el("p","Controlla il risultato nell’anteprima. Non deduciamo il nome dal nominativo; queste correzioni non cambiano la scheda allievo."));
     nameInput.oninput=()=>{opts.firstName=nameInput.value;invalidate();};initialInput.oninput=()=>{opts.surnameInitial=initialInput.value;invalidate();};
     const nameCheck=checked("Includi nome e sola iniziale del cognome",false,value=>{opts.includeName=value;nameFields.hidden=!value;invalidate();});form.append(nameCheck.wrapper,nameFields);
+    const placesCheck=checked("INCLUDI VIE / LUOGHI",false,value=>{opts.places=value;invalidate();});form.append(placesCheck.wrapper,el("p","Solo testi compilati dall’istruttore, non verificati dal GPS. Nessuna ricerca di vie o luoghi.","lesson-summary-help"));
     const linksCheck=checked("Includi link ai luoghi su Google Maps e Street View",false,value=>{opts.links=value;invalidate();});form.append(linksCheck.wrapper,el("p",GOOGLE,"lesson-summary-help"));
     const toolbar=el("div",null,"lesson-summary-actions"),all=el("button","SELEZIONA TUTTI GLI ERRORI","secondary"),none=el("button","DESELEZIONA TUTTI","secondary");all.type=none.type="button";toolbar.append(all,none);form.append(toolbar);
     const rows=[];for(const [i,error]of (lesson.errors||[]).entries()){
       const row=el("section",null,"lesson-summary-error"),label=(error.specificErrors||[]).map(x=>text(x.label)).filter(Boolean).join("; ")||text(error.categoryLabelSnapshot)||"Da classificare";
-      const selected=checked("Errore "+(i+1)+" · "+label,true,value=>{opts.selected=value?[...opts.selected,i]:opts.selected.filter(x=>x!==i);if(noteCheck)noteCheck.input.disabled=!value;invalidate();});row.append(selected.wrapper);let noteCheck=null;
+      const selected=checked("Errore "+(i+1)+" · "+label,true,value=>{opts.selected=value?[...opts.selected,i]:opts.selected.filter(x=>x!==i);if(noteCheck)noteCheck.input.disabled=!value;invalidate();});row.append(selected.wrapper);if(text(error.instructorPlace))row.append(el("p","Luogo indicato dall’istruttore: "+text(error.instructorPlace),"lesson-summary-note"));let noteCheck=null;
       if(text(error.note)){noteCheck=checked("Includi la nota sull’errore",false,value=>{opts.notes=value?[...opts.notes,i]:opts.notes.filter(x=>x!==i);invalidate();});row.append(noteCheck.wrapper,el("p",text(error.note),"lesson-summary-note"));}rows.push({i,selected,noteCheck});form.append(row);
     }
     if(!rows.length)form.append(el("p","Nessun errore registrato in questa guida."));
