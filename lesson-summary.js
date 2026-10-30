@@ -8,6 +8,18 @@
   const PARTS={tyres:"PNEUMATICI",lights:"FARI E CATADIOTTRI",controls:"COMANDI E SPIE",bonnet:"APERTURA COFANO",levels:"LIVELLI",steering:"STERZO/VOLANTE",brakes:"FRENI",inspection:"REVISIONE"};
   const text=value=>typeof value==="string"?value.replace(/\r\n?/g,"\n").replace(/[\x00-\x08\x0b-\x1f\x7f]/g,"").trim():"";
   const finite=value=>typeof value==="number"&&Number.isFinite(value);
+  // Read-only time provenance: normalized legacy defaults are never evidence of a signal.
+  const stamp=value=>Number.isSafeInteger(value)&&value>0&&Number.isFinite(new Date(value).valueOf());
+  function zoneFor(lesson){const saved=text(lesson.timeZone)||text(lesson.lessonContext?.timeZone);if(saved)try{new Intl.DateTimeFormat("it-IT",{timeZone:saved});return{zone:saved,notice:"Fuso orario: "+saved+" (registrato nella guida)."};}catch{}return{zone:"Europe/Rome",notice:"Fuso orario: Europe/Rome (convenzione del riepilogo"+(saved?"; fuso registrato non valido":"; fuso della guida non registrato")+")."};}
+  function dayKey(value,zone){const parts=new Intl.DateTimeFormat("en",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(value),get=type=>parts.find(p=>p.type===type).value;return get("year")+"-"+get("month")+"-"+get("day");}
+  const dateAt=(value,zone)=>new Intl.DateTimeFormat("it-IT",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit"}).format(value);
+  const plainClock=(value,zone)=>new Intl.DateTimeFormat("it-IT",{timeZone:zone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(value);
+  const offsetAt=(value,zone)=>new Intl.DateTimeFormat("en",{timeZone:zone,timeZoneName:"longOffset"}).formatToParts(value).find(p=>p.type==="timeZoneName").value.replace("GMT","UTC");
+  function repeatedClock(value,zone){return [1800000,3600000,7200000].some(delta=>[-delta,delta].some(d=>dayKey(value+d,zone)===dayKey(value,zone)&&plainClock(value+d,zone)===plainClock(value,zone)&&offsetAt(value+d,zone)!==offsetAt(value,zone)));}
+  const clockAt=(value,zone,qualify=false)=>plainClock(value,zone)+((qualify||repeatedClock(value,zone))?" ("+offsetAt(value,zone)+")":"");
+  function durationMs(value){if(typeof value!=="string")return null;const match=text(value).toLowerCase().match(/^(?:(\d+(?:[.,]\d+)?)\s*(?:h|ora|ore)(?:\s*(?:e\s*)?(\d+)\s*(?:minuti|minuto|min|m))?|(\d+)\s*(?:minuti|minuto|min|m))$/);if(!match)return null;const minutes=match[1]!==undefined?Number(match[1].replace(",","."))*60+Number(match[2]||0):Number(match[3]),ms=Math.round(minutes*60000);return Number.isSafeInteger(ms)&&ms>0?ms:null;}
+  function lessonHours(lesson,zone){if(!stamp(lesson.createdAt))return"Orario non disponibile";const start=lesson.createdAt,duration=durationMs(lesson.duration),end=duration!==null&&stamp(start+duration)?start+duration:null;if(end===null)return"Orario lezione: "+clockAt(start,zone)+" - Fine non disponibile";const change=offsetAt(start,zone)!==offsetAt(end,zone),different=dayKey(start,zone)!==dayKey(end,zone),nextDay=different&&Math.round((Date.parse(dayKey(end,zone))-Date.parse(dayKey(start,zone)))/86400000)===1;return"Orario lezione: "+clockAt(start,zone,change)+"\u2013"+clockAt(end,zone,change)+(different?" ("+dateAt(end,zone)+(nextDay?", giorno successivo":"")+")":"");}
+  function signalHour(error,lesson,zone){if(error.occurredAtSource!=="signal"||!stamp(error.occurredAt)||error.createdAt!==error.occurredAt)return"Ora della segnalazione: non disponibile";const value=error.occurredAt,different=!stamp(lesson.createdAt)||dayKey(value,zone)!==dayKey(lesson.createdAt,zone);return"Ora della segnalazione: "+clockAt(value,zone)+(different?" ("+dateAt(value,zone)+")":"");}
   function initial(value){return Array.from(text(value))[0]||"";}
   function defaults(person,lesson){return{includeName:false,firstName:text(person.firstName),surnameInitial:initial(person.lastName),selected:(Array.isArray(lesson.errors)?lesson.errors:[]).map((_,i)=>i),notes:[],links:false,places:false};}
   function displayName(options){if(!options.includeName)return null;const first=text(options.firstName),last=text(options.surnameInitial).replace(/\.$/,"");if(!first)throw Error("Inserisci il nome di battesimo per il solo riepilogo.");if(!/^\p{L}$/u.test(last))throw Error("Inserisci soltanto una lettera come iniziale del cognome.");return first+(last?" "+last.toLocaleUpperCase("it-IT")+".":"");}
@@ -26,14 +38,14 @@
     return item?.activityKey==="auto:checklist"||["ILLUSTRAZIONE CHECK LIST COMPLETA","ILLUSTRAZIONE CHECK LIST","CHECK LIST COMPLETA","CHECK LIST"].includes(text(item?.label).toLocaleUpperCase("it-IT"));
   }
   function snapshot(lesson){
-    return {legacyChecklist:!Array.isArray(lesson.lessonActivities)&&[...(lesson.checklist||[]),...(lesson.activitySnapshot||[])].some(checklistEntry),createdAt:lesson.createdAt,lessonContext:{category:lesson.lessonContext?.category},
+    return {legacyChecklist:!Array.isArray(lesson.lessonActivities)&&[...(lesson.checklist||[]),...(lesson.activitySnapshot||[])].some(checklistEntry),createdAt:lesson.createdAt,duration:lesson.duration,timeZone:lesson.timeZone,lessonContext:{category:lesson.lessonContext?.category,timeZone:lesson.lessonContext?.timeZone},
       ...(Array.isArray(lesson.lessonActivities)?{lessonActivities:lesson.lessonActivities.map(item=>({label:item.label,status:item.status,activityKey:item.activityKey,...(item.checklistDetails?{checklistDetails:{...item.checklistDetails}}:{})}))}:{}),
-      errors:(Array.isArray(lesson.errors)?lesson.errors:[]).map(error=>({categoryLabelSnapshot:error.categoryLabelSnapshot,specificErrors:(error.specificErrors||[]).map(entry=>({label:entry.label})),note:error.note,...(text(error.instructorPlace)?{instructorPlace:text(error.instructorPlace).slice(0,200)}:{}),locationStatus:error.locationStatus,lat:error.lat,lng:error.lng,accuracy:error.accuracy,occurredAt:error.occurredAt,createdAt:error.createdAt,routePointTime:error.routePointTime}))};
+      errors:(Array.isArray(lesson.errors)?lesson.errors:[]).map(error=>({categoryLabelSnapshot:error.categoryLabelSnapshot,specificErrors:(error.specificErrors||[]).map(entry=>({label:entry.label})),note:error.note,...(text(error.instructorPlace)?{instructorPlace:text(error.instructorPlace).slice(0,200)}:{}),locationStatus:error.locationStatus,lat:error.lat,lng:error.lng,accuracy:error.accuracy,occurredAt:error.occurredAt,occurredAtSource:error.occurredAtSource,createdAt:error.createdAt,routePointTime:error.routePointTime}))};
   }
   function buildModel(person,lesson,options,labels={}){
     if(!person||!lesson)throw Error("Guida salvata non disponibile.");
-    const stamp=finite(lesson.createdAt)?new Date(lesson.createdAt):null;
-    const date=stamp&&!Number.isNaN(stamp.valueOf())?stamp.toLocaleDateString("it-IT"):"Data non disponibile";
+    const timingZone=zoneFor(lesson),zone=timingZone.zone;
+    const date=stamp(lesson.createdAt)?dateAt(lesson.createdAt,zone):"Data non disponibile";
     const activities=[],autoContext=lesson.lessonContext?.activityType==="auto"||(lesson.lessonContext?.category||person.category)==="auto";let activityNotice="";
     if(Array.isArray(lesson.lessonActivities)){
       for(const item of lesson.lessonActivities){if(!item||!text(item.label))continue;
@@ -48,10 +60,10 @@
     for(const [i,error]of (Array.isArray(lesson.errors)?lesson.errors:[]).entries())if(selected.has(i)){
       const names=(Array.isArray(error.specificErrors)?error.specificErrors:[]).map(item=>text(item.label)).filter(Boolean);
       const loc=position(error);
-      errors.push({title:"Errore "+(errors.length+1)+" - "+(names.length?names.join("; "):text(error.categoryLabelSnapshot)||"Da classificare"),note:notes.has(i)?text(error.note):"",place:options.places?text(error.instructorPlace).slice(0,200):"",position:loc.label,links:options.links?loc.links:[]});
+      errors.push({title:"Errore "+(errors.length+1)+" - "+(names.length?names.join("; "):text(error.categoryLabelSnapshot)||"Da classificare"),signalTime:signalHour(error,lesson,zone),note:notes.has(i)?text(error.note):"",place:options.places?text(error.instructorPlace).slice(0,200):"",position:loc.label,links:options.links?loc.links:[]});
     }
     // This allowlist is the ONLY input for both preview and PDF. No raw records/IDs.
-    return{title:"RIEPILOGO GUIDA",date,category:text(labels[lesson.lessonContext?.category||person.category])||"Percorso non disponibile",name:displayName(options),privacy:PRIVACY,activities,activityNotice,errors,google:errors.some(error=>error.links.length)?GOOGLE:""};
+    return{title:"RIEPILOGO GUIDA",date,lessonHours:lessonHours(lesson,zone),timeZoneNotice:timingZone.notice,category:text(labels[lesson.lessonContext?.category||person.category])||"Percorso non disponibile",name:displayName(options),privacy:PRIVACY,activities,activityNotice,errors,google:errors.some(error=>error.links.length)?GOOGLE:""};
   }
   function wrap(value,font,size,width){
     const lines=[];
@@ -73,12 +85,12 @@
       try{font.encodeText(value.replace(/[\r\n\t]/g," "));lines=wrap(value,font,size,width);}catch{throw Error("Il contenuto contiene un carattere non supportato dal font PDF. Escludi la voce o la nota interessata, oppure correggi il nome del solo riepilogo. Nessun testo è stato sostituito.");}
       for(const line of lines){if(y+size+5>height-45)next();y+=size;pages.at(-1).push({text:line,x:left,y,size,bold,block,...(url?{url}:{})});y+=4;}y+=gap;
     }
-    add(model.title,{size:21,bold:true,gap:12});add(model.date+" | "+model.category,{bold:true});if(model.name)add("Allievo: "+model.name,{bold:true});
+    add(model.title,{size:21,bold:true,gap:12});add(model.date+" | "+model.lessonHours+" | "+model.category,{bold:true});if(model.name)add("Allievo: "+model.name,{bold:true});add(model.timeZoneNotice,{size:9});
     add(model.privacy,{size:10,gap:15});add("ATTIVITÀ DELLA GUIDA",{size:13,bold:true});
     if(model.activityNotice)add(model.activityNotice);
     for(const activity of model.activities)add(activity);
     add("ERRORI SELEZIONATI",{size:13,bold:true});if(!model.errors.length)add("Nessun errore selezionato.");
-    for(const error of model.errors){if(y>height-110)next();add(error.title,{bold:true});if(error.place)add("Luogo indicato dall’istruttore: "+error.place);add(error.position,{size:10});if(error.note)add("Nota sull’errore: "+error.note);for(const link of error.links)add(link.label,{size:10,bold:true,url:link.url});y+=5;}
+    for(const error of model.errors){if(y>height-110)next();add(error.title,{bold:true});add(error.signalTime,{size:10});if(error.place)add("Luogo indicato dall’istruttore: "+error.place);add(error.position,{size:10});if(error.note)add("Nota sull’errore: "+error.note);for(const link of error.links)add(link.label,{size:10,bold:true,url:link.url});y+=5;}
     if(model.google)add(model.google,{size:10,gap:10});
     pages.forEach((page,i)=>page.push({text:"Pagina "+(i+1)+" / "+pages.length,x:left,y:818,size:9,bold:false}));
     return{width:595,height,pages};
