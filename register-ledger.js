@@ -2,13 +2,13 @@
   const engine = typeof module === "object" && module.exports
     ? require("./register-economic-engine.js")
     : root?.RegisterEconomicEngine;
-  const api = factory(engine);
+  const api = factory(engine, typeof module === "object" && module.exports ? require("./register-categories.js") : root?.RegisterCategories);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.RegisterLedger = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function createModule(defaultEngine) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function createModule(defaultEngine, Catalog) {
   "use strict";
 
-  const WORK_CATEGORIES = Object.freeze(["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"]);
+  const WORK_CATEGORIES = Catalog.WORK_CATEGORIES;
   const ABSENCE_CATEGORIES = Object.freeze(["P", "F"]);
   const EMPLOYMENT_TYPES = Object.freeze(["PART_TIME", "FULL_TIME"]);
   const DAY_MS = 86400000;
@@ -56,9 +56,8 @@
     if (!input?.categories) throw new TypeError("Tariffe mancanti");
     const categories = {};
     for (const category of WORK_CATEGORIES) {
-      const legacyGold = input.categories.GOLD;
-      const value = category === "GOLD AUTO" ? (input.categories[category] ?? legacyGold)
-        : category === "GOLD MOTO" ? (input.categories[category] ?? legacyGold) : input.categories[category];
+      const value = Catalog.rateValue(input.categories, category);
+      if (Catalog.OPTIONAL_RATE_CATEGORIES.includes(category) && value === undefined) continue;
       assertInteger(value, `Tariffa ${category}`);
       categories[category] = value;
     }
@@ -71,7 +70,7 @@
     const day = clone(record);
     day.blocks = (day.blocks || []).map((block) => ({
       ...block,
-      category: block.category === "GOLD" ? "GOLD AUTO" : block.category,
+      category: Catalog.normalizeCategory(block.category),
       rateSnapshot: normalizeStoredRates(block.rateSnapshot)
     }));
     return day;
@@ -153,7 +152,7 @@
         assertInteger(order, "Ordine blocco", 1);
         if (orders.has(order)) throw new RangeError("Ordine blocco duplicato");
         orders.add(order);
-        const category = String(input.category || "") === "GOLD" ? "GOLD AUTO" : String(input.category || "");
+        const category = Catalog.normalizeCategory(String(input.category || ""));
         if (!WORK_CATEGORIES.includes(category) && !ABSENCE_CATEGORIES.includes(category)) {
           throw new TypeError("Categoria attività non valida");
         }
@@ -163,8 +162,12 @@
         assertInteger(input.minutes, "Durata blocco", 1);
         const id = String(input.id || idFactory());
         const previous = previousById.get(id);
-        const rateVersionId = previous?.rateVersionId || selectedRate.id;
-        const rateSnapshot = previous?.rateSnapshot || selectedRate.rates;
+        let rateVersionId = previous?.rateVersionId || selectedRate.id;
+        let rateSnapshot = previous?.rateSnapshot || selectedRate.rates;
+        if (Catalog.OPTIONAL_RATE_CATEGORIES.includes(category) && rateSnapshot.categories[category] === undefined && previous && previous.category !== category) {
+          rateVersionId = selectedRate.id; rateSnapshot = selectedRate.rates;
+        }
+        Catalog.requireRate(rateSnapshot, category);
         return {
           id,
           order,

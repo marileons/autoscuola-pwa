@@ -216,6 +216,7 @@
       <h3 id="registerDayEditorTitle">Giornata</h3>
       <form id="registerDayForm" class="register-form">
         <label>Data<input id="registerDayDate" type="date" required></label>
+        <p class="muted">EXA: ESAMI AUTO · EXM: ESAMI MOTO · LAV: LAVAGGIO AUTO.</p>
         <div id="registerBlocks" class="register-blocks"></div>
         <button id="registerAddBlock" type="button" class="secondary full">+ AGGIUNGI ATTIVITÀ</button>
         <label>Note<textarea id="registerDayNote" maxlength="4000" rows="3" data-register-sensitive></textarea></label>
@@ -225,7 +226,7 @@
 
     <section id="registerRatesPanel" class="register-editor hidden">
       <h3>Tariffe personali</h3>
-      <p class="muted">Gli importi sono locali e versionati dalla decorrenza indicata.</p>
+      <p class="muted">Gli importi sono locali e versionati dalla decorrenza indicata. EXM e LAV richiedono una tariffa manuale prima dell’uso; il campo vuoto non equivale a zero. Nel FULL TIME restano valide la base LG/A, la maggiorazione di categoria e lo straordinario esistenti.</p>
       <form id="registerRatesForm" class="register-form register-rates-grid">
         <label>Decorrenza<input id="registerRatesFrom" type="date" required></label>
         <label>LG/A (€ / ora)<input data-register-rate="LG/A" type="number" min="0" step="0.01" required></label>
@@ -233,7 +234,9 @@
         <label>M/SE (€ / ora)<input data-register-rate="M/SE" type="number" min="0" step="0.01" required></label>
         <label>GOLD AUTO (€ / ora)<input data-register-rate="GOLD AUTO" type="number" min="0" step="0.01" required></label>
         <label>GOLD MOTO (€ / ora)<input data-register-rate="GOLD MOTO" type="number" min="0" step="0.01" required></label>
-        <label>EX (€ / ora)<input data-register-rate="EX" type="number" min="0" step="0.01" required></label>
+        <label>EXA — ESAMI AUTO (€ / ora)<input data-register-rate="EXA" type="number" min="0" step="0.01" required></label>
+        <label>EXM — ESAMI MOTO (€ / ora)<input data-register-rate="EXM" type="number" min="0" step="0.01"></label>
+        <label>LAV — LAVAGGIO AUTO (€ / ora)<input data-register-rate="LAV" type="number" min="0" step="0.01"></label>
         <label>VARIE (€ / ora)<input data-register-rate="VARIE" type="number" min="0" step="0.01" required></label>
         <label>Straordinario (€ / ora)<input id="registerOvertimeRate" type="number" min="0" step="0.01" required></label>
         <div class="register-form-actions"><button type="submit">SALVA NUOVA VERSIONE</button><button id="registerCancelRates" type="button" class="secondary">ANNULLA</button></div>
@@ -662,5 +665,5 @@
   </form>
 </dialog>
 <dialog id="homeSectionsDialog" aria-labelledby="homeSectionsTitle"><h2 id="homeSectionsTitle">GESTIONE FUNZIONI</h2><p>Sezioni per singolo utente · solo Amministratore principale</p><label class="home-sections-user">UTENTE<select id="homeSectionsUser" aria-label="Seleziona utente"></select></label><h3 id="homeSectionsTarget"></h3><p id="homeSectionsSource" class="home-sections-source"></p><div id="homeSectionsList" class="home-sections-list"></div><p id="homeSectionsMessage" role="status"></p><div class="home-sections-actions"><button id="homeSectionsCancel" type="button" class="secondary">ANNULLA</button><button id="homeSectionsSave" type="button">SALVA</button><button id="homeSectionsDefaults" type="button" class="secondary">USA IMPOSTAZIONI PREDEFINITE</button></div><p class="muted">La visibilità non cambia autorizzazioni, allievi o backup. Registro e altri strumenti comuni conservano le regole attuali.</p></dialog>
-<script src="auth-client.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1"></script>
+<script src="auth-client.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-register-codes-1-window-1-safe-return-1"></script>
 </body></html>

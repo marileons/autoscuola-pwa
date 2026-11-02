@@ -1,12 +1,12 @@
 (function registerReportModule(root, factory) {
-  const api = factory();
+  const api = factory(typeof module === "object" && module.exports ? require("./register-categories.js") : root?.RegisterCategories);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.RegisterReport = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function createModule() {
+})(typeof globalThis !== "undefined" ? globalThis : this, function createModule(Catalog) {
   "use strict";
 
   const DAY_MS = 86400000;
-  const WORK_CATEGORIES = ["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"];
+  const WORK_CATEGORIES = Catalog.WORK_CATEGORIES;
   const MONTHS = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
   const COMPONENT_LABELS = Object.freeze({
     CATEGORY_WORK: "Attività per categoria", ORDINARY_BASE: "Base ordinaria LG/A",
@@ -38,7 +38,7 @@
   }
   function minutesByCategory(days) {
     const result = Object.fromEntries([...WORK_CATEGORIES, "P", "F"].map((category) => [category, 0]));
-    days.flatMap((day) => day.blocks).forEach((block) => { result[block.category] = (result[block.category] || 0) + block.minutes; });
+    days.flatMap((day) => day.blocks).forEach((block) => { const category = Catalog.normalizeCategory(block.category); result[category] = (result[category] || 0) + block.minutes; });
     return result;
   }
   function aggregateComponents(components) {
@@ -77,7 +77,7 @@
             const computed = classification.get(`${day.date}|${block.order}`) || {};
             const isAbsence = block.category === "P" || block.category === "F";
             return {
-              order: block.order, category: block.category, minutes: block.minutes,
+              order: block.order, category: Catalog.normalizeCategory(block.category), minutes: block.minutes,
               rateVersionId: block.rateVersionId, rateSnapshot: block.rateSnapshot,
               ordinaryMinutes: isAbsence ? 0 : (day.employmentType === "PART_TIME" ? block.minutes : computed.ordinaryMinutes || 0),
               overtimeMinutes: computed.overtimeMinutes || 0,
@@ -124,10 +124,10 @@
   }
   function renderHtml(report) {
     const categoryRows = [...WORK_CATEGORIES, "P", "F"].filter((category) => report.categories[category] > 0)
-      .map((category) => `<tr><td>${escapeHtml(category)}</td><td>${escapeHtml(formatMinutes(report.categories[category]))}</td></tr>`);
-    const componentRows = report.components.map((item) => `<tr><td>${escapeHtml(COMPONENT_LABELS[item.component] || item.component)}</td><td>${escapeHtml(item.category)}</td><td>${escapeHtml(formatMinutes(item.minutes))}</td><td>${escapeHtml(formatMoney(item.rateCentsPerHour))}/h</td><td>${escapeHtml(formatMoney(item.amountCents))}</td></tr>`);
+      .map((category) => `<tr><td>${escapeHtml(Catalog.label(category))}</td><td>${escapeHtml(formatMinutes(report.categories[category]))}</td></tr>`);
+    const componentRows = report.components.map((item) => `<tr><td>${escapeHtml(COMPONENT_LABELS[item.component] || item.component)}</td><td>${escapeHtml(Catalog.label(item.category))}</td><td>${escapeHtml(formatMinutes(item.minutes))}</td><td>${escapeHtml(formatMoney(item.rateCentsPerHour))}/h</td><td>${escapeHtml(formatMoney(item.amountCents))}</td></tr>`);
     const dayRows = report.days.map((day) => `<tr><td>${escapeHtml(formatDate(day.date))}</td><td>${escapeHtml(day.blocks.map((block) => `${block.category} ${formatMinutes(block.minutes)}`).join(" · "))}</td><td>${escapeHtml(day.note || "—")}</td><td>Rev. ${escapeHtml(day.revision)} / ${escapeHtml(day.revisionCount)}</td></tr>`);
-    const componentCards = report.components.map((item) => `<div class="report-mobile-card"><strong>${escapeHtml(COMPONENT_LABELS[item.component] || item.component)}</strong><span>${escapeHtml(item.category)} · ${escapeHtml(formatMinutes(item.minutes))}</span><span>${escapeHtml(formatMoney(item.rateCentsPerHour))}/h</span><b>${escapeHtml(formatMoney(item.amountCents))}</b></div>`).join("");
+    const componentCards = report.components.map((item) => `<div class="report-mobile-card"><strong>${escapeHtml(COMPONENT_LABELS[item.component] || item.component)}</strong><span>${escapeHtml(Catalog.label(item.category))} · ${escapeHtml(formatMinutes(item.minutes))}</span><span>${escapeHtml(formatMoney(item.rateCentsPerHour))}/h</span><b>${escapeHtml(formatMoney(item.amountCents))}</b></div>`).join("");
     const dayCards = report.days.map((day) => `<div class="report-mobile-card"><strong>${escapeHtml(formatDate(day.date))}</strong><span>${escapeHtml(day.blocks.map((block) => `${block.category} ${formatMinutes(block.minutes)}`).join(" · "))}</span><span>${escapeHtml(day.note || "Nessuna nota")}</span><b>Rev. ${escapeHtml(day.revision)} / ${escapeHtml(day.revisionCount)}</b></div>`).join("");
     const employment = report.employmentTypes.map((item) => item.replace("_", " ")).join(" / ") || "Non disponibile";
     return `<article class="register-print-document">

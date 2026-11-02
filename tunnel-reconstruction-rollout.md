@@ -1,5 +1,78 @@
 # Ricostruzione sperimentale delle gallerie — pubblicazione e ripristino
 
+## Ritorno compatibile alla terna fissa — piano locale del 2 novembre 2026
+
+Questa procedura sostituisce, per dati che contengono il nuovo metodo, il rollback
+integrale al vecchio codice descritto più sotto. Quel riferimento rimane storico:
+il suo validatore non comprende il nuovo metodo e può bloccare il backup completo.
+Non effettuare quindi un rollback del Worker a quella versione per ottenere questo ritorno.
+
+La compatibilità dei dati è indipendente dalla politica delle nuove ricostruzioni:
+- validate(), visible() e layers() conservano sempre il supporto dei metodi
+  unique-directed-tunnel-v1 e unique-directed-tunnel-window-v1;
+- createWindowSession mantiene l'algoritmo nuovo approvato;
+- createLegacySession conserva il corpo della precedente createSession dal commit
+  2b4655d66d635f2737ea91fc01df25cf9654bad5, con il solo cambio di nome;
+- createSession seleziona l'algoritmo tramite la costante locale RECORDING_METHOD.
+  L'adattatore mantiene compatibili heartbeat/diagnostica e non attiva il timer
+  della finestra quando viene selezionata la terna fissa.
+
+### Procedura concreta, da pubblicare soltanto dopo futura autorizzazione
+
+1. Partire dal codice compatibile preparato qui, preservando Registro e altre funzioni.
+   In tunnel-reconstruction.js cambiare soltanto:
+   const RECORDING_METHOD=METHOD;
+   in:
+   const RECORDING_METHOD=LEGACY_METHOD;
+2. Non sostituire il modulo con quello storico e non cambiare validate(), visible(),
+   METHOD, LEGACY_METHOD o evidence.method dei record. Non ricalcolare guide salvate.
+3. Usare il normale versionamento degli asset: in auth-client.js sostituire il
+   riferimento tunnel-reconstruction.js?v=window-1-safe-return-1 con un nuovo valore,
+   per esempio tunnel-reconstruction.js?v=legacy-recording-safe-return-1.
+   Aggiornare di conseguenza il riferimento auth-client.js in index.html con un nuovo
+   suffisso, per esempio -legacy-recording-safe-return-1. Se quei valori sono stati
+   già usati in una pubblicazione, sceglierne di nuovi; non cambiare il sistema di cache.
+   L'app resta la versione compatibile: non occorre sostituire app.js o i lettori.
+4. Verificare sintassi e diff e riusare l'unico caso misto documentato sotto.
+   Pubblicazione e controlli remoti richiederanno un'autorizzazione successiva.
+5. Dopo quella futura pubblicazione chiudere e riaprire normalmente la PWA con
+   connessione, a lezione terminata. Una pagina già aperta mantiene il proprio codice
+   fino alla riapertura. Non cancellare dati/cache e non reinstallare.
+   COPIA DIAGNOSI GPS della nuova sessione deve indicare "terna fissa precedente (v1)".
+   Le nuove ricostruzioni useranno il metodo precedente; quelle già salvate con la
+   finestra continueranno a essere lette, mostrate, salvate, esportate e ripristinate.
+
+Per riattivare la finestra ripristinare soltanto RECORDING_METHOD=METHOD e versionare
+nuovamente i due riferimenti. Nessun interruttore Cloudflare o controllo UI introdotto.
+La scelta è di compilazione/pubblicazione, non un'impostazione salvata negli archivi
+o nei backup. Un metodo non previsto produce errore, non un ripiego silenzioso.
+La politica vale per le nuove sessioni; nessuna riscrittura, conversione o perdita
+delle geometrie precedenti. I dati nuovi non vengono mai etichettati come vecchi.
+
+### Unico caso verificato localmente
+
+Una guida sintetica contiene una stima per ciascun metodo, con identificativi e
+ancoraggi distinti. Nel browser isolato il modulo è caricato con RECORDING_METHOD
+impostato a LEGACY_METHOD, mantenendo entrambi i validatori.
+Percorso: apertura tramite openLesson dell'app → salvataggio tramite saveLesson e
+archivio IndexedDB → backup completo → ripristino in archivio isolato vuoto →
+riapertura in nuova pagina → nuova esportazione/validazione del backup.
+Verificati punti GPS e record invariati, entrambi i metodi riconosciuti e visibili.
+Le sole parti UI e contesto non pertinenti sono simulate; persistenza, validatore,
+apertura/salvataggio e controller di backup sono quelli dell'app.
+Nessun dato reale, nuovo confronto GPS, rendering, suite o accesso remoto.
+Risultato e script ripetibile sono nella cartella esterna
+outputs/tunnel-safe-return-2026-11-02 della sessione Codex, file result.json e verify-return.cjs.
+
+Il nuovo metodo resta selezionato nel repository; il ritorno è predisposto e provato
+in memoria nell'ambiente isolato, non applicato al dispositivo o alla produzione.
+La compatibilità non dipende dal metodo scelto per nuove registrazioni.
+
+---
+
+## Documentazione storica precedente — non usare come rollback compatibile dei nuovi record
+
+
 ## Riferimento stabile da preservare
 - Git: 65ae24de432eb4af621775dc4f26211a8f5b4cdd.
 - Worker: 0fa1fa02-62f1-44c2-a379-46d694dfde7b, verificato attivo al 100% prima dell'intervento.

@@ -1,8 +1,8 @@
 (function registerBackupModule(root, factory) {
-  const api = factory(root?.crypto);
+  const api = factory(root?.crypto, typeof module === "object" && module.exports ? require("./register-categories.js") : root?.RegisterCategories);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.RegisterBackup = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function createModule(defaultCrypto) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function createModule(defaultCrypto, Catalog) {
   "use strict";
 
   const FORMAT = "agenda-istruttori-register-backup";
@@ -10,7 +10,7 @@
   const DEFAULT_ITERATIONS = 600000;
   const MIN_PASSWORD_LENGTH = 12;
   const MAX_FILE_BYTES = 50 * 1024 * 1024;
-  const WORK_CATEGORIES = new Set(["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"]);
+  const WORK_CATEGORIES = new Set(Catalog.WORK_CATEGORIES);
   const ALL_CATEGORIES = new Set([...WORK_CATEGORIES, "P", "F"]);
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -54,13 +54,19 @@
   }
   function validateRateSnapshot(rates) {
     if (!rates || typeof rates !== "object" || !rates.categories || typeof rates.categories !== "object") throw new Error("Tariffe backup non valide");
-    for (const category of WORK_CATEGORIES) if (!safeInteger(rates.categories[category])) throw new Error("Tariffe backup non valide");
+    for (const category of Catalog.REQUIRED_RATE_CATEGORIES) if (!safeInteger(rates.categories[category])) throw new Error("Tariffe backup non valide");
+    for (const category of Catalog.OPTIONAL_RATE_CATEGORIES) if (rates.categories[category] !== undefined && !safeInteger(rates.categories[category])) throw new Error("Tariffe backup non valide");
     if (!safeInteger(rates.overtime || 0)) throw new Error("Tariffa straordinario non valida");
   }
   function normalizeLegacyGoldSnapshot(source) {
     const snapshot = clone(source);
     const normalizeRates = (rates) => {
-      if (!rates?.categories || rates.categories.GOLD === undefined) return;
+      if (!rates?.categories) return;
+      if (rates.categories.EX !== undefined) {
+        rates.categories.EXA = Catalog.rateValue(rates.categories, "EXA");
+        delete rates.categories.EX;
+      }
+      if (rates.categories.GOLD === undefined) return;
       if (rates.categories["GOLD AUTO"] === undefined) rates.categories["GOLD AUTO"] = rates.categories.GOLD;
       if (rates.categories["GOLD MOTO"] === undefined) rates.categories["GOLD MOTO"] = rates.categories.GOLD;
       delete rates.categories.GOLD;
@@ -68,7 +74,7 @@
     const normalizeDay = (day) => {
       if (!day || day.kind !== "day") return;
       for (const block of day.blocks || []) {
-        if (block.category === "GOLD") block.category = "GOLD AUTO";
+        block.category = Catalog.normalizeCategory(block.category);
         normalizeRates(block.rateSnapshot);
       }
     };
@@ -87,7 +93,7 @@
       if (!block || typeof block.id !== "string" || !block.id || ids.has(block.id)) throw new Error("Blocco attività non valido");
       if (!safeInteger(block.order, 1) || orders.has(block.order) || !ALL_CATEGORIES.has(block.category) || !safeInteger(block.minutes, 1)) throw new Error("Blocco attività non valido");
       if (typeof block.rateVersionId !== "string" || !block.rateVersionId) throw new Error("Versione tariffaria blocco non valida");
-      validateRateSnapshot(block.rateSnapshot); ids.add(block.id); orders.add(block.order);
+      validateRateSnapshot(block.rateSnapshot); Catalog.requireRate(block.rateSnapshot, block.category); ids.add(block.id); orders.add(block.order);
     }
     if (!validDate(day.employmentEffectiveFrom) || !["PART_TIME", "FULL_TIME"].includes(day.employmentType)) throw new Error("Tipo lavorativo giornata non valido");
   }

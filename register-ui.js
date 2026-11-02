@@ -1,13 +1,13 @@
 (function registerUiModule(root, factory) {
-  const api = factory(root);
+  const api = factory(root, typeof module === "object" && module.exports ? require("./register-categories.js") : root?.RegisterCategories);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root?.document) root.RegisterUI = api.createController();
-})(typeof globalThis !== "undefined" ? globalThis : this, function createModule(root) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function createModule(root, Catalog) {
   "use strict";
 
   const DAY_MS = 86400000;
   const MONTHS = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
-  const CATEGORIES = ["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"];
+  const CATEGORIES = Catalog.WORK_CATEGORIES;
 
   function isoDate(value) { return value.toISOString().slice(0, 10); }
   function parseIso(value) { return new Date(`${value}T00:00:00Z`); }
@@ -253,7 +253,7 @@
       const body = doc.createElement("div"); body.className = "register-day-body";
       day.blocks.forEach((block) => {
         const row = doc.createElement("div"); row.className = "register-block-row";
-        const category = doc.createElement("strong"); category.textContent = `${block.order}. ${block.category}`;
+        const category = doc.createElement("strong"); category.textContent = `${block.order}. ${Catalog.label(block.category)}`;
         const duration = doc.createElement("span"); duration.textContent = formatMinutes(block.minutes);
         row.append(category, duration); body.append(row);
       });
@@ -298,7 +298,7 @@
       const row = doc.createElement("div"); row.className = "register-block-editor"; row.dataset.blockId = block.id || "";
       const select = doc.createElement("select"); select.className = "register-block-category"; select.setAttribute("aria-label", "Categoria attività");
       const options = employment?.employmentType === "FULL_TIME" ? [...CATEGORIES, "P", "F"] : CATEGORIES;
-      options.forEach((value) => { const option = doc.createElement("option"); option.value = value; option.textContent = value; option.selected = value === block.category; select.append(option); });
+      options.forEach((value) => { const option = doc.createElement("option"); option.value = value; option.textContent = Catalog.label(value); option.selected = value === Catalog.normalizeCategory(block.category); select.append(option); });
       const duration = doc.createElement("div"); duration.className = "register-block-duration";
       const parts = splitMinutes(block.minutes || 60);
       const hoursLabel = doc.createElement("label"); hoursLabel.textContent = "ORE";
@@ -314,10 +314,10 @@
     function refreshBlockCategories() {
       const fullTime = employmentFor(byId("registerDayDate").value)?.employmentType === "FULL_TIME";
       byId("registerBlocks").querySelectorAll(".register-block-category").forEach((select) => {
-        const selected = select.value;
+        const selected = Catalog.normalizeCategory(select.value);
         const allowed = fullTime ? [...CATEGORIES, "P", "F"] : CATEGORIES;
         select.replaceChildren(...allowed.map((value) => {
-          const option = doc.createElement("option"); option.value = value; option.textContent = value;
+          const option = doc.createElement("option"); option.value = value; option.textContent = Catalog.label(value);
           option.selected = value === selected || (!allowed.includes(selected) && value === CATEGORIES[0]);
           return option;
         }));
@@ -361,7 +361,10 @@
       event.preventDefault(); setMessage("");
       try {
         const categories = {};
-        doc.querySelectorAll("[data-register-rate]").forEach((input) => { categories[input.dataset.registerRate] = centsFromInput(input.value); });
+        doc.querySelectorAll("[data-register-rate]").forEach((input) => {
+          if (Catalog.OPTIONAL_RATE_CATEGORIES.includes(input.dataset.registerRate) && !input.value.trim()) return;
+          categories[input.dataset.registerRate] = centsFromInput(input.value);
+        });
         await ledger.createRateVersion({ effectiveFrom: byId("registerRatesFrom").value, rates: { categories, overtime: centsFromInput(byId("registerOvertimeRate").value) } });
         byId("registerRatesForm").reset(); closeEditors(); await render(); setMessage("Nuova versione tariffe salvata nel dispositivo.");
       } catch (error) { setMessage(error.message, true); }

@@ -1,11 +1,11 @@
 (function (root, factory) {
-  const api = factory();
+  const api = factory(typeof module === "object" && module.exports ? require("./register-categories.js") : root?.RegisterCategories);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.RegisterEconomicEngine = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (Catalog) {
   "use strict";
   const WEEK_MINUTES = 39 * 60;
-  const WORK_CATEGORIES = Object.freeze(["LG/A", "LG/M", "M/SE", "GOLD AUTO", "GOLD MOTO", "EX", "VARIE"]);
+  const WORK_CATEGORIES = Catalog.WORK_CATEGORIES;
   const ABSENCE_CATEGORIES = Object.freeze(["P", "F"]);
   const DAY_MS = 86400000;
   function assertInteger(value, label, minimum = 0) {
@@ -30,9 +30,8 @@
     if (!source?.categories) throw new TypeError(`Tariffe mancanti ${label}`.trim());
     const categories = {};
     for (const category of WORK_CATEGORIES) {
-      const legacyGold = source.categories.GOLD;
-      const value = category === "GOLD AUTO" ? (source.categories[category] ?? legacyGold)
-        : category === "GOLD MOTO" ? (source.categories[category] ?? legacyGold) : source.categories[category];
+      const value = Catalog.rateValue(source.categories, category);
+      if (Catalog.OPTIONAL_RATE_CATEGORIES.includes(category) && value === undefined) continue;
       assertInteger(value, `Tariffa ${category} ${label}`.trim());
       categories[category] = value;
     }
@@ -49,12 +48,13 @@
       if (weekStart === null) weekStart = blockWeek;
       if (blockWeek !== weekStart) throw new RangeError("Blocchi di settimane diverse");
       assertInteger(source.order, "Ordine"); assertInteger(source.minutes, "Durata", 1);
-      const category = source.category === "GOLD" ? "GOLD AUTO" : source.category;
+      const category = Catalog.normalizeCategory(source.category);
       if (!WORK_CATEGORIES.includes(category) && !ABSENCE_CATEGORIES.includes(category)) throw new TypeError("Categoria non valida");
       if (input.employmentType === "PART_TIME" && ABSENCE_CATEGORIES.includes(source.category)) throw new TypeError("P/F solo FULL_TIME");
       const blockRates = source.rates
         ? normalizeRates(source.rates, input.employmentType, `blocco ${inputIndex + 1}`)
         : defaultRates;
+      Catalog.requireRate(blockRates, category);
       return {
         date: source.date, order: source.order, minutes: source.minutes,
         category, rates: blockRates, inputIndex

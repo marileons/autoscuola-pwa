@@ -51,7 +51,7 @@ test("giornata locale conserva blocchi ordinati, note e fotografia tariffaria", 
   assert.deepEqual(day.blocks.map((block) => block.id), ["blocco-1", "blocco-2"]);
   assert.ok(day.blocks.every((block) => block.rateVersionId === rate.id));
   assert.deepEqual(day.blocks[0].rateSnapshot, {
-    categories: { "LG/A": 1000, "LG/M": 1200, "M/SE": 1300, "GOLD AUTO": 1500, "GOLD MOTO": 1500, EX: 1400, VARIE: 900 },
+    categories: { "LG/A": 1000, "LG/M": 1200, "M/SE": 1300, "GOLD AUTO": 1500, "GOLD MOTO": 1500, EXA: 1400, VARIE: 900 },
     overtime: 1500
   });
   assert.equal(day.employmentType, "PART_TIME");
