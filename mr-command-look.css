@@ -2,7 +2,7 @@
 @media screen {
  :root{--mr-command-green:#216b4c;--mr-command-green-hover:#19563d;--mr-command-red:#9b3344;--mr-command-red-hover:#802939;--mr-command-yellow:#f5d76e;--mr-command-ink:#143d48;--mr-command-ivory:#fff7e8;--mr-title-green:#ceffdd}
  body #appShell :is(.interior-view,#registerView,#userManagement) :is(#saveStudent,#newLesson,#saveLesson,#saveExaminer,#addChecklistItem,#addDrivingErrorCategory,#documentOpen,#saveStudentLicense,#restoreFullBackup,.driving-error-classify,.archive-action),
- body #appShell #registerView :is(#registerAddDay,#registerWeekTab,#registerMonthTab,button[type=submit]),
+ body #appShell #registerView :is(#registerAddDay,button[type=submit]),
  body:has(.interior-view.active) .choice-modal .choice-card button:not(.secondary):not(.danger),
  body .lesson-summary-dialog button:not(.secondary),body #homeSectionsDialog .home-sections-actions button:not(.secondary){
   --mr-command-current:var(--mr-command-green);--mr-command-current-hover:var(--mr-command-green-hover);
@@ -50,3 +50,73 @@
  body #appShell #lesson .save-error:hover:not(:disabled),body #appShell #studentPathChangePanel #confirmStudentPathChange:hover:not(:disabled),
  body #studentListPrintDialog button:not(.secondary):not(.danger):hover:not(:disabled),body .peer-lesson-dialog button:not(.secondary):not(.danger):hover:not(:disabled){background:var(--mr-command-green-hover)!important}
 }
+
+/* MR interface components, screen only; no GPS, assessment, signal, document or map palette. */
+@media screen{
+ :root{--mr-command-blue:#164f72;--mr-command-blue-hover:#103f5d;--mr-ui-accent:#bcefd2;--mr-ui-line:#86bed0;--mr-ui-focus:#a9e0ef}
+ body #appShell main > .view:is(.view,#registerView,#userManagement) button:is(.mr-nav-home,.mr-nav-back){min-height:44px;min-width:44px;padding:10px 14px;border-radius:12px;line-height:1.35;font-size:15px;border-width:1px!important;border-style:solid!important;color:#fff7e8!important;gap:8px;box-shadow:none!important;white-space:normal}
+ body #appShell main > .view:is(.view,#registerView,#userManagement) button.mr-nav-home{background:var(--mr-command-blue)!important;border-color:var(--mr-ui-line)!important}
+ body #appShell main > .view:is(.view,#registerView,#userManagement) button.mr-nav-back{background:var(--mr-command-green)!important;border-color:#92cbb0!important}
+ body #appShell main > .view:is(.view,#registerView,#userManagement) button.mr-nav-home:hover:not(:disabled){background:var(--mr-command-blue-hover)!important}
+ body #appShell main > .view:is(.view,#registerView,#userManagement) button.mr-nav-back:hover:not(:disabled){background:var(--mr-command-green-hover)!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab):not(.active){background:var(--mr-command-blue)!important;border-color:var(--mr-ui-line)!important;box-shadow:none!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab):not(.active):hover{background:var(--mr-command-blue-hover)!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab).active{background:#174f38!important;border-color:#d5ffe3!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab).active:hover{background:#123f2d!important}
+ body #appShell :is(.interior-view,#userManagement) :is(#newExaminer,#newExam){background:var(--mr-command-green)!important;border-color:#92cbb0!important;color:#fff7e8!important}
+ body #appShell :is(.interior-view,#userManagement) :is(#newExaminer,#newExam):hover:not(:disabled){background:var(--mr-command-green-hover)!important}
+ /* Existing interface accents, not semantic statuses. */
+ body #appShell :is(#home,#secretaryHome) .categories>button :is(.home-path-mark,.home-count-active),
+ body #appShell :is(#home,#secretaryHome) .other-functions-symbol,
+ body #appShell :is(.interior-view,#otherFunctions,#secretaryMenu,#secretaryHome) :is(h2,h3,label,summary)>.mr-interior-icon,
+ body #appShell #activeStudentName,body #appShell #lesson #lessonCategory,
+ body #homeSectionsDialog :is(h2,small,.home-sections-source),body .lesson-summary-step,
+ body #appShell #registerView .register-summary-row:last-child{color:var(--mr-ui-accent)!important}
+ body #appShell :is(#home,#secretaryHome) .categories>button .hero-copy::after,
+ body #appShell :is(#home,#secretaryHome) .categories>button strong::after{background:var(--mr-ui-accent)!important}
+ body #appShell .home-brand-user::before{color:var(--mr-ui-accent)!important}
+ body #appShell :is(.interior-view,#otherFunctions,#secretaryMenu,#secretaryHome) button :is(.mr-interior-icon,.ui-icon),body #appShell :is(#otherFunctions,#secretaryMenu,#secretaryHome) a.home-pro-action .ui-icon{color:inherit!important}
+ body #appShell :is(.interior-view,#otherFunctions,#secretaryHome,#secretaryMenu) :is(h2,h3,h4){text-shadow:none!important}
+ body #appShell :is(.view,#registerView,#userManagement) :is(button,a,input,textarea,select,summary):focus-visible,
+ body :is(#reservedAreaDialog,#homeSectionsDialog,#studentListPrintDialog,.peer-lesson-dialog,.lesson-summary-dialog,.choice-modal) :focus-visible{outline:3px solid var(--mr-ui-focus)!important;outline-offset:3px;box-shadow:0 0 0 5px #082f3b!important}
+ body #appShell :is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement) :is(.logout-action,#managerLogout){border-color:var(--mr-ui-line)!important}
+ body #appShell .app-header>#activeStudentIdentity:not([hidden]){border-left-color:var(--mr-ui-line)!important}
+ body #appShell #checklistManager .check-tabs button.active,body #appShell .interior-view .document-card.selected{border-color:#a1dfb9!important}
+ body #appShell #checklistManager .check-tabs button.active::after,body #appShell .interior-view .document-card.selected::after{color:var(--mr-ui-accent)!important}
+ body #homeSectionsDialog .home-sections-list input{accent-color:var(--mr-command-green)}
+ body #homeSectionsDialog .home-sections-list input:checked::before{background:#3b9e72;border-color:#9de5bb}
+ body #homeSectionsDialog .home-sections-list input:checked::after{background:#f1fff7}
+ body #studentListPrintDialog .student-list-sites input,body .lesson-summary-check input{accent-color:var(--mr-command-green)}
+ body #appShell .archived-student .license-complete-badge{align-self:flex-start;padding:5px 9px;border:1px solid #a0dfb9;border-radius:8px;background:#d2f8e2;color:#0d5136!important;font-weight:850;line-height:1.35}
+ body #appShell .exam-participant-names{display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere;color:#fff7e8;line-height:1.5}
+ #reservedAreaDialog{box-sizing:border-box;width:min(520px,calc(100% - 28px));max-height:calc(100dvh - 28px);overflow:auto;padding:24px;border:1px solid var(--mr-ui-line);border-radius:18px;background:#0d4353;color:#fff7e8;font:16px/1.5 'Nunito Sans',system-ui,sans-serif}
+ #reservedAreaDialog::backdrop{background:#001e2bd9}
+ #reservedAreaDialog form{display:grid;gap:14px;min-width:0}
+ #reservedAreaDialog :is(h2,p){margin:0;overflow-wrap:anywhere}
+ #reservedAreaDialog label{display:grid;gap:6px;min-width:0;font-weight:750}
+ #reservedAreaDialog input{box-sizing:border-box;width:100%;min-width:0;min-height:48px;padding:10px 12px;border:1px solid #82a9b2;border-radius:10px;background:#062b37;color:#fff7e8;font:inherit}
+ #reservedAreaDialog [role=alert]{color:#ffc2be}
+ #reservedAreaDialog .reserved-area-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:4px}
+ #reservedAreaDialog .reserved-area-actions button{width:100%;min-width:0;min-height:48px;margin:0;padding:12px 14px;border:1px solid #92cbb0;border-radius:12px;box-shadow:none;white-space:normal;overflow-wrap:anywhere;font:800 15px/1.35 'Nunito Sans',system-ui,sans-serif;color:#fff7e8}
+ #reservedAreaDialog .reserved-area-actions .reserved-area-unlock{background:var(--mr-command-green)}
+ #reservedAreaDialog .reserved-area-actions .reserved-area-cancel{background:var(--mr-command-blue);border-color:var(--mr-ui-line)}
+ #reservedAreaDialog .reserved-area-actions .reserved-area-reset{grid-column:1/-1;background:var(--mr-command-red);border-color:#efacb3}
+ #reservedAreaDialog .reserved-area-unlock:hover:not(:disabled){background:var(--mr-command-green-hover)}
+ #reservedAreaDialog .reserved-area-cancel:hover:not(:disabled){background:var(--mr-command-blue-hover)}
+ #reservedAreaDialog .reserved-area-reset:hover:not(:disabled){background:var(--mr-command-red-hover)}
+ #reservedAreaDialog button:disabled{opacity:.45;filter:saturate(.3);cursor:not-allowed}
+ @media(max-width:600px){#reservedAreaDialog{padding:18px}#reservedAreaDialog .reserved-area-actions{grid-template-columns:1fr}}
+}
+
+@media screen{
+ body #appShell .interior-view .latest-badge{background:#c9e8f3!important;color:#123f4a!important}
+ body #appShell .archived-student{border-left-color:var(--mr-ui-line)!important}
+ body #appShell #registerView :is(h2,h3) .register-mr-icon{color:var(--mr-ui-accent)!important}
+ body #appShell #registerView button .register-mr-icon{color:inherit!important}
+}
+
+@media screen{body #appShell #otherFunctions>#openUserManagement{display:flex;align-items:center;justify-content:center;gap:12px;min-height:48px;margin:16px 0 8px;padding:12px 16px;border-radius:14px}body #appShell #otherFunctions>#openUserManagement.hidden{display:none!important}}
+
+@media screen{body #appShell #otherFunctions>#openUserManagement[hidden]{display:none!important}}
+
+@media screen{body #appShell #activeStudentIdentity>svg,body #appShell #lesson .mr-summary-icon{color:var(--mr-ui-accent)!important}body #appShell .interior-view .driving-error-symbol-editor{border-color:var(--mr-ui-line)!important}}

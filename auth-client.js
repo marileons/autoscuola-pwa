@@ -94,12 +94,12 @@
       const submit = action(status.configured ? "SBLOCCA" : "CONFIGURA E SBLOCCA", () => {}); submit.type = "submit";
       let cancelled = false;
       const finish = value => { if (!value) { cancelled = true; void lockReservedArea(); } form.reset(); dialog.close(); dialog.remove(); resolve(value); };
-      form.append(error, submit, action("ANNULLA", () => finish(false)));
-      if (status.configured) form.append(action("RIPRISTINA PIN", async () => {
+      const actions=document.createElement("div");actions.className="reserved-area-actions";submit.classList.add("reserved-area-unlock");actions.append(submit,action("ANNULLA",()=>finish(false),"secondary reserved-area-cancel"));form.append(error,actions);
+      if (status.configured) actions.append(action("RIPRISTINA PIN", async () => {
         const operatorPassword = prompt("Conferma la password account per azzerare il PIN dell’Area riservata");
         if (operatorPassword === null) return;
         try { await api("/api/reserved-area/reset", { method: "POST", body: JSON.stringify({ operatorPassword }) }); finish(false); alert("PIN azzerato. Riapri l’Area riservata per configurarlo."); } catch (e) { error.textContent = e.message; }
-      }));
+      },"danger reserved-area-reset"));
       dialog.addEventListener("cancel", event => { event.preventDefault(); finish(false); });
       let busy = false;
       form.addEventListener("submit", async event => {
@@ -249,7 +249,7 @@
       }
       await loadScript("shared-calendar-exam-report.js?v=site-labels-1");
       await loadScript("student-report-print.js?v=1.21-student-report-print-v1");
-      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-categories.js?v=1.21-register-codes-1", "register-economic-engine.js?v=1.21-register-v2-codes-1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2-codes-1", "register-report.js?v=1.21-register-report-v3-codes-1", "register-backup.js?v=1.21-register-backup-v2-codes-1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6-codes-1", "driving-errors.js?v=1.21-error-symbols-3-place-1-times-1", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-window-1-safe-return-1-command-look-1", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); }
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-categories.js?v=1.21-register-codes-1", "register-economic-engine.js?v=1.21-register-v2-codes-1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2-codes-1", "register-report.js?v=1.21-register-report-v3-codes-1", "register-backup.js?v=1.21-register-backup-v2-codes-1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6-codes-1", "driving-errors.js?v=1.21-error-symbols-3-place-1-times-1", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-window-1-safe-return-1-command-look-2", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); }
       if (window.AgendaAppReady) await window.AgendaAppReady;
       await loadScript("shared-calendar-store.js?v=1");
       await loadScript("lesson-secretary-transfer-ui.js?v=site-labels-1");

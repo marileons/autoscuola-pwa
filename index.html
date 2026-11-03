@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="home-look.css?v=users-2-home-sections-1">
 <link rel="stylesheet" href="interior-look.css?v=tunnels-1">
 <link rel="stylesheet" href="lesson-summary.css?v=1">
-<link rel="stylesheet" href="mr-command-look.css?v=1">
+<link rel="stylesheet" href="mr-command-look.css?v=2">
 </head>
 <body>
 <section id="loginScreen" class="auth-screen hidden">
@@ -110,8 +110,8 @@
   <a class="home-pro-action link-button full" href="https://aci.gov.it/approfondimento/il-codice-della-strada/" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#road-link-pro"/></svg></span><span class="home-pro-label">LINK AL CODICE DELLA STRADA</span></a>
   <button id="manageChecklists" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#checklist-pro"/></svg></span><span class="home-pro-label">PERCORSO DIDATTICO</span></button>
   <button id="openDocuments" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#documents-pro"/></svg></span><span class="home-pro-label">DOCUMENTI VARI</span></button>
-  <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#settings-pro"/></svg></span><span class="home-pro-label">IMPOSTAZIONI</span></button>
-  <button id="manageHomeSections" type="button" class="home-pro-action full" hidden><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#settings-pro"/></svg></span><span class="home-pro-label">GESTIONE FUNZIONI</span></button>
+  <button id="openSettings" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#mr-settings"/></svg></span><span class="home-pro-label">IMPOSTAZIONI</span></button>
+  <button id="manageHomeSections" type="button" class="home-pro-action full" hidden><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#mr-activity"/></svg></span><span class="home-pro-label">GESTIONE FUNZIONI</span></button>
   <button id="openRegister" class="home-pro-action full"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg?v=other-functions-r14#schedule-pro"/></svg></span><span class="home-pro-label">REGISTRO ORE E COMPENSI</span></button>
   <button id="openUserManagement" class="user-management-entry home-pro-action full hidden"><span class="ui-icon" aria-hidden="true"><svg><use href="ui-icons.svg#settings-pro"/></svg></span><span class="home-pro-label">AREA RISERVATA</span></button>
   </div></div>
@@ -569,7 +569,6 @@
 <section id="documentsView" class="view interior-view">
   <p id="documentsMessage" class="muted hidden" role="status"></p>
   <div id="documentViewer" class="card" hidden></div>
-  <div class="other-functions-subnav"><button id="backDocuments" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
   <div class="card documents-heading">
     <h2>📁 Documenti vari</h2>
     <p class="muted">I documenti sono conservati esclusivamente su questo dispositivo.</p>
@@ -602,6 +601,7 @@
   <div id="documentsList"></div>
   <p id="emptyDocuments" class="empty">Nessun documento salvato.</p>
   </div>
+  <div class="other-functions-subnav"><button id="backDocuments" type="button" class="home-command">HOME</button><button type="button" class="secondary" data-other-functions-back>INDIETRO</button></div>
 </section>
 </main>
 <footer class="ownership">© 2026 Mario Leoni — Tutti i diritti riservati<br><span>L'applicazione e il relativo codice sono software proprietario. I materiali di terzi restano di proprietà dei rispettivi titolari.</span></footer>
@@ -666,5 +666,5 @@
   </form>
 </dialog>
 <dialog id="homeSectionsDialog" aria-labelledby="homeSectionsTitle"><h2 id="homeSectionsTitle">GESTIONE FUNZIONI</h2><p>Sezioni per singolo utente · solo Amministratore principale</p><label class="home-sections-user">UTENTE<select id="homeSectionsUser" aria-label="Seleziona utente"></select></label><h3 id="homeSectionsTarget"></h3><p id="homeSectionsSource" class="home-sections-source"></p><div id="homeSectionsList" class="home-sections-list"></div><p id="homeSectionsMessage" role="status"></p><div class="home-sections-actions"><button id="homeSectionsCancel" type="button" class="secondary">ANNULLA</button><button id="homeSectionsSave" type="button">SALVA</button><button id="homeSectionsDefaults" type="button" class="secondary">USA IMPOSTAZIONI PREDEFINITE</button></div><p class="muted">La visibilità non cambia autorizzazioni, allievi o backup. Registro e altri strumenti comuni conservano le regole attuali.</p></dialog>
-<script src="auth-client.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-register-codes-1-window-1-safe-return-1-command-look-1"></script>
+<script src="auth-client.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-register-codes-1-window-1-safe-return-1-command-look-2"></script>
 </body></html>
