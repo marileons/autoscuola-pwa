@@ -1,0 +1,52 @@
+/* Screen-only command palette. Assessment, GPS, traffic symbols and print rules stay independent. */
+@media screen {
+ :root{--mr-command-green:#216b4c;--mr-command-green-hover:#19563d;--mr-command-red:#9b3344;--mr-command-red-hover:#802939;--mr-command-yellow:#f5d76e;--mr-command-ink:#143d48;--mr-command-ivory:#fff7e8;--mr-title-green:#ceffdd}
+ body #appShell :is(.interior-view,#registerView,#userManagement) :is(#saveStudent,#newLesson,#saveLesson,#saveExaminer,#addChecklistItem,#addDrivingErrorCategory,#documentOpen,#saveStudentLicense,#restoreFullBackup,.driving-error-classify,.archive-action),
+ body #appShell #registerView :is(#registerAddDay,#registerWeekTab,#registerMonthTab,button[type=submit]),
+ body:has(.interior-view.active) .choice-modal .choice-card button:not(.secondary):not(.danger),
+ body .lesson-summary-dialog button:not(.secondary),body #homeSectionsDialog .home-sections-actions button:not(.secondary){
+  --mr-command-current:var(--mr-command-green);--mr-command-current-hover:var(--mr-command-green-hover);
+  background:var(--mr-command-current)!important;color:var(--mr-command-ivory)!important;border-color:#92cbb0!important;
+ }
+ body #appShell #lesson #signalDrivingError,body #appShell #settings #openOwnPassword,body #appShell #registerView #registerOpenRecovery{
+  --mr-command-current:var(--mr-command-red);--mr-command-current-hover:var(--mr-command-red-hover);
+  background:var(--mr-command-current)!important;color:var(--mr-command-ivory)!important;border-color:#efacb3!important;
+ }
+ body #appShell #otherFunctions #openUserManagement{
+  --mr-command-current:var(--mr-command-yellow);--mr-command-current-hover:#e8c354;
+  background:var(--mr-command-current)!important;color:var(--mr-command-ink)!important;border-color:#fff0b6!important;
+ }
+ body #appShell #otherFunctions #openUserManagement :is(svg,.ui-icon,.home-pro-label){color:var(--mr-command-ink)!important}
+ /* Apply hover only to the commands carrying a palette variable above. */
+ body #appShell :is(.interior-view,#registerView,#userManagement) :is(#saveStudent,#newLesson,#saveLesson,#saveExaminer,#addChecklistItem,#addDrivingErrorCategory,#documentOpen,#saveStudentLicense,#restoreFullBackup,#signalDrivingError,#openOwnPassword,#registerOpenRecovery,#registerAddDay,#registerWeekTab,#registerMonthTab,.driving-error-classify,.archive-action):hover:not(:disabled),
+ body #appShell #registerView button[type=submit]:hover:not(:disabled),
+ body #appShell #otherFunctions #openUserManagement:hover:not(:disabled),
+ body:has(.interior-view.active) .choice-modal .choice-card button:not(.secondary):not(.danger):hover:not(:disabled),
+ body .lesson-summary-dialog button:not(.secondary):hover:not(:disabled),body #homeSectionsDialog .home-sections-actions button:not(.secondary):hover:not(:disabled){background:var(--mr-command-current-hover)!important}
+ body #appShell #registerView .register-tabs button.active{background:#174f38!important;border:2px solid #d5ffe3!important;box-shadow:inset 0 0 0 1px #d5ffe3!important;font-weight:850}
+ body #appShell .home-brand :is(.home-wordmark,.home-wordmark b,.home-brand-user),body #appShell .app-header>h1{color:var(--mr-title-green)!important}
+ body #appShell .mr-top-navigation{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 16px;min-width:0}
+ body #appShell .mr-top-navigation[hidden],body #appShell .mr-top-navigation button[hidden]{display:none!important}
+ body #appShell .mr-top-navigation button{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;min-width:44px;min-height:44px;margin:0;padding:10px 16px;border:1px solid #82a9b2!important;border-radius:12px;background:#0a3c4d!important;color:#fff7e8!important;font:750 15px/1.35 'Nunito Sans',system-ui,sans-serif;white-space:normal;max-width:100%}
+ body #appShell .mr-top-navigation button:hover:not(:disabled){background:#155367!important}
+ body #appShell .mr-top-navigation svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor}
+ body #appShell .mr-top-navigation :focus-visible{outline:3px solid #a9e0ef!important;outline-offset:3px;box-shadow:0 0 0 5px #082f3b!important}
+ @media(max-width:600px){body #appShell .mr-top-navigation{gap:8px;margin-bottom:14px}body #appShell .mr-top-navigation button{padding:10px 13px}}
+}
+@media print{.mr-top-navigation{display:none!important}}
+
+@media screen{
+ body #appShell :is(.interior-view,#registerView,#userManagement) .mr-top-navigation button[hidden]{display:none!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab).active{background:#174f38!important}
+ body #appShell #otherFunctions #openUserManagement svg{filter:brightness(0) saturate(100%)}
+}
+
+/* Remaining existing warm command components; no catalog/state/indicator rules. */
+@media screen{
+ body #appShell #lesson .save-error,body #appShell #studentPathChangePanel #confirmStudentPathChange,
+ body #studentListPrintDialog button:not(.secondary):not(.danger),body .peer-lesson-dialog button:not(.secondary):not(.danger){
+  background:var(--mr-command-green)!important;color:var(--mr-command-ivory)!important;border-color:#92cbb0!important;
+ }
+ body #appShell #lesson .save-error:hover:not(:disabled),body #appShell #studentPathChangePanel #confirmStudentPathChange:hover:not(:disabled),
+ body #studentListPrintDialog button:not(.secondary):not(.danger):hover:not(:disabled),body .peer-lesson-dialog button:not(.secondary):not(.danger):hover:not(:disabled){background:var(--mr-command-green-hover)!important}
+}

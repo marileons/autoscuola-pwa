@@ -667,3 +667,35 @@ $("confirmStudentPathChange").onclick=()=>{const person=state.students.find(s=>s
 $("cancelStudentPathChange").onclick=()=>{const person=state.students.find(s=>s.id===state.editingStudent);if(person)$("category").value=person.category;updateStudentPathChange()};
 $("importPeerLesson").onclick=openPeerLessonImport;
 window.LocalLessonActions={reset:resetLocalLessonActions,sync:syncLocalLessonActions};
+
+// Presentation only: forward to existing controls, with no duplicate IDs or new navigation rules.
+(()=>{
+ if(window.MRTopNavigation)return;
+ const shell=document.getElementById('appShell');if(!shell)return;
+ const entries=[],ns='http://www.w3.org/2000/svg';
+ const kind=source=>{const label=source.textContent.trim().replace(/^[\s\u2190-\u2BFF\uFE0F\u{1F300}-\u{1FAFF}]+/u,'').toUpperCase();return label==='HOME'?'home':/^(?:ANNULLA \/ )?INDIETRO(?: AL REGISTRO)?$/.test(label)?'back':null};
+ for(const view of shell.querySelectorAll('main > .view')){
+  if(['home','secretaryHome'].includes(view.id))continue;
+  const sources=[...view.querySelectorAll('button')].filter(b=>kind(b)),first=view.firstElementChild;
+  const topKinds=new Set(sources.filter(b=>b===first||first?.matches('.other-functions-subnav,.lesson-heading,.register-topbar')&&first.contains(b)||b.id==='otherFunctionsHome').map(kind));
+  const bottom=sources.filter(b=>!topKinds.has(kind(b)));
+  if(!bottom.length)continue;
+  const nav=document.createElement('nav');nav.className='mr-top-navigation';nav.setAttribute('aria-label','Navigazione superiore');
+  for(const source of bottom){
+   const type=kind(source),button=document.createElement('button'),svg=document.createElementNS(ns,'svg'),use=document.createElementNS(ns,'use');
+   button.type='button';button.className='secondary'+(type==='home'?' home-command':'');
+   svg.classList.add('mr-interior-icon');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');use.setAttribute('href','ui-icons.svg#mr-'+type);svg.append(use);
+   const label=document.createElement('span');label.textContent=type==='home'?'HOME':'INDIETRO';button.append(svg,label);
+   button.addEventListener('click',()=>{if(!button.disabled&&!button.hidden)source.click()});
+   nav.append(button);entries.push({source,button,nav});
+  }
+  view.prepend(nav);
+ }
+ let queued=false;
+ function refresh(){queued=false;for(const {source,button} of entries){const hidden=!source.isConnected||!(source.checkVisibility?.({visibilityProperty:true})??(source.getClientRects().length>0&&getComputedStyle(source).visibility!=='hidden'));if(button.hidden!==hidden)button.hidden=hidden;if(button.disabled!==source.disabled)button.disabled=source.disabled}for(const nav of new Set(entries.map(e=>e.nav))){const hidden=[...nav.children].every(b=>b.hidden);if(nav.hidden!==hidden)nav.hidden=hidden}}
+ function queue(){if(!queued){queued=true;requestAnimationFrame(refresh)}}
+ const observer=new MutationObserver(records=>{if(records.some(r=>!r.target.closest('.mr-top-navigation')&&entries.some(e=>r.target===e.source||r.target.contains(e.source))))queue()});
+ observer.observe(shell,{subtree:true,attributes:true,attributeFilter:['class','hidden','disabled','style']});
+ shell.addEventListener('click',queue,{capture:true,passive:true});
+ window.MRTopNavigation={refresh};refresh();
+})();
