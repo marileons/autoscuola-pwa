@@ -1,6 +1,7 @@
 "use strict";
 (() => {
   let currentUser = null;
+  let markerProfileSuppressed = false;
   let onShowApp = null;
   let onShowLogin = null;
   let checkTimer = null;
@@ -152,6 +153,7 @@
   function applyUser(user) {
     const previousId = currentUser?.id || null;
     const nextId = user?.id || null;
+    if(previousId!==nextId)window.GpsMapOrientation?.setProfile(null);
     if (previousId && previousId !== nextId) {
       reservedUnlocked = false; clearTimeout(reservedTimer); document.getElementById("reservedAreaDialog")?.remove();
       void lockRegisterVault();
@@ -159,6 +161,7 @@
     }
     if(previousId!==nextId){window.StudentListPrint?.reset();window.LocalLessonActions?.reset();window.LessonSecretaryTransferUI?.reset();authEpoch++;}
     currentUser = user;
+    window.GpsMapOrientation?.setProfile(markerProfileSuppressed?null:user);
     if(previousId!==nextId)window.HomeSections?.reset();else window.HomeSections?.sync();
     if(!user?.sharedCalendarEnabled || previousId!==nextId)window.SharedCalendar?.dispose?.();
     syncAdminPresence();
@@ -181,6 +184,7 @@
   }
 
   function loseAccess(message) {
+    window.GpsMapOrientation?.setProfile(null);
     document.getElementById("connectionNotice")?.remove();
     clearTimeout(sessionRetry);sessionRetry=null;
     // The app snapshots the lesson with its still-valid account ID first.
@@ -249,7 +253,7 @@
       }
       await loadScript("shared-calendar-exam-report.js?v=site-labels-1");
       await loadScript("student-report-print.js?v=1.21-student-report-print-v1");
-      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-categories.js?v=1.21-register-codes-1", "register-economic-engine.js?v=1.21-register-v2-codes-1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2-codes-1", "register-report.js?v=1.21-register-report-v3-codes-1", "register-backup.js?v=1.21-register-backup-v2-codes-1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6-codes-1", "driving-errors.js?v=1.21-error-symbols-3-place-1-times-1", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-window-1-safe-return-1-command-look-2-heading-1-text-contrast-1", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); if(src==="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"){try{await loadScript("assets/vendor/leaflet-rotate-0.3.0.js?v=1");}catch{/* Optional view extension: keep ordinary Leaflet available. */}finally{window.L?.Map?.mergeOptions({preventPageGestures:false})}try{await loadScript("gps-map-orientation.js?v=2")}catch{window.GpsMapOrientation=null}} }
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-categories.js?v=1.21-register-codes-1", "register-economic-engine.js?v=1.21-register-v2-codes-1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2-codes-1", "register-report.js?v=1.21-register-report-v3-codes-1", "register-backup.js?v=1.21-register-backup-v2-codes-1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6-codes-1", "driving-errors.js?v=1.21-error-symbols-3-place-1-times-1", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-window-1-safe-return-1-command-look-2-heading-1-text-contrast-1", "examiner-routes-ui.js?v=1.21-exam-routes-v1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); if(src==="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"){try{await loadScript("assets/vendor/leaflet-rotate-0.3.0.js?v=1");}catch{/* Optional view extension: keep ordinary Leaflet available. */}finally{window.L?.Map?.mergeOptions({preventPageGestures:false})}try{await loadScript("gps-map-orientation.js?v=3")}catch{window.GpsMapOrientation=null}} }
       if (window.AgendaAppReady) await window.AgendaAppReady;
       await loadScript("shared-calendar-store.js?v=1");
       await loadScript("lesson-secretary-transfer-ui.js?v=site-labels-1");
@@ -315,11 +319,15 @@
   }
 
   async function logout(showLogin) {
-    await lockReservedArea();
-    try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } catch {}
-    window.ExaminerRoutesUI?.stopAll?.();
-    await lockRegisterVault();
-    showLogin();applyUser(null);clearTimeout(sessionRetry);sessionRetry=null;
+    markerProfileSuppressed = true;
+    window.GpsMapOrientation?.setProfile(null);
+    try {
+      await lockReservedArea();
+      try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } catch {}
+      window.ExaminerRoutesUI?.stopAll?.();
+      await lockRegisterVault();
+      showLogin();applyUser(null);clearTimeout(sessionRetry);sessionRetry=null;
+    } finally { markerProfileSuppressed = false; }
   }
 
   function updateAccountSummary() {
@@ -493,7 +501,31 @@
       if (currentUser?.role === "ADMIN")
       actions.append(action("Revoca definitivamente", async () => { if (!confirm(`Revocare definitivamente l’accesso di ${user.name}?`)) return; try { await api(`/api/users/${encodeURIComponent(user.id)}`, { method: "DELETE", body: "{}" }); message("Accesso revocato."); await refreshUsers(); } catch (error) { message(error.message, true); } }, "danger"));
     }
-    row.append(name, detail, actions); return row;
+    row.append(name, detail, actions);
+    if(currentUser?.capabilities?.managePrivilegedUsers)row.append(markerInitialsForm(user));
+    return row;
+  }
+  function markerInitialsForm(user) {
+    const form=document.createElement("form"),label=document.createElement("label"),input=document.createElement("input"),help=document.createElement("small"),button=document.createElement("button");
+    form.className="user-marker-initials";label.textContent="Sigla sulla macchinina";
+    input.type="text";input.name="gpsMarkerInitials";input.maxLength=2;input.pattern="[A-Za-z]{2}";input.autocomplete="off";input.spellcheck=false;input.setAttribute("autocapitalize","characters");input.value=user.gpsMarkerInitials||"";
+    input.oninput=()=>{input.value=input.value.replace(/[a-z]/g,letter=>letter.toUpperCase())};
+    input.title="Due lettere A–Z, oppure vuoto per rimuovere la sigla";label.append(input);
+    help.className="muted";help.textContent="Due lettere A–Z. Lascia vuoto per rimuovere. Nessun obbligo di unicità.";
+    button.type="submit";button.className="secondary";button.textContent="SALVA SIGLA";form.append(label,button,help);
+    form.onsubmit=async event=>{event.preventDefault();if(button.disabled||!form.reportValidity())return;
+      if(!currentUser?.capabilities?.managePrivilegedUsers)return;
+      const actor=currentUser.id,epoch=authEpoch,value=input.value.trim().toUpperCase();button.disabled=true;input.disabled=true;
+      try {
+        const data=await api(`/api/users/${encodeURIComponent(user.id)}`,{method:"PATCH",body:JSON.stringify({gpsMarkerInitials:value})});
+        if(actor!==currentUser?.id||epoch!==authEpoch)return;
+        if(data?.user?.id!==user.id||(data.user.gpsMarkerInitials??null)!==(value||null))throw new Error("Risposta della sigla non valida. Aggiorna la Gestione utenti.");
+        if(user.id===currentUser.id)applyUser({...currentUser,gpsMarkerInitials:data.user.gpsMarkerInitials});
+        message(value?"Sigla salvata.":"Sigla rimossa.");await refreshUsers();
+      }catch(error){if(actor===currentUser?.id&&epoch===authEpoch)message(error.message,true)}
+      finally{button.disabled=false;input.disabled=false}
+    };
+    return form;
   }
   async function setManagedStatus(user, active) {
     if (currentUser?.role === "USER_MANAGER") { try { await api(`/api/user-management/users/${encodeURIComponent(user.id)}/status`, { method: "POST", body: JSON.stringify({ active }) }); message("Stato utente aggiornato."); await refreshUsers(); } catch(error) { message(error.message, true); } return; }
@@ -605,6 +637,7 @@
     logout,
     updateAccountSummary,
     currentUser: () => currentUser,
+    gpsMarkerProfile: () => markerProfileSuppressed || !currentUser ? null : {id:currentUser.id,gpsMarkerInitials:currentUser.gpsMarkerInitials},
     lockRegisterVault,
     lockReservedArea
   };
