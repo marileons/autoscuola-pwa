@@ -109,7 +109,8 @@
 }
 
 @media screen{
- body #appShell .interior-view .latest-badge{background:#c9e8f3!important;color:#123f4a!important}
+ body #appShell #student .latest-badge{display:inline-flex;align-items:center;width:fit-content;max-width:100%;padding:5px 9px;margin:0 0 10px;border:0;border-radius:8px;background:var(--mr-command-green)!important;color:#fff!important;font-size:12px;line-height:1.35;font-weight:850;letter-spacing:.025em}
+ body #appShell #student .lesson-card :is(.driving-error-lesson-summary,.lesson-gps-summary){display:block;margin-top:6px;line-height:1.45}
  body #appShell .archived-student{border-left-color:var(--mr-ui-line)!important}
  body #appShell #registerView :is(h2,h3) .register-mr-icon{color:var(--mr-ui-accent)!important}
  body #appShell #registerView button .register-mr-icon{color:inherit!important}
@@ -120,3 +121,44 @@
 @media screen{body #appShell #otherFunctions>#openUserManagement[hidden]{display:none!important}}
 
 @media screen{body #appShell #activeStudentIdentity>svg,body #appShell #lesson .mr-summary-icon{color:var(--mr-ui-accent)!important}body #appShell .interior-view .driving-error-symbol-editor{border-color:var(--mr-ui-line)!important}}
+
+/* Readable secondary interface text on known dark surfaces only.
+   Functional indicators, disabled controls, maps and document canvases keep
+   their own colours; light form surfaces retain dark text. Print is untouched. */
+@media screen{
+ :root{--mr-text-secondary:#eef3f4;--mr-text-secondary-ink:#344b56}
+ body #appShell :is(.interior-view,#registerView,#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement)
+ :is(.meta,.muted,.empty,.detail-row,.native-dictation-hint,.lesson-notes,.lesson-items,.driving-error-lesson-summary,.lesson-gps-summary,.auto-summary-caption,.auto-summary-note,.road-report-meta,.road-report-meta strong,.road-endpoint small,.register-eyebrow,.register-file-name,.register-print-hint,.register-account-card span,.register-block-duration label,.secondary-functions>h2,.home-student-counts,.home-count-sites,.home-count-archived):not(:where(
+ .shared-calendar *,.sc-main *,.leaflet-container *,.map *,.saved-map *,
+ .document-preview *,.lesson-summary-page *,#registerPrintPanel *,.register-print-document *,
+ .manager-only-notice *,.temporary-password-value *,
+ .state-btn,.state-btn *,.activity-indicator,.activity-indicator *,
+ .gps-indicator,.gps-indicator *,[role=alert],[role=status],[aria-live],
+ .error,.warning,.success,.documents-error,.documents-success,.auth-error,
+ .full-backup-warning,.full-backup-error,.full-backup-success,.register-warning,.register-status,.driving-error-search-empty,.road-report-warning,
+ button:disabled *,[aria-disabled=true] *, .disabled *)){
+  color:var(--mr-text-secondary)!important;
+ }
+ body #appShell :is(#home,#secretaryHome) .home-count-sites::before,
+ body #appShell #activeStudentIdentity small,body #appShell>footer.ownership,
+ body .auth-card :is(.muted,.auth-version,.auth-credit),
+ body :is(.choice-card,.choice-modal-card,.peer-lesson-dialog,.lt-dialog,.lesson-summary-dialog,#homeSectionsDialog,#studentListPrintDialog,#reservedAreaDialog)
+ :is(.meta,.muted,.empty,.lt-filter-description,.lesson-summary-help,.lesson-summary-note,.student-list-local-note,.home-sections-source,.home-sections-list small):not(:where(.lesson-summary-page *,[role=alert],[role=status],[aria-live],button:disabled *,[aria-disabled=true] *)){
+  color:var(--mr-text-secondary)!important;
+ }
+ /* Only these fields have a dark surface in the current UI. */
+ body #appShell .interior-view :is(input,textarea)::placeholder,
+ body .auth-card input::placeholder,
+ body #registerView :is(.register-form,.register-block-editor) :is(input,textarea)::placeholder{
+  color:var(--mr-text-secondary)!important;opacity:1;
+ }
+ /* Neutral supporting text in the existing pale administration notice. */
+ body #appShell .manager-only-notice :is(.meta,.muted,.empty):not(:where([role=alert],[role=status],[aria-live])){
+  color:var(--mr-text-secondary-ink)!important;
+ }
+ /* Existing pale input surfaces, not the dark panels around them. */
+ body #userManagement input::placeholder,
+ body .lesson-summary-dialog input:not([type=checkbox])::placeholder{
+  color:var(--mr-text-secondary-ink);opacity:1;
+ }
+}
