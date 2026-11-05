@@ -18,12 +18,11 @@
  }
  body #appShell #otherFunctions #openUserManagement :is(svg,.ui-icon,.home-pro-label){color:var(--mr-command-ink)!important}
  /* Apply hover only to the commands carrying a palette variable above. */
- body #appShell :is(.interior-view,#registerView,#userManagement) :is(#saveStudent,#newLesson,#saveLesson,#saveExaminer,#addChecklistItem,#addDrivingErrorCategory,#documentOpen,#saveStudentLicense,#restoreFullBackup,#signalDrivingError,#openOwnPassword,#registerOpenRecovery,#registerAddDay,#registerWeekTab,#registerMonthTab,.driving-error-classify,.archive-action):hover:not(:disabled),
+ body #appShell :is(.interior-view,#registerView,#userManagement) :is(#saveStudent,#newLesson,#saveLesson,#saveExaminer,#addChecklistItem,#addDrivingErrorCategory,#documentOpen,#saveStudentLicense,#restoreFullBackup,#signalDrivingError,#openOwnPassword,#registerOpenRecovery,#registerAddDay,.driving-error-classify,.archive-action):hover:not(:disabled),
  body #appShell #registerView button[type=submit]:hover:not(:disabled),
  body #appShell #otherFunctions #openUserManagement:hover:not(:disabled),
  body:has(.interior-view.active) .choice-modal .choice-card button:not(.secondary):not(.danger):hover:not(:disabled),
  body .lesson-summary-dialog button:not(.secondary):hover:not(:disabled),body #homeSectionsDialog .home-sections-actions button:not(.secondary):hover:not(:disabled){background:var(--mr-command-current-hover)!important}
- body #appShell #registerView .register-tabs button.active{background:#174f38!important;border:2px solid #d5ffe3!important;box-shadow:inset 0 0 0 1px #d5ffe3!important;font-weight:850}
  body #appShell .home-brand :is(.home-wordmark,.home-wordmark b,.home-brand-user),body #appShell .app-header>h1{color:var(--mr-title-green)!important}
  body #appShell .mr-top-navigation{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 16px;min-width:0}
  body #appShell .mr-top-navigation[hidden],body #appShell .mr-top-navigation button[hidden]{display:none!important}
@@ -37,7 +36,6 @@
 
 @media screen{
  body #appShell :is(.interior-view,#registerView,#userManagement) .mr-top-navigation button[hidden]{display:none!important}
- body #appShell #registerView :is(#registerWeekTab,#registerMonthTab).active{background:#174f38!important}
  body #appShell #otherFunctions #openUserManagement svg{filter:brightness(0) saturate(100%)}
 }
 
@@ -59,10 +57,14 @@
  body #appShell main > .view:is(.view,#registerView,#userManagement) button.mr-nav-back{background:var(--mr-command-green)!important;border-color:#92cbb0!important}
  body #appShell main > .view:is(.view,#registerView,#userManagement) button.mr-nav-home:hover:not(:disabled){background:var(--mr-command-blue-hover)!important}
  body #appShell main > .view:is(.view,#registerView,#userManagement) button.mr-nav-back:hover:not(:disabled){background:var(--mr-command-green-hover)!important}
- body #appShell #registerView :is(#registerWeekTab,#registerMonthTab):not(.active){background:var(--mr-command-blue)!important;border-color:var(--mr-ui-line)!important;box-shadow:none!important}
- body #appShell #registerView :is(#registerWeekTab,#registerMonthTab):not(.active):hover{background:var(--mr-command-blue-hover)!important}
- body #appShell #registerView :is(#registerWeekTab,#registerMonthTab).active{background:#174f38!important;border-color:#d5ffe3!important}
- body #appShell #registerView :is(#registerWeekTab,#registerMonthTab).active:hover{background:#123f2d!important}
+ /* Period tabs: one border, shared command colours, no permanent halo. */
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab){background:var(--mr-command-blue)!important;border:1px solid var(--mr-ui-line)!important;box-shadow:none!important;color:#fff!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab) *,body #appShell #registerView :is(#registerWeekTab,#registerMonthTab)::after{color:#fff!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab):hover:not(:disabled){background:var(--mr-command-blue-hover)!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab).active{background:var(--mr-command-green)!important;border-color:#92cbb0!important;font-weight:850}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab).active:hover:not(:disabled){background:var(--mr-command-green-hover)!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab):not(:focus-visible){outline:none!important}
+ body #appShell #registerView :is(#registerWeekTab,#registerMonthTab):focus-visible{outline:3px solid var(--mr-ui-focus)!important;outline-offset:3px;box-shadow:none!important}
  body #appShell :is(.interior-view,#userManagement) :is(#newExaminer,#newExam){background:var(--mr-command-green)!important;border-color:#92cbb0!important;color:#fff7e8!important}
  body #appShell :is(.interior-view,#userManagement) :is(#newExaminer,#newExam):hover:not(:disabled){background:var(--mr-command-green-hover)!important}
  /* Existing interface accents, not semantic statuses. */
