@@ -124,7 +124,7 @@
     for(const student of [...appData.students,...trash.map(e=>e.student)]){
       if(!student||typeof student!=="object"||typeof student.id!=="string"||!student.id||studentIds.has(student.id))throw new Error("Il backup contiene allievi duplicati o non validi.");
       if(!Array.isArray(student.lessons)||!Array.isArray(student.checklist))throw new Error("Scheda allievo incompleta nel backup.");
-      if(Object.hasOwn(student,"drivingLicense"))window.StudentLicense.normalize(student.drivingLicense,{strict:true});
+      if(Object.hasOwn(student,"accompaniedOrigin"))window.LessonActivities.validateGaOrigin(student.accompaniedOrigin,student.id);if(Object.hasOwn(student,"drivingLicense"))window.StudentLicense.normalize(student.drivingLicense,{strict:true});
       const lessonIds=new Set();
       for(const lesson of student.lessons){if(!lesson||typeof lesson!=="object"||typeof lesson.id!=="string"||!lesson.id||lessonIds.has(lesson.id)||!Array.isArray(lesson.route)||!Array.isArray(lesson.checklist)||!Array.isArray(lesson.errors||[]))throw new Error("Guida duplicata o non valida nel backup.");if(Object.hasOwn(lesson,"secretaryTransfer")){if(!window.LessonSecretaryTransfer)throw Error("Validazione trasferimenti non disponibile.");window.LessonSecretaryTransfer.metadata(lesson.secretaryTransfer)}if(lesson.lessonContext)window.LessonActivities.validateContext(lesson.lessonContext);if(lesson.instructorTransfer)window.LessonSecretaryTransfer.metadata(lesson.instructorTransfer);lessonIds.add(lesson.id)}
       studentIds.add(student.id);
@@ -801,12 +801,12 @@
           const canonicalLesson={id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist),errors:window.DrivingErrors.normalizeErrors(lesson&&lesson.errors)};
           for(const key of ["activityBaseline","activitySnapshot","lessonActivities"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key].map(item=>({id:String(item.id),label:String(item.label),status:String(item.status),...(item.checklistDetails?{checklistDetails:{...item.checklistDetails}}:{})}));
           for(const key of ["instructorId","instructorName","completedDraftSignature"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key];
-          if(typeof lesson?.duration==="string"&&lesson.duration.trim())canonicalLesson.duration=lesson.duration.trim();
+          if(lesson.activityDetailsIncomplete===true)canonicalLesson.activityDetailsIncomplete=true;if(typeof lesson?.duration==="string"&&lesson.duration.trim())canonicalLesson.duration=lesson.duration.trim();
           if(Object.hasOwn(lesson,"secretaryTransfer"))canonicalLesson.secretaryTransfer=window.LessonSecretaryTransfer.metadata(lesson.secretaryTransfer);
           return canonicalLesson;
         })
       };
-      if(student.siteId||student.siteName){canonicalStudent.siteId=String(student.siteId||"");canonicalStudent.siteName=String(student.siteName||"")};      if(typeof student?.photo==="string"&&/^data:image\/(?:jpeg|png|webp);base64,/i.test(student.photo))canonicalStudent.photo=student.photo;
+      if(Object.hasOwn(student,"accompaniedOrigin"))canonicalStudent.accompaniedOrigin=window.LessonActivities.validateGaOrigin(student.accompaniedOrigin,student.id);if(student.siteId||student.siteName){canonicalStudent.siteId=String(student.siteId||"");canonicalStudent.siteName=String(student.siteName||"")};      if(typeof student?.photo==="string"&&/^data:image\/(?:jpeg|png|webp);base64,/i.test(student.photo))canonicalStudent.photo=student.photo;
       const drivingLicense=Object.hasOwn(student||{},"drivingLicense")?window.StudentLicense.normalize(student.drivingLicense,{strict:true}):null;if(drivingLicense)canonicalStudent.drivingLicense=drivingLicense;
       return canonicalStudent;
     });

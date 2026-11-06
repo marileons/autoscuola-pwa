@@ -173,3 +173,17 @@
  body #appShell #userManagement .user-marker-initials button:disabled{opacity:.45;cursor:not-allowed}
  body #appShell #userManagement .user-marker-initials small{flex-basis:100%;line-height:1.45}
 }
+
+/* GA course: derived hours, documented activities and explicit reversible AUTO transition. */
+body #appShell #otherFunctions>#openUserManagement{--mr-command-current:#4f2769;--mr-command-current-hover:#60317d;width:min(100%,280px)!important;max-width:100%;margin:16px auto 8px!important;background:#4f2769!important;color:#fff!important;border:1px solid #b79acb!important;min-height:48px;align-self:center;justify-self:center}
+body #appShell #otherFunctions>#openUserManagement:is(:hover,:active){background:#60317d!important}
+body #appShell #otherFunctions>#openUserManagement :is(svg,.ui-icon,.home-pro-label){color:#fff!important;filter:none!important}
+body #appShell #otherFunctions>#openUserManagement:focus-visible{outline:3px solid #e5d4f0!important;outline-offset:3px}
+.ga-course-panel,.ga-lesson-progress,.ga-auto-transition{overflow-wrap:anywhere;min-width:0;color:#f3f7f5}
+.ga-hours{font-size:1.15rem;margin:8px 0}.ga-caption{font-size:.95rem}.ga-activities{padding-left:22px;margin:8px 0}.ga-activities li{margin:7px 0;overflow-wrap:anywhere}
+.ga-saved-progress,.ga-saved-progress>span,.ga-saved-cumulative{display:block;margin-top:12px}.ga-saved-cumulative{border-top:1px solid #769994;padding-top:12px}.ga-saved-cumulative p{margin:8px 0}.ga-saved-cumulative ul{margin-bottom:0}
+.ga-lesson-progress{border:1px solid #769994;border-radius:12px;padding:12px;margin:12px 0}.ga-lesson-progress summary{min-height:44px;padding:10px 0;cursor:pointer}
+.ga-confirm{display:flex!important;align-items:flex-start;gap:12px;line-height:1.5}.ga-confirm input{width:24px!important;height:24px;flex:0 0 24px}.ga-auto-transition{margin:16px 0}.ga-auto-transition button{margin-top:12px;min-height:44px}
+
+.ga-lesson-progress:not([hidden])~#lessonChecklist .state-row{grid-template-columns:auto minmax(0,1fr);min-width:0}
+.ga-lesson-progress:not([hidden])~#lessonChecklist .state-row>span,#student .lesson-card:has(.ga-saved-progress) .lesson-items{min-width:0;overflow-wrap:anywhere}
