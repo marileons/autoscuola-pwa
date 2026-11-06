@@ -194,3 +194,5 @@ body #appShell #otherFunctions>#openUserManagement:focus-visible{outline:3px sol
 .ga-auto-path>strong,.ga-auto-path>span,.ga-evidence-group,.ga-evidence-group>strong{display:block;margin:8px 0}.ga-evidence-group{border-top:1px solid #72959d;padding-top:10px}.ga-evidence-group .ga-evidence{border-top:0;padding:8px 0}
 
 #gaLessonProgress[hidden],#gaStudentPanel[hidden],#gaLessonProgress [hidden]{display:none!important}
+
+.ga-module{min-width:0;margin:12px 0;padding:12px;border:1px solid #91afb4;border-radius:10px}.ga-module legend{font-weight:750;overflow-wrap:anywhere;max-width:100%;padding:0 5px}.ga-module-hours{display:flex;flex-wrap:wrap;gap:10px}.ga-module-hours>label{display:flex;align-items:center;gap:9px;min-height:48px;flex:1 1 120px;padding:8px;background:#123b45;border:1px solid #72959d;border-radius:8px}.ga-module-hours input{width:24px!important;height:24px;flex:0 0 24px}.ga-module-hours label:has(input:checked){background:#164b3c;color:#f3fff8}.ga-module-summary p{margin:8px 0}
