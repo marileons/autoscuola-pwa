@@ -1,6 +1,6 @@
 /* Screen-only command palette. Assessment, GPS, traffic symbols and print rules stay independent. */
 @media screen {
- :root{--mr-command-green:#216b4c;--mr-command-green-hover:#19563d;--mr-command-red:#9b3344;--mr-command-red-hover:#802939;--mr-command-yellow:#f5d76e;--mr-command-ink:#143d48;--mr-command-ivory:#fff7e8;--mr-title-green:#ceffdd}
+ :root{--mr-command-green:#216b4c;--mr-command-green-hover:#19563d;--mr-command-red:#9b3344;--mr-command-red-hover:#802939;--mr-command-yellow:#f5d76e;--mr-command-ink:#143d48;--mr-command-ivory:#fff7e8;--mr-path-auto:#e4ff2b;--mr-path-moto:#ff5673}
  body #appShell :is(.interior-view,#registerView,#userManagement) :is(#saveStudent,#newLesson,#saveLesson,#saveExaminer,#addChecklistItem,#addDrivingErrorCategory,#documentOpen,#saveStudentLicense,#restoreFullBackup,.driving-error-classify,.archive-action),
  body #appShell #registerView :is(#registerAddDay,button[type=submit]),
  body:has(.interior-view.active) .choice-modal .choice-card button:not(.secondary):not(.danger),
@@ -23,7 +23,8 @@
  body #appShell #otherFunctions #openUserManagement:hover:not(:disabled),
  body:has(.interior-view.active) .choice-modal .choice-card button:not(.secondary):not(.danger):hover:not(:disabled),
  body .lesson-summary-dialog button:not(.secondary):hover:not(:disabled),body #homeSectionsDialog .home-sections-actions button:not(.secondary):hover:not(:disabled){background:var(--mr-command-current-hover)!important}
- body #appShell .home-brand :is(.home-wordmark,.home-wordmark b,.home-brand-user),body #appShell .app-header>h1{color:var(--mr-title-green)!important}
+ body #appShell .home-brand :is(.home-wordmark,.home-wordmark b),body #appShell .app-header>h1{color:var(--mr-path-auto)!important}
+ body #appShell .home-brand .home-brand-user{color:#C5F4DF!important}
  body #appShell .mr-top-navigation{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 16px;min-width:0}
  body #appShell .mr-top-navigation[hidden],body #appShell .mr-top-navigation button[hidden]{display:none!important}
  body #appShell .mr-top-navigation button{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;min-width:44px;min-height:44px;margin:0;padding:10px 16px;border:1px solid #82a9b2!important;border-radius:12px;background:#0a3c4d!important;color:#fff7e8!important;font:750 15px/1.35 'Nunito Sans',system-ui,sans-serif;white-space:normal;max-width:100%}
@@ -207,9 +208,9 @@ body #appShell #otherFunctions>#openUserManagement:focus-visible{outline:3px sol
 @media screen{
  :root{--mr-branch:#9edceb}
  #appShell :is([data-f="auto"],[data-f="guida-accompagnata"]),
- body:has(#appShell:not(.hidden) main > :is([data-mr-path="auto"],[data-mr-path="guida-accompagnata"]).active){--mr-branch:#e4ff2b}
+ body:has(#appShell:not(.hidden) main > :is([data-mr-path="auto"],[data-mr-path="guida-accompagnata"]).active){--mr-branch:var(--mr-path-auto)}
  #appShell :is([data-f="moto"],[data-f="corso-moto"]),
- body:has(#appShell:not(.hidden) main > :is([data-mr-path="moto"],[data-mr-path="corso-moto"]).active){--mr-branch:#ff5673}
+ body:has(#appShell:not(.hidden) main > :is([data-mr-path="moto"],[data-mr-path="corso-moto"]).active){--mr-branch:var(--mr-path-moto)}
  #appShell :is([data-f="quad-leggero"],[data-f="quad-pesante"]),
  body:has(#appShell:not(.hidden) main > :is([data-mr-path="quad-leggero"],[data-mr-path="quad-pesante"]).active){--mr-branch:#ff9b3f}
  #appShell :is([data-f="perfezionamento"]),
