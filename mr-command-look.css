@@ -242,9 +242,9 @@ body #appShell #otherFunctions>#openUserManagement:focus-visible{outline:3px sol
  body :is(#homeSectionsDialog){--mr-branch:#ffb1eb}
  #appShell :is(#openRegister),
  body:has(#appShell:not(.hidden) main > :is(#registerView).active){--mr-branch:#8ee38c}
- #appShell :is(.sc-home-entry:has(use[href$="#schedule-pro"])),
+ #appShell :is(.sc-home-entry:has(use[href$="#menu-agenda"])),
  body :is(dialog.shared-calendar){--mr-branch:#7aabff}
- #appShell :is(.sc-home-entry:has(use[href$="#documents-pro"])),
+ #appShell :is(.sc-home-entry:has(use[href$="#menu-report"])),
  body :is(.sc-report-host){--mr-branch:#f5b19c}
  #appShell :is(#openUserManagement),
  body:has(#appShell:not(.hidden) main > :is(#userManagement).active),
