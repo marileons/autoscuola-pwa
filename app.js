@@ -724,8 +724,29 @@ window.AccompaniedStudentUI=(()=>{
  function activityMarkup(result){return (result.items.length?'<ul class="ga-activities">'+result.items.map(item=>'<li><span class="activity-indicator activity-indicator-'+item.status+'" aria-hidden="true">'+stateIcon(item.status)+'</span> '+esc(item.label)+(G.placeText(item)?' · '+esc(G.placeText(item)):'')+'</li>').join('')+'</ul>':'<p>Nessuna attività documentata.</p>')+(result.legacy?'<p>'+result.legacy+' guide storiche con dettagli non disponibili: nessuna attività dedotta.</p>':'');}
  function evidenceMarkup(rows){if(!rows.length)return '<p>Nessuna attività GA documentata.</p>';const groups=new Map();for(const r of rows){if(!groups.has(r.item.label))groups.set(r.item.label,[]);groups.get(r.item.label).push(r);}const performed=item=>A.isChecklist(item)&&A.checklistProgress(item)>0?'<span>CHECK LIST · '+A.checklistProgress(item)+'/8</span><span>'+A.checklistParts.filter(p=>A.checklistPartSelected(item,p.id)).map(p=>esc(p.label)+' · '+esc(A.labels[item.checklistDetails[p.id]])).join('<br>')+'</span>':'<span class="activity-indicator activity-indicator-'+item.status+'" aria-hidden="true">'+stateIcon(item.status)+'</span> <span>'+esc(A.labels[item.status])+'</span>';return '<span class="ga-evidence-list">'+[...groups].map(([label,entries])=>'<span class="ga-evidence-group"><strong>'+esc(label)+'</strong>'+entries.map(r=>'<span class="ga-evidence"><span class="ga-origin-badge">PROVENIENZA GA</span>'+performed(r.item)+'<span>'+esc(G.placeText(r.item)||'Località / tratta non registrata')+'</span><small>'+esc(formatLessonDate(new Date(r.createdAt)))+' · Istruttore: '+esc(r.instructorName||'non registrato')+(r.gaProgram?.kind==='additional'?' · guida aggiuntiva':'')+'</small></span>').join('')+'</span>').join('')+'</span>';}
 
- function progressMarkup(p){return '<div class="ga-module-summary">'+p.modules.map(m=>'<p><strong>'+m.code+' '+m.done+'/'+m.hours+'</strong> · '+esc(m.label)+'</p>').join('')+'</div>'+(p.legacyAssignments?'<p>'+p.legacyAssignments+' guide con assegnazioni numeriche precedenti: '+p.legacyHours.length+' ore da verificare, non convertite automaticamente nei moduli A–E.</p>':'')+(p.unassigned?'<p>'+p.unassigned+' guide storiche con ore del programma da confermare manualmente. Durate originali conservate.</p>':'')+(p.conflicts.length?'<p role="status">Assegnazioni da correggere: ore '+p.conflicts.map(G.hourLabel).join(', ')+'. Il completamento è sospeso; nessuna guida cancellata.</p>':'')+(p.unknown?'<p>'+p.unknown+' durate non disponibili. Nessun dato dedotto da GPS o timer.</p>':'');}
- function savedMarkup(person,l){const row=G.progress(person,l.id).rows.at(-1);return '<span class="ga-saved-progress"><strong>'+esc(row.covered)+'</strong><span>Durata: '+esc(l.duration||'non disponibile')+'</span></span>';}
+ function progressMarkup(p){return '<div class="ga-module-summary">'+p.modules.map(m=>{
+  const complete=m.done===m.hours&&!p.conflicts.some(key=>key.startsWith(m.id+'/'));
+  const status=complete?'complete':m.done?'partial':'empty';
+  return '<p><strong class="ga-module-mark ga-module-mark--'+status+'">'+(complete?'✓ ':'')+m.code+' '+m.done+'/'+m.hours+'</strong> · '+esc(m.label)+'</p>';
+ }).join('')+'</div>'+(p.legacyAssignments?'<p>'+p.legacyAssignments+' guide con assegnazioni numeriche precedenti: '+p.legacyHours.length+' ore da verificare, non convertite automaticamente nei moduli A–E.</p>':'')+(p.unassigned?'<p>'+p.unassigned+' guide storiche con ore del programma da confermare manualmente. Durate originali conservate.</p>':'')+(p.conflicts.length?'<p role="status">Assegnazioni da correggere: ore '+p.conflicts.map(G.hourLabel).join(', ')+'. Il completamento è sospeso; nessuna guida cancellata.</p>':'')+(p.unknown?'<p>'+p.unknown+' durate non disponibili. Nessun dato dedotto da GPS o timer.</p>':'');}
+ function savedMarkup(person,lesson){
+  const program=lesson.gaProgram;
+  let hoursMarkup;
+  if(program?.version===2&&program.kind==='program'){
+   const slots=G.program(program).hours;
+   hoursMarkup=G.modules.map(module=>{
+    const hours=slots.filter(slot=>slot.moduleId===module.id).map(slot=>slot.hour).sort((a,b)=>a-b);
+    if(!hours.length)return '';
+    const numbers=hours.length===2&&hours[1]===hours[0]+1?hours.join('–'):hours.join(', ');
+    const label=module.code+' · '+(hours.length===1?'ora ':'ore ')+numbers+'/'+module.hours;
+    return '<strong class="ga-module-mark ga-module-mark--complete">✓ '+esc(label)+'</strong>';
+   }).join('');
+  }else{
+   const row=G.progress(person,lesson.id).rows.at(-1);
+   hoursMarkup='<strong>'+esc(row.covered)+'</strong>';
+  }
+  return '<span class="ga-saved-progress">'+hoursMarkup+'<span>Durata: '+esc(lesson.duration||'non disponibile')+'</span></span>';
+ }
  function command(text,handler,parent){const b=document.createElement('button');b.type='button';b.innerHTML='<svg class="mr-interior-icon" aria-hidden="true"><use href="ui-icons.svg#mr-'+(text.includes('AUTO')?'car':'activity')+'"/></svg>'+esc(text);b.onclick=handler;parent.append(b);return b;}
  function originSource(person){return state.students.find(s=>s.id===person.accompaniedOrigin.sourceId&&s.category==='guida-accompagnata');}
  function autoPath(person,cutoff=null){if(!person?.accompaniedOrigin?.linked)return '';const origin=A.validateGaOrigin(person.accompaniedOrigin,person.id),source=originSource(person);let rows=source?G.evidence(source):origin.summary.evidence||[];if(cutoff!==null)rows=rows.filter(r=>r.createdAt<=cutoff);return '<span class="ga-auto-path"><strong>Attività già svolte in GUIDA ACCOMPAGNATA</strong><span>'+(source?'Fonte: scheda GA locale collegata.':'Evidenze conservate al passaggio; fonte locale non presente, nessun accesso all’account di origine richiesto.')+'</span>'+evidenceMarkup(rows)+(origin.version===1&&!source?'<span>Storico precedente: dettagli per guida e località non disponibili.</span>'+activityMarkup({items:origin.summary.activities,legacy:origin.summary.legacy}):'')+'<span>Stati e provenienza conservati, incluse le guide aggiuntive. Non sono nuove guide o ore AUTO; nessuna attività mancante viene completata.</span></span>';}
