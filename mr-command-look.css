@@ -202,3 +202,99 @@ body #appShell #otherFunctions>#openUserManagement:focus-visible{outline:3px sol
 .ga-module-mark--partial{background:#694300;border-color:#e6ac4b;color:#fff1cf}
 .ga-module-mark--complete{background:#17563e;border-color:#82cca7;color:#effff4}
 .ga-saved-progress .ga-module-mark{margin:0 .4em .3em 0}
+
+/* Navigation accents. Backgrounds, state indicators and print stay independent. */
+@media screen{
+ :root{--mr-branch:#9edceb}
+ #appShell :is([data-f="auto"],[data-f="guida-accompagnata"]),
+ body:has(#appShell:not(.hidden) main > :is([data-mr-path="auto"],[data-mr-path="guida-accompagnata"]).active){--mr-branch:#e4ff2b}
+ #appShell :is([data-f="moto"],[data-f="corso-moto"]),
+ body:has(#appShell:not(.hidden) main > :is([data-mr-path="moto"],[data-mr-path="corso-moto"]).active){--mr-branch:#ff5673}
+ #appShell :is([data-f="quad-leggero"],[data-f="quad-pesante"]),
+ body:has(#appShell:not(.hidden) main > :is([data-mr-path="quad-leggero"],[data-mr-path="quad-pesante"]).active){--mr-branch:#ff9b3f}
+ #appShell :is([data-f="perfezionamento"]),
+ body:has(#appShell:not(.hidden) main > :is([data-mr-path="perfezionamento"]).active){--mr-branch:#5cebd2}
+ #appShell :is([data-f="esame-revisione"]),
+ body:has(#appShell:not(.hidden) main > :is([data-mr-path="esame-revisione"]).active){--mr-branch:#c99bff}
+ #appShell :is([data-f="esame-esperimento"]),
+ body:has(#appShell:not(.hidden) main > :is([data-mr-path="esame-esperimento"]).active){--mr-branch:#75caff}
+ #appShell :is(#openGeneralStudentManagement,#secretaryStudents,[data-secretary-command^="import"],[data-secretary-command^="share"],[data-secretary-command^="archiveStudents"],[data-secretary-command="deleteStudents"]),
+ body:has(#appShell:not(.hidden) main > :is(#generalStudentManagement,#studentMultiAction,#studentMultiShare,#studentMultiImport).active),
+ body :is(.peer-lesson-dialog,.lt-dialog,#studentListPrintDialog){--mr-branch:#65dacb}
+ #appShell :is(#openArchive,[data-secretary-command="openArchive"],[data-secretary-command="openStudentTrash"]),
+ body:has(#appShell:not(.hidden) main > :is(#studentArchive,#studentTrash).active){--mr-branch:#9eb3d2}
+ #appShell :is(#openExaminers),
+ body:has(#appShell:not(.hidden) main > :is(#examiners,#examinerForm,#examinerRouteView).active){--mr-branch:#62dbff}
+ #appShell :is(a[href*="ilportaledellautomobilista.it/gms/turni"]){--mr-branch:#ffc26f}
+ #appShell :is(#openExams),
+ body:has(#appShell:not(.hidden) main > :is(#exams,#examForm,#examLocations,#examExaminerPicker,#examStudentPicker).active){--mr-branch:#ef9fb9}
+ #appShell :is(a[href*="aci.gov.it/approfondimento/il-codice-della-strada"]){--mr-branch:#e7e29d}
+ #appShell :is(#manageChecklists),
+ body:has(#appShell:not(.hidden) main > :is(#checklistManager).active){--mr-branch:#b4b4ff}
+ #appShell :is(#openDocuments,[data-secretary-command="openDocuments"]),
+ body:has(#appShell:not(.hidden) main > :is(#documentsView).active),
+ body :is(#documentTitleModal,#documentMoveModal){--mr-branch:#7ad3ed}
+ #appShell :is(#openSettings),
+ body:has(#appShell:not(.hidden) main > :is(#settings).active),
+ body :is(#ownPasswordModal,#fullBackupModal){--mr-branch:#a9cde8}
+ #appShell :is(#manageHomeSections),
+ body :is(#homeSectionsDialog){--mr-branch:#ffb1eb}
+ #appShell :is(#openRegister),
+ body:has(#appShell:not(.hidden) main > :is(#registerView).active){--mr-branch:#8ee38c}
+ #appShell :is(.sc-home-entry:has(use[href$="#schedule-pro"])),
+ body :is(dialog.shared-calendar){--mr-branch:#7aabff}
+ #appShell :is(.sc-home-entry:has(use[href$="#documents-pro"])),
+ body :is(.sc-report-host){--mr-branch:#f5b19c}
+ #appShell :is(#openUserManagement),
+ body:has(#appShell:not(.hidden) main > :is(#userManagement).active),
+ body :is(#reservedAreaDialog,#temporaryPasswordModal){--mr-branch:#d7a6ff}
+ #appShell :is(#secretaryOtherFunctions),
+ body:has(#appShell:not(.hidden) main > :is(#secretaryMenu).active){--mr-branch:#b9dbc3}
+ #appShell main > .view:not(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu)){
+  box-sizing:border-box;position:relative;padding-inline-start:clamp(11px,2vw,20px);min-width:0;
+ }
+ #appShell main > .view:not(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu))::before{
+  content:"";position:absolute;inset-block:0 12px;inset-inline-start:0;width:4px;border-radius:5px;pointer-events:none;
+  background:linear-gradient(var(--mr-branch),color-mix(in srgb,var(--mr-branch) 30%,transparent));
+ }
+ #appShell main > .view :is(.page-context-title,.student-section > h2,.register-header h2,.examiner-route-title h2),
+ #appShell main > .view > h2,#appShell main > .view > .card > h2,
+ body :is(dialog,[role=dialog]) :is(h2,.home-sections-source){
+  font-weight:850;text-wrap:balance;overflow-wrap:anywhere;
+ }
+ #appShell main > .view :is(.page-context-title,.student-section > h2,.register-header h2,.examiner-route-title h2),
+ #appShell main > .view:not(:is(#otherFunctions,#secretaryMenu)) > h2,
+ #appShell main > .view:not(:is(#otherFunctions,#secretaryMenu)) > .card > h2{
+  padding-inline-start:9px;border-inline-start:2px solid color-mix(in srgb,var(--mr-branch) 65%,transparent);
+ }
+ body :is(dialog,[role=dialog]) h2{padding-inline-start:9px;border-inline-start:3px solid var(--mr-branch)}
+ @media(max-width:480px){#appShell main > .view:not(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu))::before{width:3px}}
+}
+/* Screen-only important border layer so older button shorthands cannot hide the outline. */
+@layer mr-branch-borders{
+ @media screen{
+  :is(#appShell,#loginScreen,dialog,[role=dialog],.choice-modal) :is(button,.link-button,a[role=button]){
+   border-style:solid!important;border-width:1px!important;
+   border-color:color-mix(in srgb,var(--mr-branch) 65%,#214e5a)!important;
+  }
+  #appShell :is(#home,#secretaryHome) .categories > button[data-f]{
+   border-width:2px!important;border-color:var(--mr-branch)!important;
+  }
+  #appShell :is(#otherFunctions,#secretaryMenu,#secretaryHome) .home-pro-action:not(.logout-action){
+   border-color:var(--mr-branch)!important;
+  }
+  :is(#appShell,dialog,[role=dialog],.choice-modal) button:is(.mr-command-save,.mr-nav-back,#saveLesson,#saveStudent,#saveExam,#saveExaminer,#homeSectionsSave,.reserved-area-unlock){
+   border-color:#a0e3bb!important;
+  }
+  :is(#appShell,dialog,[role=dialog],.choice-modal) button:is(.mr-command-delete,.danger,.danger-outline,.gps-active,#signalDrivingError,#openOwnPassword,#registerOpenRecovery,.reserved-area-reset){
+   border-color:#ffb1bb!important;
+  }
+  :is(#appShell,dialog,[role=dialog],.choice-modal) button.mr-command-save:not(:disabled){background:var(--mr-command-green)!important;color:var(--mr-command-ivory)!important}
+  :is(#appShell,dialog,[role=dialog],.choice-modal) button.mr-command-delete:not(:disabled){background:var(--mr-command-red)!important;color:var(--mr-command-ivory)!important}
+  :is(#appShell,dialog,[role=dialog],.choice-modal) button.mr-command-save:hover:not(:disabled){background:var(--mr-command-green-hover)!important}
+  :is(#appShell,dialog,[role=dialog],.choice-modal) button.mr-command-delete:hover:not(:disabled){background:var(--mr-command-red-hover)!important}
+  :is(#appShell,dialog,[role=dialog],.choice-modal) :is(button:disabled,button[aria-disabled=true],a[role=button][aria-disabled=true]){
+   border-color:color-mix(in srgb,var(--mr-branch) 37%,#214e5a)!important;
+  }
+ }
+}

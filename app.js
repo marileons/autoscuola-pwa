@@ -81,7 +81,12 @@ const NAV_SECTION_LABELS={auto:"Auto",moto:"Moto","guida-accompagnata":"Guida ac
 function navigationSectionLabel(category){return NAV_SECTION_LABELS[category]||sectionLabel(category)}
 function categoryForView(id){if(id==="studentForm"){if(state.editingStudent)return state.students.find(item=>item.id===state.editingStudent)?.category||state.filter;return state.filter}return student()?.category||state.filter}
 function contextualSubpage(id){if(id==="student")return"Scheda allievo";if(id==="savedMapView")return"Mappa / percorso salvato";return""}
-function updatePageTitle(id){const view=$(id),title=view&&view.querySelector(":scope > .page-context-title");if(!title)return;const section=document.createElement("strong");section.className="page-context-section";section.textContent=navigationSectionLabel(categoryForView(id));title.replaceChildren(section);const subpage=contextualSubpage(id);if(subpage){const detail=document.createElement("span");detail.className="page-context-subpage";detail.textContent=subpage;title.appendChild(detail)}}
+function updatePageTitle(id){const view=$(id);
+ if(view&&(id==="categoryHub"||CATEGORY_CONTEXT_VIEWS.includes(id))){
+  const category=id==="categoryHub"?state.filter:id==="lesson"||id==="savedMapView"?lessonPathContext?.category||categoryForView(id):categoryForView(id);
+  view.dataset.mrPath=category||"";
+ }
+ const title=view&&view.querySelector(":scope > .page-context-title");if(!title)return;const section=document.createElement("strong");section.className="page-context-section";section.textContent=navigationSectionLabel(categoryForView(id));title.replaceChildren(section);const subpage=contextualSubpage(id);if(subpage){const detail=document.createElement("span");detail.className="page-context-subpage";detail.textContent=subpage;title.appendChild(detail)}}
 
 function syncStudentHeader(viewId){const bar=$("activeStudentIdentity"),text=$("activeStudentName");if(!bar||!text)return;const person=student(),visible=["student","lesson","savedMapView"].includes(viewId)&&!!person&&(viewId!=="lesson"||validLessonStudent());text.textContent=visible?(nameOf(person)||"Allievo senza nominativo"):"";bar.hidden=!visible;measureStudentHeader()}
 function measureStudentHeader(){const bar=$("activeStudentIdentity"),header=bar?.closest("header");document.documentElement.style.setProperty("--student-header-height",bar&&!bar.hidden&&header?Math.ceil(header.getBoundingClientRect().height)+"px":"0px")}
@@ -680,7 +685,13 @@ window.LocalLessonActions={reset:resetLocalLessonActions,sync:syncLocalLessonAct
  const shell=document.getElementById('appShell');if(!shell)return;
  const entries=[],ns='http://www.w3.org/2000/svg';
  const kind=source=>{const label=source.textContent.trim().replace(/^[\s\u2190-\u2BFF\uFE0F\u{1F300}-\u{1FAFF}]+/u,'').toUpperCase();return label==='HOME'?'home':/^(?:ANNULLA \/ )?INDIETRO(?: AL REGISTRO)?$/.test(label)||source.id==='backDocumentSection'?'back':null};
- function tag(button){const type=kind(button);if(type&&!button.classList.contains('mr-nav-'+type))button.classList.add('mr-nav-'+type)}
+ function tag(button){
+  const type=kind(button);if(type&&!button.classList.contains('mr-nav-'+type))button.classList.add('mr-nav-'+type);
+  const label=button.textContent.trim().replace(/^[\s\u2190-\u2BFF\uFE0F\u{1F300}-\u{1FAFF}]+/u,'');
+  button.classList.toggle('mr-command-save',/^SALVA(?:\s|$)/i.test(label));
+  button.classList.toggle('mr-command-delete',/^ELIMINA(?:\s|$)/i.test(label));
+ }
+ document.querySelectorAll('button').forEach(tag);
  const menu=document.getElementById('otherFunctions'),grid=document.querySelector('#otherFunctions .other-functions-grid'),reserved=document.getElementById('openUserManagement');
  function reservedLast(){if(menu&&reserved?.isConnected&&menu.contains(reserved)&&menu.lastElementChild!==reserved)menu.append(reserved)}
  for(const view of shell.querySelectorAll('main > .view')){
@@ -700,6 +711,7 @@ window.LocalLessonActions={reset:resetLocalLessonActions,sync:syncLocalLessonAct
  function queue(){if(!queued){queued=true;requestAnimationFrame(refresh)}}
  const observer=new MutationObserver(records=>{let relevant=false;for(const r of records){if(r.type==='childList'){if(r.target===grid||r.target===menu)reservedLast();if(r.target.matches?.('button'))tag(r.target);for(const n of r.addedNodes)if(n.nodeType===1){if(n.matches('button'))tag(n);n.querySelectorAll('button').forEach(tag)}}else if(!r.target.closest('.mr-top-navigation')&&entries.some(e=>r.target===e.source||r.target.contains(e.source)))relevant=true}if(relevant)queue()});
  observer.observe(shell,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden','disabled','style']});
+ observer.observe(document.body,{subtree:true,childList:true});
  shell.addEventListener('click',queue,{capture:true,passive:true});window.MRTopNavigation={refresh};refresh();
 })();
 
