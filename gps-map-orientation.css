@@ -3,6 +3,18 @@
  #liveMap .gps-heading-glyph{width:48px;height:48px;filter:drop-shadow(0 2px 3px #002c4c88)}
  #liveMap .gps-heading-glyph>svg{display:block;width:48px;height:48px;transform-origin:24px 24px;transition:none!important}
  #liveMap .gps-heading-car{display:none}
+ #liveMap .gps-heading-rose #gps-car-paint-v3 stop:nth-child(1){stop-color:#965d71}
+ #liveMap .gps-heading-rose #gps-car-paint-v3 stop:nth-child(2){stop-color:#d693a8}
+ #liveMap .gps-heading-rose #gps-car-paint-v3 stop:nth-child(3){stop-color:#ffe1e8}
+ #liveMap .gps-heading-rose #gps-car-paint-v3 stop:nth-child(4){stop-color:#edb8c7}
+ #liveMap .gps-heading-rose #gps-car-paint-v3 stop:nth-child(5){stop-color:#c18399}
+ #liveMap .gps-heading-rose #gps-car-paint-v3 stop:nth-child(6){stop-color:#8d5065}
+ #liveMap .gps-heading-rose [fill="#7ccaff"]{fill:#ffe4ec}
+ #liveMap .gps-heading-rose [stroke="#1463ad"]{stroke:#a36b80}
+ #liveMap .gps-heading-rose [fill="#2586f3"]{fill:#e6aabd}
+ #liveMap .gps-heading-rose [fill="url(#gps-car-roof-v3)"]{fill:#f5cbd7}
+ #liveMap .gps-heading-rose .initials{fill:#482138}
+ #liveMap .gps-heading-rose .neutral{stroke:#482138}
  #liveMap .gps-heading-unknown{fill:#1478d4;stroke:#fff;stroke-width:4}
  #liveMap .gps-heading-known .gps-heading-car{display:block}
  #liveMap .gps-heading-known .gps-heading-unknown{display:none}

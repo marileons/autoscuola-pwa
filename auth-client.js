@@ -254,7 +254,7 @@
       }
       await loadScript("shared-calendar-exam-report.js?v=site-labels-1");
       await loadScript("student-report-print.js?v=1.21-student-report-print-v1");
-      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-categories.js?v=1.21-register-codes-1", "register-economic-engine.js?v=1.21-register-v2-codes-1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2-codes-1", "register-report.js?v=1.21-register-report-v3-codes-1", "register-backup.js?v=1.21-register-backup-v2-codes-1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6-codes-1", "driving-errors.js?v=1.21-error-symbols-3-place-1-times-1", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2-notes-1", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-window-1-safe-return-1-command-look-2-heading-1-text-contrast-1-ga-course-1-ga-program-2-additional-auto-1-catalog-1-shared-editor-1-progress-1", "examiner-routes-ui.js?v=1.21-exam-routes-v1-manual-gps-1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1-ga-origin-1-ga-program-2", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); if(src==="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"){try{await loadScript("assets/vendor/leaflet-rotate-0.3.0.js?v=1");}catch{/* Optional view extension: keep ordinary Leaflet available. */}finally{window.L?.Map?.mergeOptions({preventPageGestures:false})}try{await loadScript("gps-map-orientation.js?v=3")}catch{window.GpsMapOrientation=null}} }
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-categories.js?v=1.21-register-codes-1", "register-economic-engine.js?v=1.21-register-v2-codes-1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2-codes-1", "register-report.js?v=1.21-register-report-v3-codes-1", "register-backup.js?v=1.21-register-backup-v2-codes-1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6-codes-1", "driving-errors.js?v=1.21-error-symbols-3-place-1-times-1", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2-notes-1", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-window-1-safe-return-1-command-look-2-heading-1-text-contrast-1-ga-course-1-ga-program-2-additional-auto-1-catalog-1-shared-editor-1-progress-1", "examiner-routes-ui.js?v=1.21-exam-routes-v1-manual-gps-1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1-ga-origin-1-ga-program-2", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); if(src==="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"){try{await loadScript("assets/vendor/leaflet-rotate-0.3.0.js?v=1");}catch{/* Optional view extension: keep ordinary Leaflet available. */}finally{window.L?.Map?.mergeOptions({preventPageGestures:false})}try{await loadScript("gps-map-orientation.js?v=4")}catch{window.GpsMapOrientation=null}} }
       if (window.AgendaAppReady) await window.AgendaAppReady;
       await loadScript("shared-calendar-store.js?v=1");
       await loadScript("lesson-secretary-transfer-ui.js?v=site-labels-1");
@@ -503,28 +503,40 @@
       actions.append(action("Revoca definitivamente", async () => { if (!confirm(`Revocare definitivamente l’accesso di ${user.name}?`)) return; try { await api(`/api/users/${encodeURIComponent(user.id)}`, { method: "DELETE", body: "{}" }); message("Accesso revocato."); await refreshUsers(); } catch (error) { message(error.message, true); } }, "danger"));
     }
     row.append(name, detail, actions);
-    if(currentUser?.capabilities?.managePrivilegedUsers)row.append(markerInitialsForm(user));
+    if(currentUser?.capabilities?.managePrivilegedUsers)row.append(markerSettingsForm(user));
     return row;
   }
-  function markerInitialsForm(user) {
+  function markerSettingsForm(user) {
     const form=document.createElement("form"),label=document.createElement("label"),input=document.createElement("input"),help=document.createElement("small"),button=document.createElement("button");
     form.className="user-marker-initials";label.textContent="Sigla sulla macchinina";
     input.type="text";input.name="gpsMarkerInitials";input.maxLength=2;input.pattern="[A-Za-z]{2}";input.autocomplete="off";input.spellcheck=false;input.setAttribute("autocapitalize","characters");input.value=user.gpsMarkerInitials||"";
     input.oninput=()=>{input.value=input.value.replace(/[a-z]/g,letter=>letter.toUpperCase())};
     input.title="Due lettere A–Z, oppure vuoto per rimuovere la sigla";label.append(input);
+    const styleLabel=document.createElement("label"),style=document.createElement("select");
+    styleLabel.textContent="Stile macchinina";style.name="gpsMarkerStyle";
+    for(const [value,text] of [["dark","Scura · sigla bianca"],["rose","Rosa cipria · sigla prugna"]]){
+      const option=document.createElement("option");option.value=value;option.textContent=text;style.append(option);
+    }
+    style.value=user.gpsMarkerStyle==="rose"?"rose":"dark";styleLabel.append(style);
     help.className="muted";help.textContent="Due lettere A–Z. Lascia vuoto per rimuovere. Nessun obbligo di unicità.";
-    button.type="submit";button.className="secondary";button.textContent="SALVA SIGLA";form.append(label,button,help);
+    button.type="submit";button.className="secondary";button.textContent="SALVA MACCHININA";form.append(label,styleLabel,button,help);
     form.onsubmit=async event=>{event.preventDefault();if(button.disabled||!form.reportValidity())return;
       if(!currentUser?.capabilities?.managePrivilegedUsers)return;
-      const actor=currentUser.id,epoch=authEpoch,value=input.value.trim().toUpperCase();button.disabled=true;input.disabled=true;
+      const actor=currentUser.id,epoch=authEpoch,value=input.value.trim().toUpperCase(),settings={};
+      if(value!==(user.gpsMarkerInitials||""))settings.gpsMarkerInitials=value;
+      if(style.value!==(user.gpsMarkerStyle||"dark"))settings.gpsMarkerStyle=style.value;
+      if(!Object.keys(settings).length)return;
+      button.disabled=true;input.disabled=true;style.disabled=true;
       try {
-        const data=await api(`/api/users/${encodeURIComponent(user.id)}`,{method:"PATCH",body:JSON.stringify({gpsMarkerInitials:value})});
+        const data=await api(`/api/users/${encodeURIComponent(user.id)}`,{method:"PATCH",body:JSON.stringify(settings)});
         if(actor!==currentUser?.id||epoch!==authEpoch)return;
-        if(data?.user?.id!==user.id||(data.user.gpsMarkerInitials??null)!==(value||null))throw new Error("Risposta della sigla non valida. Aggiorna la Gestione utenti.");
-        if(user.id===currentUser.id)applyUser({...currentUser,gpsMarkerInitials:data.user.gpsMarkerInitials});
-        message(value?"Sigla salvata.":"Sigla rimossa.");await refreshUsers();
+        const saved=data?.user;
+        if(saved?.id!==user.id||(Object.hasOwn(settings,"gpsMarkerInitials")&&(saved.gpsMarkerInitials??null)!==(value||null))||
+          (Object.hasOwn(settings,"gpsMarkerStyle")&&saved.gpsMarkerStyle!==settings.gpsMarkerStyle))throw new Error("Risposta delle impostazioni GPS non valida. Aggiorna la Gestione utenti.");
+        if(user.id===currentUser.id)applyUser({...currentUser,gpsMarkerInitials:saved.gpsMarkerInitials,gpsMarkerStyle:saved.gpsMarkerStyle});
+        message("Impostazioni macchinina salvate.");await refreshUsers();
       }catch(error){if(actor===currentUser?.id&&epoch===authEpoch)message(error.message,true)}
-      finally{button.disabled=false;input.disabled=false}
+      finally{button.disabled=false;input.disabled=false;style.disabled=false}
     };
     return form;
   }
@@ -638,7 +650,7 @@
     logout,
     updateAccountSummary,
     currentUser: () => currentUser,
-    gpsMarkerProfile: () => markerProfileSuppressed || !currentUser ? null : {id:currentUser.id,gpsMarkerInitials:currentUser.gpsMarkerInitials},
+    gpsMarkerProfile: () => markerProfileSuppressed || !currentUser ? null : {id:currentUser.id,gpsMarkerInitials:currentUser.gpsMarkerInitials,gpsMarkerStyle:currentUser.gpsMarkerStyle},
     lockRegisterVault,
     lockReservedArea
   };
