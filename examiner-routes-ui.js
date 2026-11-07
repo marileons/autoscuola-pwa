@@ -10,13 +10,79 @@
   function openExaminer(id){examinerId=id;$("examinerRoutesSection").classList.remove("hidden");$("examinerShareActions").classList.remove("hidden");renderList()}
   function closeExaminer(){examinerId=null;$("examinerRoutesSection").classList.add("hidden");$("examinerShareActions").classList.add("hidden")}
   function blankDraft(idValue=crypto.randomUUID()){return{id:idValue,examinerId,sequence:routes().length+1,title:"",note:"",startedAt:Date.now(),endedAt:null,durationMs:0,distanceMetres:0,points:[],segments:[],status:"saved",report:core.normalizeReport(null),createdAt:Date.now(),updatedAt:Date.now()}}
-  function openRecording(item){draft=item;routeId=item.id;show("examinerRouteView");$("examinerRouteExaminer").textContent=examinerName(examiner());$("examinerRouteTitleInput").value=item.title;$("examinerRouteZone").value=item.zone||"";$("examinerRouteNote").value=item.note;$("examinerRouteRecordingBadge").classList.remove("hidden");$("examinerRouteRecordingActions").classList.remove("hidden");$("examinerRouteSavedActions").classList.add("hidden");$("registerAnotherExaminerRoute").classList.add("hidden");draw(item.points);updateMetrics(item);clearInterval(timer);timer=setInterval(()=>updateMetrics(draft),1000)}
+  function syncRecordingControls(){
+    const recording=watch!==null;
+    $("examinerRouteRecordingBadge").classList.toggle("hidden",!recording);
+    $("finishExaminerRoute").textContent=recording?"FERMA GPS":"AVVIA GPS";
+  }
+  function openRecording(item){draft=item;routeId=item.id;show("examinerRouteView");$("examinerRouteExaminer").textContent=examinerName(examiner());$("examinerRouteTitleInput").value=item.title;$("examinerRouteZone").value=item.zone||"";$("examinerRouteNote").value=item.note;syncRecordingControls();$("examinerRouteGpsStatus").textContent="GPS non attivo. Premi AVVIA GPS per registrare il percorso.";$("examinerRouteRecordingActions").classList.remove("hidden");$("examinerRouteSavedActions").classList.add("hidden");$("registerAnotherExaminerRoute").classList.add("hidden");draw(item.points);updateMetrics(item)}
   function persistDraftMeta(){if(!draft)return;draft.title=$("examinerRouteTitleInput").value.trim();draft.zone=$("examinerRouteZone").value.trim();draft.note=$("examinerRouteNote").value.trim();draft.updatedAt=Date.now();store.saveDraft(accountId(),examinerId,draft)}
-  function newRoute(){if(routes().length>=core.MAX_ROUTES)return alert(`Limite di ${core.MAX_ROUTES} percorsi raggiunto. Elimina manualmente un percorso.`);if(!window.AgendaGpsCoordinator.acquire("examiner"))return alert("Un'altra registrazione GPS è già attiva. Termina quella corrente prima di iniziarne un'altra.");draft=blankDraft();store.saveDraft(accountId(),examinerId,draft);openRecording(draft);startGps()}
-  function resumeDraft(idValue){if(!window.AgendaGpsCoordinator.acquire("examiner"))return alert("Un'altra registrazione GPS è già attiva.");const item=store.drafts(accountId(),examinerId).find(x=>x.id===idValue);if(!item)return;draft=item;openRecording(item);startGps(true)}
-  function startGps(resuming=false){if(!navigator.geolocation){$("examinerRouteGpsStatus").textContent="Geolocalizzazione non disponibile.";return}let needsBreak=resuming;watch=navigator.geolocation.watchPosition(position=>{const p={lat:Number(position.coords.latitude),lng:Number(position.coords.longitude),accuracy:Number(position.coords.accuracy),time:Number(position.timestamp)||Date.now(),breakBefore:false};if(!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||!Number.isFinite(p.accuracy))return;if(p.accuracy>100){needsBreak=true;$("examinerRouteGpsStatus").textContent="GPS attivo · attendo un segnale più preciso";return}const decision=evaluateGpsPoint(draft.points.at(-1),p,needsBreak,draft.points.at(-2));if(!decision.accept){if(decision.reason==="impossible")needsBreak=true;return}p.breakBefore=decision.breakBefore;draft.points.push(p);draft.updatedAt=Date.now();draft.distanceMetres=core.routeDistance(draft.points);needsBreak=false;store.saveDraft(accountId(),examinerId,draft);draw(draft.points);updateMetrics(draft);$("examinerRouteGpsStatus").textContent=`GPS attivo · ${draft.points.length} punti validi`},error=>{$("examinerRouteGpsStatus").textContent=error.code===1?"Permesso GPS negato.":"Posizione temporaneamente non disponibile. La bozza resta salva."},{enableHighAccuracy:true,maximumAge:0,timeout:20000});if(typeof window.requestGpsWakeLock==="function")window.requestGpsWakeLock();$("examinerRouteGpsStatus").textContent="GPS attivo · acquisizione della posizione…"}
-  function stopGps(){if(watch!==null&&navigator.geolocation)navigator.geolocation.clearWatch(watch);watch=null;clearInterval(timer);timer=null;window.AgendaGpsCoordinator.release("examiner");if(typeof window.releaseGpsWakeLock==="function")window.releaseGpsWakeLock()}
-  async function finish(){if(!draft)return;stopGps();if(draft.points.length<2){const action=await chooseAction("Percorso GPS non valido","Sono stati acquisiti meno di due punti validi.",[{label:"TORNA ALLA REGISTRAZIONE",value:"resume"},{label:"SALVA COMUNQUE SENZA PERCORSO VALIDO",value:"save"},{label:"ELIMINA BOZZA",value:"delete",className:"danger"}]);if(action==="resume"){if(window.AgendaGpsCoordinator.acquire("examiner"))startGps(true);return}if(action==="delete"){store.deleteDraft(accountId(),examinerId,draft.id);draft=null;show("examinerForm");renderList();return}if(action!=="save")return;draft.status="saved_without_valid_route"}draft.title=$("examinerRouteTitleInput").value.trim();draft.zone=$("examinerRouteZone").value.trim();draft.note=$("examinerRouteNote").value.trim();draft.endedAt=Date.now();draft.durationMs=Math.max(0,draft.endedAt-draft.startedAt);draft.distanceMetres=core.routeDistance(draft.points);draft.updatedAt=Date.now();const saved=store.saveRoute(accountId(),examinerId,draft);store.deleteDraft(accountId(),examinerId,draft.id);draft=null;openRoute(saved.id);$("registerAnotherExaminerRoute").classList.toggle("hidden",routes().length>=core.MAX_ROUTES);$("examinerRouteGpsStatus").textContent="Percorso salvato sul dispositivo."}
+  function newRoute(){
+    if(routes().length>=core.MAX_ROUTES)return alert(`Limite di ${core.MAX_ROUTES} percorsi raggiunto. Elimina manualmente un percorso.`);
+    const item=blankDraft();
+    store.saveDraft(accountId(),examinerId,item);
+    openRecording(item);
+  }
+  function resumeDraft(idValue){
+    const item=store.drafts(accountId(),examinerId).find(x=>x.id===idValue);
+    if(!item)return;
+    openRecording(item);
+    startGps();
+  }
+  function startGps(){
+    if(!draft||watch!==null)return;
+    const status=$("examinerRouteGpsStatus"),geo=navigator.geolocation;
+    if(!geo){status.textContent="Geolocalizzazione non disponibile.";return}
+    if(!window.AgendaGpsCoordinator.acquire("examiner")){
+      status.textContent="Un'altra registrazione GPS è già attiva. Termina quella corrente prima di iniziarne un'altra.";
+      return;
+    }
+    let needsBreak=draft.points.length>0,watchId;
+    try{
+      watchId=geo.watchPosition(position=>{
+        if(watch!==watchId)return;
+        const p={lat:Number(position.coords.latitude),lng:Number(position.coords.longitude),accuracy:Number(position.coords.accuracy),time:Number(position.timestamp)||Date.now(),breakBefore:false};
+        if(!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||!Number.isFinite(p.accuracy))return;
+        if(p.accuracy>100){needsBreak=true;status.textContent="GPS attivo · attendo un segnale più preciso";return}
+        const decision=evaluateGpsPoint(draft.points.at(-1),p,needsBreak,draft.points.at(-2));
+        if(!decision.accept){if(decision.reason==="impossible")needsBreak=true;return}
+        p.breakBefore=decision.breakBefore;
+        draft.points.push(p);
+        draft.updatedAt=Date.now();
+        draft.distanceMetres=core.routeDistance(draft.points);
+        needsBreak=false;
+        store.saveDraft(accountId(),examinerId,draft);
+        draw(draft.points);
+        updateMetrics(draft);
+        status.textContent=`GPS attivo · ${draft.points.length} punti validi`;
+      },error=>{
+        if(watch!==watchId)return;
+        status.textContent=error.code===1?"Permesso GPS negato.":"Posizione temporaneamente non disponibile. La bozza resta salva.";
+      },{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+    }catch{
+      window.AgendaGpsCoordinator.release("examiner");
+      status.textContent="Impossibile avviare il GPS.";
+      return;
+    }
+    watch=watchId;
+    if(!needsBreak)draft.startedAt=Date.now();
+    timer=setInterval(()=>updateMetrics(draft),1000);
+    updateMetrics(draft);
+    syncRecordingControls();
+    if(typeof window.requestGpsWakeLock==="function")window.requestGpsWakeLock();
+    status.textContent="GPS attivo · acquisizione della posizione…";
+  }
+  function stopGps(){
+    if(watch===null)return;
+    const watchId=watch;
+    watch=null;
+    navigator.geolocation.clearWatch(watchId);
+    clearInterval(timer);
+    timer=null;
+    window.AgendaGpsCoordinator.release("examiner");
+    if(typeof window.releaseGpsWakeLock==="function")window.releaseGpsWakeLock();
+  }
+  async function finish(){if(!draft)return;stopGps();syncRecordingControls();$("examinerRouteGpsStatus").textContent="GPS fermato.";if(draft.points.length<2){const action=await chooseAction("Percorso GPS non valido","Sono stati acquisiti meno di due punti validi.",[{label:"TORNA ALLA REGISTRAZIONE",value:"resume"},{label:"SALVA COMUNQUE SENZA PERCORSO VALIDO",value:"save"},{label:"ELIMINA BOZZA",value:"delete",className:"danger"}]);if(action==="resume"){startGps();return}if(action==="delete"){store.deleteDraft(accountId(),examinerId,draft.id);draft=null;show("examinerForm");renderList();return}if(action!=="save")return;draft.status="saved_without_valid_route"}draft.title=$("examinerRouteTitleInput").value.trim();draft.zone=$("examinerRouteZone").value.trim();draft.note=$("examinerRouteNote").value.trim();draft.endedAt=Date.now();draft.durationMs=Math.max(0,draft.endedAt-draft.startedAt);draft.distanceMetres=core.routeDistance(draft.points);draft.updatedAt=Date.now();const saved=store.saveRoute(accountId(),examinerId,draft);store.deleteDraft(accountId(),examinerId,draft.id);draft=null;openRoute(saved.id);$("registerAnotherExaminerRoute").classList.toggle("hidden",routes().length>=core.MAX_ROUTES);$("examinerRouteGpsStatus").textContent="Percorso salvato sul dispositivo."}
   async function cancelRecording(){const action=await chooseAction("Annulla registrazione","La bozza e tutti i punti acquisiti saranno eliminati.",[{label:"TORNA ALLA REGISTRAZIONE",value:"back"},{label:"ELIMINA BOZZA",value:"delete",className:"danger"}]);if(action!=="delete")return;stopGps();store.deleteDraft(accountId(),examinerId,draft.id);draft=null;show("examinerForm");renderList()}
   async function deleteDraft(idValue){const action=await chooseAction("Elimina bozza","Eliminare definitivamente la bozza GPS?",[{label:"ELIMINA",value:"delete",className:"danger"},{label:"ANNULLA",value:"cancel"}]);if(action==="delete"){store.deleteDraft(accountId(),examinerId,idValue);renderList()}}
   async function deleteRoute(idValue){const action=await chooseAction("Elimina percorso","Saranno eliminati percorso, punti, mappa, report e cache specifica. Gli altri percorsi resteranno invariati.",[{label:"ELIMINA",value:"delete",className:"danger"},{label:"ANNULLA",value:"cancel"}]);if(action==="delete"){store.deleteRoute(accountId(),examinerId,idValue);renderList()}}
@@ -62,7 +128,7 @@
   function mergeRoutes(existing,incoming){return core.mergeRoutes(existing,incoming,examinerId)}
   async function importExaminerFile(file){let data;try{data=await readJsonFile(file)}catch{}if(!data||data.app!==APP_NAME||data.type!=="examiner"||data.formatVersion!==1||!data.examiner||!Array.isArray(data.routes)){alert("File esaminatore non valido o versione non supportata.");return}const imported={id:String(data.examiner.id||uid()),firstName:String(data.examiner.firstName||""),lastName:String(data.examiner.lastName||""),notes:String(data.examiner.notes||""),habits:Array.isArray(data.examiner.habits)?data.examiner.habits.map(value=>String(value).slice(0,500)):[]},normalizedRoutes=core.normalizeRoutes(data.routes,imported.id),duplicate=state.examiners.find(item=>normalizedPersonPart(item.firstName)===normalizedPersonPart(imported.firstName)&&normalizedPersonPart(item.lastName)===normalizedPersonPart(imported.lastName));let action="copy";if(duplicate)action=await chooseAction("Esaminatore già presente",`${examinerName(duplicate)} esiste già nell'archivio.`,[{label:"UNISCI CONTROLLANDO I PERCORSI",value:"merge"},{label:"CREA NUOVA SCHEDA",value:"copy",className:"secondary"},{label:"ANNULLA",value:"cancel",className:"secondary"}]);if(action==="cancel")return;const targetId=action==="merge"?duplicate.id:uid(),target=action==="merge"?duplicate:{...imported,id:targetId};let routesToSave=normalizedRoutes.map(route=>core.normalizeRoute({...route,examinerId:targetId}));if(action==="merge"){try{routesToSave=mergeRoutes(store.routes(accountId(),targetId),routesToSave)}catch(error){alert(error.message);return}duplicate.notes=[duplicate.notes,imported.notes].filter(Boolean).join("\n");duplicate.habits=[...new Set([...duplicate.habits,...imported.habits])]}else state.examiners.push(target);saveExaminers();const archive=store.read(accountId());archive.examiners[targetId]=routesToSave;store.write(accountId(),archive);for(const raw of Array.isArray(data.drafts)?data.drafts:[])store.saveDraft(accountId(),targetId,core.normalizeRoute({...raw,id:uid(),examinerId:targetId}));renderExaminers();alert(action==="merge"?"Scheda esaminatore unita senza duplicare gli ID dei percorsi.":"Scheda esaminatore importata come nuova.")}
   async function beforeDeleteExaminer(idValue){const count=store.count(accountId(),idValue);if(!count)return true;const action=await chooseAction("Esaminatore con percorsi GPS",`Questo esaminatore contiene ${count} percorsi. Saranno eliminati definitivamente con punti, mappe e report. Esegui prima un backup se vuoi conservarli.`,[{label:"ELIMINA ESAMINATORE E PERCORSI",value:"delete",className:"danger"},{label:"ANNULLA",value:"cancel"}]);if(action!=="delete")return false;store.deleteExaminer(accountId(),idValue);return true}
-  function bind(){window.AgendaGpsCoordinator=window.AgendaGpsCoordinator||core.createGpsCoordinator();const lessonGpsHandler=$("startGps").onclick;$("startGps").onclick=()=>{if(state.watch===null&&!window.AgendaGpsCoordinator.acquire("lesson")){updateGpsUi("Un'altra registrazione GPS è già attiva.");return}lessonGpsHandler();if(state.watch===null)window.AgendaGpsCoordinator.release("lesson")};$("newExaminerRoute").onclick=newRoute;$("finishExaminerRoute").onclick=finish;$("cancelExaminerRoute").onclick=cancelRecording;$("backExaminerRoute").onclick=()=>{if(watch!==null)return alert("Termina o annulla la registrazione prima di uscire.");show("examinerForm");renderList()};$("examinerRouteHome").onclick=()=>{if(watch!==null)return alert("Termina o annulla la registrazione prima di uscire.");show("home")};$("saveExaminerRouteMeta").onclick=saveMeta;$("generateExaminerRoadReport").onclick=generateReport;$("resumeExaminerRoadReport").onclick=generateReport;$("retryExaminerRoadReport").onclick=generateReport;$("stopExaminerRoadReport").onclick=()=>reportAbort?.abort();$("printExaminerRoadReport").onclick=printReport;$("registerAnotherExaminerRoute").onclick=newRoute;$("shareExaminer").onclick=shareExaminer;$("exportExaminerPdf").onclick=exportExaminerPdf;$("chooseExaminerFile").onclick=()=>$("examinerFile").click();$("examinerFile").onchange=async event=>{const file=event.target.files[0];event.target.value="";if(file)await importExaminerFile(file)}}
+  function bind(){window.AgendaGpsCoordinator=window.AgendaGpsCoordinator||core.createGpsCoordinator();const lessonGpsHandler=$("startGps").onclick;$("startGps").onclick=()=>{if(state.watch===null&&!window.AgendaGpsCoordinator.acquire("lesson")){updateGpsUi("Un'altra registrazione GPS è già attiva.");return}lessonGpsHandler();if(state.watch===null)window.AgendaGpsCoordinator.release("lesson")};$("newExaminerRoute").onclick=newRoute;$("finishExaminerRoute").onclick=()=>watch===null?startGps():finish();$("cancelExaminerRoute").onclick=cancelRecording;$("backExaminerRoute").onclick=()=>{if(watch!==null)return alert("Termina o annulla la registrazione prima di uscire.");show("examinerForm");renderList()};$("examinerRouteHome").onclick=()=>{if(watch!==null)return alert("Termina o annulla la registrazione prima di uscire.");show("home")};$("saveExaminerRouteMeta").onclick=saveMeta;$("generateExaminerRoadReport").onclick=generateReport;$("resumeExaminerRoadReport").onclick=generateReport;$("retryExaminerRoadReport").onclick=generateReport;$("stopExaminerRoadReport").onclick=()=>reportAbort?.abort();$("printExaminerRoadReport").onclick=printReport;$("registerAnotherExaminerRoute").onclick=newRoute;$("shareExaminer").onclick=shareExaminer;$("exportExaminerPdf").onclick=exportExaminerPdf;$("chooseExaminerFile").onclick=()=>$("examinerFile").click();$("examinerFile").onchange=async event=>{const file=event.target.files[0];event.target.value="";if(file)await importExaminerFile(file)}}
   function snapshot(account){const data=store.snapshot(account),drafts={},storedExaminers=(()=>{try{return JSON.parse(localStorage.getItem(EXAMINERS_KEY)||"[]")}catch{return[]}})(),ids=new Set([...Object.keys(data.examiners),...state.examiners.map(item=>item.id),...storedExaminers.map(item=>String(item.id))]);for(const targetId of ids){const values=store.drafts(account,targetId);if(values.length)drafts[targetId]=values}return{...data,drafts}}
   function restore(account,snapshotValue){const current=store.snapshot(account),ids=new Set([...Object.keys(current.examiners),...state.examiners.map(item=>String(item.id)),...Object.keys(snapshotValue?.drafts||{})]);for(const targetId of ids)for(const existing of store.drafts(account,targetId))store.deleteDraft(account,targetId,existing.id);const restored=store.restore(account,snapshotValue);for(const [targetExaminerId,items]of Object.entries(snapshotValue?.drafts||{}))for(const item of items)store.saveDraft(account,targetExaminerId,item);return restored}
   window.ExaminerRoutesUI={bind,openExaminer,closeExaminer,beforeDeleteExaminer,isRecording:()=>watch!==null,stopAll(){stopGps();reportAbort?.abort();closeExaminer()},snapshot,restore,examinerPdfHtml,importExaminerFile};bind();
