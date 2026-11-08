@@ -503,12 +503,15 @@
       actions.append(action("Revoca definitivamente", async () => { if (!confirm(`Revocare definitivamente l’accesso di ${user.name}?`)) return; try { await api(`/api/users/${encodeURIComponent(user.id)}`, { method: "DELETE", body: "{}" }); message("Accesso revocato."); await refreshUsers(); } catch (error) { message(error.message, true); } }, "danger"));
     }
     row.append(name, detail, actions);
-    if(currentUser?.capabilities?.managePrivilegedUsers)row.append(markerSettingsForm(user));
+    if(canManageMarker(user.role))row.append(markerSettingsForm(user));
     return row;
   }
-  function markerSettingsForm(user) {
-    const form=document.createElement("form"),label=document.createElement("label"),input=document.createElement("input"),help=document.createElement("small"),button=document.createElement("button");
-    form.className="user-marker-initials";label.textContent="Sigla sulla macchinina";
+  function canManageMarker(role) {
+    return currentUser?.capabilities?.managePrivilegedUsers===true && ["ISTRUTTORE","ADMIN"].includes(role);
+  }
+  function markerSettingsFields(container,user={}) {
+    const label=document.createElement("label"),input=document.createElement("input"),help=document.createElement("small");
+    label.textContent="Sigla GPS";
     input.type="text";input.name="gpsMarkerInitials";input.maxLength=2;input.pattern="[A-Za-z]{2}";input.autocomplete="off";input.spellcheck=false;input.setAttribute("autocapitalize","characters");input.value=user.gpsMarkerInitials||"";
     input.oninput=()=>{input.value=input.value.replace(/[a-z]/g,letter=>letter.toUpperCase())};
     input.title="Due lettere A–Z, oppure vuoto per rimuovere la sigla";label.append(input);
@@ -519,19 +522,31 @@
     }
     style.value=user.gpsMarkerStyle||"dark";styleLabel.append(style);
     help.className="muted";help.textContent="Due lettere A–Z. Lascia vuoto per rimuovere. Nessun obbligo di unicità.";
-    button.type="submit";button.className="secondary";button.textContent="SALVA MACCHININA";form.append(label,styleLabel,button,help);
+    container.append(label,styleLabel,help);
+    return {input,style};
+  }
+  function markerSettingsValues(container,user={}) {
+    const value=container.querySelector('[name="gpsMarkerInitials"]').value.trim().toUpperCase();
+    const style=container.querySelector('[name="gpsMarkerStyle"]').value,settings={};
+    if(value!==(user.gpsMarkerInitials||""))settings.gpsMarkerInitials=value;
+    if(style!==(user.gpsMarkerStyle||"dark"))settings.gpsMarkerStyle=style;
+    return settings;
+  }
+  function markerSettingsForm(user) {
+    const form=document.createElement("form"),button=document.createElement("button");
+    form.className="user-marker-initials";
+    const {input,style}=markerSettingsFields(form,user);
+    button.type="submit";button.className="secondary";button.textContent="SALVA MACCHININA";form.insertBefore(button,form.lastElementChild);
     form.onsubmit=async event=>{event.preventDefault();if(button.disabled||!form.reportValidity())return;
-      if(!currentUser?.capabilities?.managePrivilegedUsers)return;
-      const actor=currentUser.id,epoch=authEpoch,value=input.value.trim().toUpperCase(),settings={};
-      if(value!==(user.gpsMarkerInitials||""))settings.gpsMarkerInitials=value;
-      if(style.value!==(user.gpsMarkerStyle||"dark"))settings.gpsMarkerStyle=style.value;
+      if(!canManageMarker(user.role))return;
+      const actor=currentUser.id,epoch=authEpoch,settings=markerSettingsValues(form,user);
       if(!Object.keys(settings).length)return;
       button.disabled=true;input.disabled=true;style.disabled=true;
       try {
         const data=await api(`/api/users/${encodeURIComponent(user.id)}`,{method:"PATCH",body:JSON.stringify(settings)});
         if(actor!==currentUser?.id||epoch!==authEpoch)return;
         const saved=data?.user;
-        if(saved?.id!==user.id||(Object.hasOwn(settings,"gpsMarkerInitials")&&(saved.gpsMarkerInitials??null)!==(value||null))||
+        if(saved?.id!==user.id||(Object.hasOwn(settings,"gpsMarkerInitials")&&(saved.gpsMarkerInitials??null)!==(settings.gpsMarkerInitials||null))||
           (Object.hasOwn(settings,"gpsMarkerStyle")&&saved.gpsMarkerStyle!==settings.gpsMarkerStyle))throw new Error("Risposta delle impostazioni GPS non valida. Aggiorna la Gestione utenti.");
         if(user.id===currentUser.id)applyUser({...currentUser,gpsMarkerInitials:saved.gpsMarkerInitials,gpsMarkerStyle:saved.gpsMarkerStyle});
         message("Impostazioni macchinina salvate.");await refreshUsers();
@@ -553,6 +568,12 @@
     document.getElementById("temporaryPasswordValue").textContent = data.temporaryPassword;
     document.getElementById("temporaryPasswordExpiry").textContent = `Scade: ${new Date(data.temporaryPasswordExpiresAt).toLocaleString("it-IT")}`;
     document.getElementById("temporaryPasswordModal").classList.remove("hidden");
+  }
+  function syncNewUserMarkerFields() {
+    const container=document.getElementById("newUserMarkerSettings");
+    const enabled=reservedUnlocked&&canManageMarker(document.getElementById("newUserRole").value);
+    container.hidden=!enabled;
+    for(const field of container.querySelectorAll("input,select"))field.disabled=!enabled;
   }
   function configureUserManagementForm() {
     document.getElementById("unlockReservedArea")?.remove();
@@ -577,6 +598,7 @@
     document.getElementById("newUserRoleLabel").classList.toggle("hidden", manager);
     document.getElementById("newUserOperatorPasswordLabel").classList.toggle("hidden", !manager);
     document.getElementById("newUserOperatorPassword").required = manager;
+    syncNewUserMarkerFields();
   }
 
   async function update(id, changes) {
@@ -588,17 +610,18 @@
     event.preventDefault();
     const form = event.currentTarget, submit = form.querySelector("button[type=submit]"); submit.disabled = true;
     try {
-      const manager = currentUser?.role === "USER_MANAGER";
+      const manager = currentUser?.role === "USER_MANAGER", role=document.getElementById("newUserRole").value;
       const payload = {
         name: document.getElementById("newUserName").value,
         username: document.getElementById("newUsername").value,
         employmentType: document.getElementById("newUserEmploymentType").value,
         employmentEffectiveFrom: document.getElementById("newUserEmploymentEffectiveFrom").value,
-        ...(manager ? { operatorPassword: document.getElementById("newUserOperatorPassword").value } : { password: document.getElementById("newUserPassword").value, role: document.getElementById("newUserRole").value })
+        ...(manager ? { operatorPassword: document.getElementById("newUserOperatorPassword").value } : { password: document.getElementById("newUserPassword").value, role, ...(reservedUnlocked&&canManageMarker(role)?markerSettingsValues(document.getElementById("newUserMarkerSettings")):{}) })
       };
       const data = await api(manager ? "/api/user-management/users" : "/api/users", { method: "POST", body: JSON.stringify(payload) });
       if (data.temporaryPassword) showTemporaryPassword(data);
       form.reset();
+      syncNewUserMarkerFields();
       document.getElementById("newUserEmploymentEffectiveFrom").value = mondayIso();
       message("Utente creato e attivo."); await refreshUsers();
     } catch (error) { message(error.message, true); }
@@ -609,6 +632,9 @@
     document.getElementById("openUserManagement").onclick = openUsers;
     document.getElementById("backUserManagement").onclick = async () => { await lockReservedArea(); window.show("home"); };
     document.getElementById("createUserForm").onsubmit = createUser;
+    markerSettingsFields(document.getElementById("newUserMarkerSettings"));
+    document.getElementById("newUserRole").addEventListener("change",syncNewUserMarkerFields);
+    syncNewUserMarkerFields();
     document.getElementById("openOwnPassword").onclick = openOwnPassword;
     document.getElementById("cancelOwnPassword").onclick = closeOwnPassword;
     document.getElementById("ownPasswordForm").onsubmit = changeOwnPassword;

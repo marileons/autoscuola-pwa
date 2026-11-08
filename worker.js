@@ -463,10 +463,40 @@ async function listUsers(env, admin) {
   const result = await env.DB.prepare(userSelect("ORDER BY u.name COLLATE NOCASE")).all();
   return json({ users: result.results.map(publicUser) });
 }
+function hasGpsMarkerSettings(body) {
+  return Object.hasOwn(body, "gpsMarkerInitials") || Object.hasOwn(body, "gpsMarkerStyle");
+}
+function markerSettingsAllowed(admin, role) {
+  return isPrimaryAdmin(admin) && ["ISTRUTTORE", "ADMIN"].includes(role);
+}
+function markerSettingsDenied() {
+  return json({ error: "Impostazioni GPS riservate all’Amministratore principale per profili istruttore e amministratore." }, 403);
+}
+function collectGpsMarkerSettings(body, admin, role, hasColumn, updates, values) {
+  if (!hasGpsMarkerSettings(body)) return null;
+  if (!markerSettingsAllowed(admin, role)) return markerSettingsDenied();
+  if (Object.hasOwn(body, "gpsMarkerInitials")) {
+    const raw = body.gpsMarkerInitials;
+    if (typeof raw !== "string" || (raw.trim() !== "" && !/^[A-Za-z]{2}$/.test(raw.trim()))) return json({ error: "Inserisci esattamente due lettere A–Z oppure lascia vuoto per rimuovere la sigla." }, 400);
+    if (!hasColumn("gps_marker_initials")) return json({ error: "La configurazione della sigla richiede l’aggiornamento del database.", code: "GPS_MARKER_SCHEMA_UNAVAILABLE" }, 503);
+    updates.push("gps_marker_initials=?"); values.push(raw.trim() ? raw.trim().toUpperCase() : null);
+  }
+  if (Object.hasOwn(body, "gpsMarkerStyle")) {
+    const style = body.gpsMarkerStyle;
+    const panda = style === "panda-yellow" || style === "panda-striped";
+    if (!panda && style !== "dark" && style !== "rose") return json({ error: "Stile della macchinina non valido." }, 400);
+    if (!hasColumn("gps_marker_style")) return json({ error: "La configurazione dello stile richiede l’aggiornamento del database.", code: "GPS_MARKER_STYLE_SCHEMA_UNAVAILABLE" }, 503);
+    const hasPandaStyle = hasColumn("gps_marker_panda_style");
+    if (panda && !hasPandaStyle) return json({ error: "Gli stili Panda richiedono l’aggiornamento del database.", code: "GPS_MARKER_STYLE_SCHEMA_UNAVAILABLE" }, 503);
+    if (!panda) { updates.push("gps_marker_style=?"); values.push(style); }
+    if (hasPandaStyle) { updates.push("gps_marker_panda_style=?"); values.push(panda ? style : null); }
+  }
+  return null;
+}
 async function createUser(request, env, admin) {
   const denied = requireAdmin(admin); if (denied) return denied;
   const body = await request.json();
-  if (!strictBody(body, ["username", "name", "password", "role", "employmentType", "employmentEffectiveFrom"])) return json({ error: "La richiesta contiene campi non consentiti." }, 400);
+  if (!strictBody(body, ["username", "name", "password", "role", "employmentType", "employmentEffectiveFrom", "gpsMarkerInitials", "gpsMarkerStyle"])) return json({ error: "La richiesta contiene campi non consentiti." }, 400);
   const username = normalizeUsername(body.username), name = String(body.name || "").trim(), password = String(body.password || "");
   if (body.role !== undefined && !AUTHORIZATION_ROLES.includes(body.role)) return json({ error: "Ruolo non consentito." }, 400);
   const role = body.role || "ISTRUTTORE";
@@ -481,11 +511,20 @@ async function createUser(request, env, admin) {
   if (!requestedEffectiveFrom || employmentEffectiveFrom < mondayOf(today())) {
     return json({ error: "La decorrenza lavorativa non può precedere la settimana corrente." }, 400);
   }
+  const markerUpdates = [], markerValues = [];
+  if (hasGpsMarkerSettings(body)) {
+    if (!markerSettingsAllowed(admin, role)) return markerSettingsDenied();
+    const { results } = await env.DB.prepare("PRAGMA table_info(users)").all();
+    const columns = new Set(results.map(column => column.name));
+    const markerDenied = collectGpsMarkerSettings(body, admin, role, column => columns.has(column), markerUpdates, markerValues);
+    if (markerDenied) return markerDenied;
+  }
   const secret = await makePassword(password), now = new Date().toISOString(), id = crypto.randomUUID();
   try {
     await env.DB.batch([
       env.DB.prepare("INSERT INTO users (id,username,name,role,authorization_role,password_hash,password_salt,password_iterations,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
         .bind(id, username, name, role === "USER_MANAGER" ? "ISTRUTTORE" : role, role, secret.hash, secret.salt, secret.iterations, 1, now, now),
+      ...(markerUpdates.length ? [env.DB.prepare("UPDATE users SET " + markerUpdates.join(",") + " WHERE id=?").bind(...markerValues, id)] : []),
       env.DB.prepare("INSERT INTO user_employment_periods (id,user_id,employment_type,effective_from,created_at,created_by) VALUES (?,?,?,?,?,?)")
         .bind(crypto.randomUUID(), id, employmentType, employmentEffectiveFrom, now, admin.id),
       ...auditStatements(env, request, admin, { id, username, name }, role === "USER_MANAGER" ? "CREATE_USER_MANAGER" : "CREATE_USER", "SUCCESS", "CREATED_BY_ADMIN")
@@ -505,24 +544,8 @@ async function updateUser(request, env, admin, id) {
   if (target.is_primary_admin && target.id !== admin.id) return json({ error: "L’amministratore principale è protetto." }, 403);
   const body = await request.json(), updates = [], values = [];
   if (!strictBody(body, ["name", "active", "employmentType", "employmentEffectiveFrom", "gpsMarkerInitials", "gpsMarkerStyle"])) return json({ error: Object.hasOwn(body, "password") ? "Usa la funzione Password provvisoria." : "La richiesta contiene campi non consentiti." }, 400);
-  if (Object.hasOwn(body, "gpsMarkerInitials")) {
-    if (!isPrimaryAdmin(admin)) return json({ error: "La sigla sulla macchinina è modificabile solo dall’Amministratore principale." }, 403);
-    const raw = body.gpsMarkerInitials;
-    if (typeof raw !== "string" || (raw.trim() !== "" && !/^[A-Za-z]{2}$/.test(raw.trim()))) return json({ error: "Inserisci esattamente due lettere A–Z oppure lascia vuoto per rimuovere la sigla." }, 400);
-    if (!Object.hasOwn(target, "gps_marker_initials")) return json({ error: "La configurazione della sigla richiede l’aggiornamento del database.", code: "GPS_MARKER_SCHEMA_UNAVAILABLE" }, 503);
-    updates.push("gps_marker_initials=?"); values.push(raw.trim() ? raw.trim().toUpperCase() : null);
-  }
-  if (Object.hasOwn(body, "gpsMarkerStyle")) {
-    if (!isPrimaryAdmin(admin)) return json({ error: "Lo stile della macchinina è modificabile solo dall’Amministratore principale." }, 403);
-    const style = body.gpsMarkerStyle;
-    const panda = style === "panda-yellow" || style === "panda-striped";
-    if (!panda && style !== "dark" && style !== "rose") return json({ error: "Stile della macchinina non valido." }, 400);
-    if (!Object.hasOwn(target, "gps_marker_style")) return json({ error: "La configurazione dello stile richiede l’aggiornamento del database.", code: "GPS_MARKER_STYLE_SCHEMA_UNAVAILABLE" }, 503);
-    const hasPandaStyle = Object.hasOwn(target, "gps_marker_panda_style");
-    if (panda && !hasPandaStyle) return json({ error: "Gli stili Panda richiedono l’aggiornamento del database.", code: "GPS_MARKER_STYLE_SCHEMA_UNAVAILABLE" }, 503);
-    if (!panda) { updates.push("gps_marker_style=?"); values.push(style); }
-    if (hasPandaStyle) { updates.push("gps_marker_panda_style=?"); values.push(panda ? style : null); }
-  }
+  const markerDenied = collectGpsMarkerSettings(body, admin, effectiveRole(target), column => Object.hasOwn(target, column), updates, values);
+  if (markerDenied) return markerDenied;
   let employmentChange = null;
   const changesEmployment = Object.hasOwn(body, "employmentType") || Object.hasOwn(body, "employmentEffectiveFrom");
   if (changesEmployment) {

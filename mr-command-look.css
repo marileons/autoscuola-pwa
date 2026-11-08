@@ -168,6 +168,7 @@
 
 @media screen{
  body #appShell #userManagement .user-marker-initials{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:14px 0 0;min-width:0}
+ body #appShell #userManagement .user-marker-initials[hidden]{display:none}
  body #appShell #userManagement .user-marker-initials label{display:grid;gap:6px;font-weight:750;min-width:0}
  body #appShell #userManagement .user-marker-initials input{box-sizing:border-box;min-height:44px;width:7ch;max-width:100%;margin:0;padding:9px 12px;border:1px solid var(--mr-ui-line);border-radius:9px;background:#062b37;color:#fff;font:800 18px/1.2 'Nunito Sans',system-ui,sans-serif;letter-spacing:.1em}
  body #appShell #userManagement .user-marker-initials select{box-sizing:border-box;min-height:44px;max-width:100%;margin:0;padding:9px 12px;border:1px solid var(--mr-ui-line);border-radius:9px;background:#062b37;color:#fff}
