@@ -1,9 +1,30 @@
 "use strict";
 (()=>{
-  const core=window.ExaminerRoutes,store=core.createStore(localStorage);let examinerId=null,routeId=null,draft=null,watch=null,map=null,line=null,timer=null,reportAbort=null,reportRunning=false;
+  const core=window.ExaminerRoutes,store=core.createStore(localStorage);let examinerId=null,routeId=null,draft=null,watch=null,map=null,line=null,orientation=null,livePositioned=false,timer=null,reportAbort=null,reportRunning=false;
   const accountId=()=>String(window.AgendaAuth?.currentUser?.()?.id||""),examiner=()=>state.examiners.find(x=>x.id===examinerId),routes=()=>store.routes(accountId(),examinerId),currentRoute=()=>routes().find(x=>x.id===routeId),fmtDuration=ms=>{const minutes=Math.max(0,Math.round(ms/60000)),hours=Math.floor(minutes/60);return hours?`${hours} h ${minutes%60} min`:`${minutes} min`},fmtDistance=metres=>metres>=1000?`${(metres/1000).toFixed(1).replace(".",",")} km`:`${Math.round(metres)} m`,fmtDate=value=>new Date(value).toLocaleString("it-IT",{dateStyle:"short",timeStyle:"short"});
-  function initMap(){if(!map){map=L.map("examinerRouteMap").setView([44.4056,8.9463],13);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map)}setTimeout(()=>map.invalidateSize(),60)}
-  function draw(points=[]){initMap();if(line)map.removeLayer(line);line=null;if(!points.length)return;const groups=[];let group=[];points.forEach((p,index)=>{if(index&&p.breakBefore&&group.length){groups.push(group);group=[]}group.push([p.lat,p.lng])});if(group.length)groups.push(group);line=L.featureGroup(groups.map(group=>L.polyline(group,{weight:5,color:"#d88700"}))).addTo(map);const bounds=line.getBounds();if(bounds.isValid())map.fitBounds(bounds,{padding:[18,18]})}
+  function initMap(){if(!map){map=L.map("examinerRouteMap",window.GpsMapOrientation?.options(L)).setView([44.4056,8.9463],13);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map)}}
+  function draw(points,fit=true){
+    initMap();
+    const groups=[];let group=[];
+    points.forEach(p=>{if(p.breakBefore&&group.length){groups.push(group);group=[]}group.push([p.lat,p.lng])});
+    if(group.length)groups.push(group);
+    if(line)line.setLatLngs(groups);
+    else line=L.polyline(groups,{weight:5,color:"#d88700"}).addTo(map);
+    if(fit){
+      const bounds=line.getBounds();
+      if(bounds.isValid())map.fitBounds(bounds,{padding:[18,18]});
+      const view=map;
+      setTimeout(()=>view.invalidateSize(),60);
+    }
+  }
+  function updateLiveMap(point,sensorSpeed){
+    draw(draft.points,false);
+    const position=[point.lat,point.lng];
+    if(livePositioned)map.panTo(position,{animate:false});
+    else{map.setView(position,17,{animate:false});livePositioned=true}
+    orientation?.update({point,healthy:true,speedKmh:Number.isFinite(sensorSpeed)&&sensorSpeed>=0?sensorSpeed*3.6:null,breakBefore:point.breakBefore});
+  }
+  function pauseOrientation(){orientation?.update({point:livePositioned?draft.points.at(-1):null,healthy:false})}
   function updateMetrics(route){const elapsed=route.endedAt?route.durationMs:Date.now()-route.startedAt;$("examinerRouteDuration").textContent=fmtDuration(elapsed);$("examinerRoutePoints").textContent=String(route.points.length);$("examinerRouteDistance").textContent=fmtDistance(core.routeDistance(route.points))}
   function renderList(){if(!examinerId)return;const items=routes(),drafts=store.drafts(accountId(),examinerId);$("examinerRoutesCount").textContent=`${items.length} di ${core.MAX_ROUTES}`;$("emptyExaminerRoutes").classList.toggle("hidden",items.length>0);$("newExaminerRoute").disabled=items.length>=core.MAX_ROUTES;$("examinerRouteLimit").classList.toggle("hidden",items.length<core.MAX_ROUTES);$("examinerDrafts").innerHTML=drafts.map(item=>`<article class="examiner-route-card draft"><strong>Bozza del ${fmtDate(item.startedAt)}</strong><span>${item.points.length} punti · ${fmtDistance(core.routeDistance(item.points))}</span><div><button type="button" data-resume-draft="${esc(item.id)}">RIPRENDI BOZZA</button><button type="button" class="danger" data-delete-draft="${esc(item.id)}">ELIMINA BOZZA</button></div></article>`).join("");$("examinerRoutesList").innerHTML=items.slice().sort((a,b)=>b.startedAt-a.startedAt).map((item,index)=>`<article class="examiner-route-card"><strong>Percorso ${items.length-index} · ${fmtDate(item.startedAt)}</strong><span>${esc(item.title||"Senza titolo")} · ${esc(item.zone||"Zona non inserita")} · ${fmtDuration(item.durationMs)} · ${fmtDistance(item.distanceMetres)}</span><span>Report: ${esc(reportStateLabel(item.report.state))}</span><div><button type="button" data-open-route="${esc(item.id)}">VISUALIZZA</button><button type="button" class="secondary" data-edit-route="${esc(item.id)}">MODIFICA DATI</button><button type="button" class="danger" data-delete-route="${esc(item.id)}">ELIMINA</button></div></article>`).join("");document.querySelectorAll("[data-resume-draft]").forEach(button=>button.onclick=()=>resumeDraft(button.dataset.resumeDraft));document.querySelectorAll("[data-delete-draft]").forEach(button=>button.onclick=()=>deleteDraft(button.dataset.deleteDraft));document.querySelectorAll("[data-open-route],[data-edit-route]").forEach(button=>button.onclick=()=>openRoute(button.dataset.openRoute||button.dataset.editRoute));document.querySelectorAll("[data-delete-route]").forEach(button=>button.onclick=()=>deleteRoute(button.dataset.deleteRoute))}
   function reportStateLabel(value){return({not_generated:"Non generato",running:"Generazione in corso",paused:"Interrotto",completed:"Completato",completed_with_unidentified:"Completato con tratti non identificati",temporary_error:"Errore temporaneo"})[value]||"Non generato"}
@@ -43,20 +64,21 @@
         if(watch!==watchId)return;
         const p={lat:Number(position.coords.latitude),lng:Number(position.coords.longitude),accuracy:Number(position.coords.accuracy),time:Number(position.timestamp)||Date.now(),breakBefore:false};
         if(!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||!Number.isFinite(p.accuracy))return;
-        if(p.accuracy>100){needsBreak=true;status.textContent="GPS attivo · attendo un segnale più preciso";return}
+        if(p.accuracy>100){needsBreak=true;pauseOrientation();status.textContent="GPS attivo · attendo un segnale più preciso";return}
         const decision=evaluateGpsPoint(draft.points.at(-1),p,needsBreak,draft.points.at(-2));
-        if(!decision.accept){if(decision.reason==="impossible")needsBreak=true;return}
+        if(!decision.accept){if(decision.reason==="impossible"){needsBreak=true;pauseOrientation()}return}
         p.breakBefore=decision.breakBefore;
         draft.points.push(p);
         draft.updatedAt=Date.now();
         draft.distanceMetres=core.routeDistance(draft.points);
         needsBreak=false;
         store.saveDraft(accountId(),examinerId,draft);
-        draw(draft.points);
+        updateLiveMap(p,position.coords.speed);
         updateMetrics(draft);
         status.textContent=`GPS attivo · ${draft.points.length} punti validi`;
       },error=>{
         if(watch!==watchId)return;
+        pauseOrientation();
         status.textContent=error.code===1?"Permesso GPS negato.":"Posizione temporaneamente non disponibile. La bozza resta salva.";
       },{enableHighAccuracy:true,maximumAge:0,timeout:20000});
     }catch{
@@ -65,6 +87,8 @@
       return;
     }
     watch=watchId;
+    livePositioned=false;
+    orientation=window.GpsMapOrientation?.attach({L,map})||null;
     if(!needsBreak)draft.startedAt=Date.now();
     timer=setInterval(()=>updateMetrics(draft),1000);
     updateMetrics(draft);
@@ -77,6 +101,9 @@
     const watchId=watch;
     watch=null;
     navigator.geolocation.clearWatch(watchId);
+    orientation?.dispose();
+    orientation=null;
+    if(map?.getBearing?.())map.setBearing(0);
     clearInterval(timer);
     timer=null;
     window.AgendaGpsCoordinator.release("examiner");

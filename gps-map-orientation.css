@@ -25,7 +25,7 @@
  #liveMap .gps-heading-known .gps-heading-car{display:block}
  #liveMap .gps-heading-known .gps-heading-unknown{display:none}
  #liveMap .gps-orientation-control{max-width:min(180px,calc(100vw - 110px));margin-right:10px}
- #appShell #lesson #liveMap button.gps-orientation-toggle,.gps-orientation-toggle{box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:44px;min-width:120px;max-width:180px;padding:8px 10px;background:#164f72!important;border:1px solid #8ec1df!important;border-radius:10px;color:#fff!important;font:800 12px/1.3 'Nunito Sans',system-ui,sans-serif;white-space:normal;box-shadow:0 2px 6px #00253666}
+ #appShell #lesson #liveMap button.gps-orientation-toggle,#appShell #examinerRouteView #examinerRouteMap button.gps-orientation-toggle,.gps-orientation-toggle{box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:44px;min-width:120px;max-width:180px;padding:8px 10px;background:#164f72!important;border:1px solid #8ec1df!important;border-radius:10px;color:#fff!important;font:800 12px/1.3 'Nunito Sans',system-ui,sans-serif;white-space:normal;box-shadow:0 2px 6px #00253666}
  .gps-orientation-toggle small{font:600 10px/1.25 'Nunito Sans',system-ui,sans-serif;color:#e1f3ff}
  .gps-orientation-toggle:focus-visible{outline:3px solid #a9e0ef;outline-offset:3px}
  .gps-orientation-toggle:disabled{opacity:.65}
