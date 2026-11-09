@@ -36,7 +36,9 @@
  // Account presentation only: no persistence or requests. Values come solely
  // from the authenticated profile; these are glyphs, never name mappings.
  const GLYPHS={"A":[8,"M0 10 3.1 0H4.9L8 10H6.25L5.55 7.8H2.45L1.75 10ZM3 6.2H5L4 2.6Z"],"B":[7,"M0 10V0H4.6Q6.9 0 6.9 2.2V3.1Q6.9 4.3 5.8 4.9Q7 5.4 7 6.8V7.8Q7 10 4.6 10ZM1.6 1.6V4.1H4.4Q5.3 4.1 5.3 3.2V2.4Q5.3 1.6 4.4 1.6ZM1.6 5.7V8.4H4.4Q5.4 8.4 5.4 7.5V6.7Q5.4 5.7 4.4 5.7Z"],"C":[6.8,"M6.8 1.15 5.65 2.3Q5.05 1.6 4.2 1.6H2.6Q1.6 1.6 1.6 2.6V7.4Q1.6 8.4 2.6 8.4H4.2Q5.05 8.4 5.65 7.7L6.8 8.85Q5.8 10 4.2 10H2.5Q0 10 0 7.5V2.5Q0 0 2.5 0H4.2Q5.8 0 6.8 1.15Z"],"D":[7,"M0 0H3.9Q7 0 7 3.2V6.8Q7 10 3.9 10H0ZM1.6 1.6V8.4H3.8Q5.4 8.4 5.4 6.7V3.3Q5.4 1.6 3.8 1.6Z"],"E":[6.3,"M0 0H6.3V1.6H1.6V4.1H5.5V5.7H1.6V8.4H6.3V10H0Z"],"F":[6.3,"M0 10V0H6.3V1.6H1.6V4.3H5.5V5.9H1.6V10Z"],"G":[7,"M6.8 1.15 5.65 2.3Q5.05 1.6 4.2 1.6H2.6Q1.6 1.6 1.6 2.6V7.4Q1.6 8.4 2.6 8.4H4.5Q5.4 8.4 5.4 7.5V6.1H3.6V4.5H7V7.6Q7 10 4.5 10H2.5Q0 10 0 7.5V2.5Q0 0 2.5 0H4.2Q5.8 0 6.8 1.15Z"],"H":[7,"M0 0H1.6V4.1H5.4V0H7V10H5.4V5.7H1.6V10H0Z"],"I":[4.6,"M0 0H4.6V1.6H3.1V8.4H4.6V10H0V8.4H1.5V1.6H0Z"],"J":[6.3,"M1.2 0H6.3V7.5Q6.3 10 3.8 10H2.5Q0 10 0 7.5V6.7H1.6V7.4Q1.6 8.4 2.6 8.4H3.7Q4.7 8.4 4.7 7.4V1.6H1.2Z"],"K":[7.2,"M0 0H1.6V4.5L5.25 0H7.2L3.4 4.7 7.2 10H5.25L2.25 6 1.6 6.8V10H0Z"],"L":[6.1,"M0 0H1.6V8.4H6.1V10H0Z"],"M":[7.8,"M0 10V0H1.5L3.9 3.6 6.3 0H7.8V10H6.2V2.7L3.9 6.1 1.6 2.7V10Z"],"N":[7.1,"M0 10V0H1.6L5.5 7V0H7.1V10H5.5L1.6 3V10Z"],"O":[7.2,"M2.5 0H4.7Q7.2 0 7.2 2.5V7.5Q7.2 10 4.7 10H2.5Q0 10 0 7.5V2.5Q0 0 2.5 0ZM2.6 1.6Q1.6 1.6 1.6 2.6V7.4Q1.6 8.4 2.6 8.4H4.6Q5.6 8.4 5.6 7.4V2.6Q5.6 1.6 4.6 1.6Z"],"P":[6.8,"M0 10V0H3.9Q6.8 0 6.8 2.9Q6.8 5.8 3.9 5.8H1.6V10ZM1.6 1.6V4.2H3.8Q5.2 4.2 5.2 2.9Q5.2 1.6 3.8 1.6Z"],"Q":[7.6,"M2.5 0H4.7Q7.2 0 7.2 2.5V7.5Q7.2 8.4 6.8 9L7.6 10H5.6L5.4 9.8Q5.05 10 4.7 10H2.5Q0 10 0 7.5V2.5Q0 0 2.5 0ZM2.6 1.6Q1.6 1.6 1.6 2.6V7.4Q1.6 8.4 2.6 8.4H4.3L3.2 7H5.2L5.6 7.5V2.6Q5.6 1.6 4.6 1.6Z"],"R":[7,"M0 10V0H3.9Q6.8 0 6.8 2.9Q6.8 5.1 4.8 5.65L7 10H5.15L2.95 5.8H1.6V10ZM1.6 1.6V4.2H3.8Q5.2 4.2 5.2 2.9Q5.2 1.6 3.8 1.6Z"],"S":[6.8,"M6.6 1.05 5.5 2.2Q4.9 1.6 4 1.6H2.55Q1.6 1.6 1.6 2.55Q1.6 3.35 2.45 3.65L4.8 4.5Q6.8 5.2 6.8 7.3Q6.8 10 4.2 10H2.5Q.9 10 0 8.9L1.15 7.75Q1.8 8.4 2.65 8.4H4.15Q5.2 8.4 5.2 7.4Q5.2 6.45 4.3 6.1L2 5.25Q0 4.55 0 2.5Q0 0 2.6 0H4Q5.6 0 6.6 1.05Z"],"T":[7.2,"M0 0H7.2V1.6H4.4V10H2.8V1.6H0Z"],"U":[7.1,"M0 0H1.6V7.4Q1.6 8.4 2.6 8.4H4.5Q5.5 8.4 5.5 7.4V0H7.1V7.5Q7.1 10 4.6 10H2.5Q0 10 0 7.5Z"],"V":[7.5,"M0 0H1.75L3.75 7.3 5.75 0H7.5L4.65 10H2.85Z"],"W":[7.8,"M0 0H1.6L2.6 7.1 3.15 3.5H4.65L5.2 7.1 6.2 0H7.8L6.25 10H4.65L3.9 6 3.15 10H1.55Z"],"X":[7.4,"M0 0H1.9L3.7 3.5 5.5 0H7.4L4.65 5 7.4 10H5.5L3.7 6.5 1.9 10H0L2.75 5Z"],"Y":[7.5,"M0 0H1.85L3.75 4.2 5.65 0H7.5L4.55 6V10H2.95V6Z"],"Z":[6.8,"M0 0H6.8V1.6L1.95 8.4H6.8V10H0V8.4L4.85 1.6H0Z"]},PAIR_GAPS={"PG":0.85,"GL":1.05,"EN":0.9,"CR":0.85},profileListeners=new Set();
- const MARKER_SVG=`<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+ const MARKER_SIZE=54;
+ const MARKER_CENTER=MARKER_SIZE/2;
+ const MARKER_SVG=`<svg width="${MARKER_SIZE}" height="${MARKER_SIZE}" viewBox="0 0 48 48" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
  <defs>
   <linearGradient id="GPS_ID-paint" x1="0" y1="0" x2="1" y2=".2">
    <stop class="car-paint-edge"/><stop class="car-paint-light" offset=".38"/><stop class="car-paint-mid" offset=".72"/><stop class="car-paint-edge" offset="1"/>
@@ -49,16 +51,13 @@
  <circle class="gps-heading-unknown" cx="24" cy="24" r="10"/>
  <g class="gps-heading-car" stroke-linecap="round" stroke-linejoin="round">
   <g fill="#152127"><rect x="10.8" y="9" width="4.5" height="9" rx="1.5"/><rect x="32.7" y="9" width="4.5" height="9" rx="1.5"/><rect x="10.8" y="33" width="4.5" height="8" rx="1.5"/><rect x="32.7" y="33" width="4.5" height="8" rx="1.5"/></g>
-  <g class="car-rounded">
-   <path d="M16.7 3.7Q24 .4 31.3 3.7C34.5 5.6 36 9.3 36 14l-.5 8 .5 13c0 6.1-2.1 9.5-6 11H18c-3.9-1.5-6-4.9-6-11l.5-13-.5-8c0-4.7 1.5-8.4 4.7-10.3Z" fill="url(#GPS_ID-paint)" stroke="#fff6e3" stroke-width="2.2"/>
-   <path d="M17.2 5.1Q24 2.6 30.8 5.1M15 8q-2 4-2 10m20-10q2 4 2 10M18.5 44.3q5.5 1.2 11 0" fill="none" class="car-trim" stroke-width=".7"/>
-  </g>
   <g class="car-panda">
    <path d="M15 3Q24 1.1 33 3c3 .7 4.7 3.8 4.8 7.4l-.4 27.9c-.2 4.8-2.5 7.1-6.5 7.7H17.1c-4-.6-6.3-2.9-6.5-7.7l-.4-27.9C10.3 6.8 12 3.7 15 3Z" fill="url(#GPS_ID-paint)" stroke="#fff6e3" stroke-width="2.2"/>
    <path d="M14.7 5.1Q24 2.9 33.3 5.1m-15 38.8q5.7.9 11.4 0" fill="none" class="car-trim" stroke-width=".8"/>
    <g class="car-stripes">
-    <path fill="#2acbff" d="M25.5 4h2.5l-4 7.9h-2.5Zm3.2.2 1.4.2-3.8 7.5h-1.5ZM11.4 27.8l3.5 5.2v4.1l-3.6-5.6Zm25.2 0-3.5 5.2v4.1l3.6-5.6Z"/>
-    <path fill="#151d25" d="m31 4.5.9.2-3.7 7.2h-.9ZM11.3 16l3.8 5.4v1.6l-3.8-5.2Zm0 3 3.8 5.3v1.6l-3.8-5.2Zm25.4-3-3.8 5.4v1.6l3.8-5.2Zm0 3-3.8 5.3v1.6l3.8-5.2ZM11.4 34.6l3.7 5.2.5 2.1-4.1-5.5Zm25.2 0-3.7 5.2-.5 2.1 4.1-5.5Z"/>
+    <path fill="#00a8e6" d="M25.7 4h2.6l-4.1 7.8h-2.6Zm3.3.1 1.8.1-4 7.6H25Z"/>
+    <path fill="#009cdb" d="M11.6 27.4 15.5 33v3.8l-4-5.9Zm24.8 0-3.9 5.6v3.8l4-5.9Z"/>
+    <path fill="#131a21" d="M31.6 4.3l1 .2-3.9 7.3h-1ZM11.5 9.8l3.1 5.2-3.2-3Zm-.1 3 2.6 4-2.6-2.1Zm25.1-3-3.1 5.2 3.2-3Zm.1 3-2.6 4 2.6-2.1ZM11.5 20.7l3.6 5.1v1.7l-3.6-5Zm0 3.1 3.7 5.2v1.6l-3.7-5.1Zm25-3.1-3.6 5.1v1.7l3.6-5Zm0 3.1-3.7 5.2v1.6l3.7-5.1ZM11.6 33l4.1 5.8.7 2.3-4.8-5.9Zm24.8 0-4.1 5.8-.7 2.3 4.8-5.9Z"/>
    </g>
   </g>
   <path d="M14.8 16.6 17 21.5v12.3L14.7 37Zm18.4 0L31 21.5v12.3l2.3 3.2Z" fill="#15262c"/>
@@ -102,7 +101,7 @@
    node.dataset.markerStyle=profileStyle;
    setInitials(node,profileInitials);
   };syncProfile();profileListeners.add(syncProfile);
-  const marker=L.marker(map.getCenter(),{icon:L.divIcon({html:node,className:'gps-heading-marker',iconSize:[48,48],iconAnchor:[24,24]}),opacity:0,interactive:false,keyboard:false,zIndexOffset:1000}).addTo(map);
+  const marker=L.marker(map.getCenter(),{icon:L.divIcon({html:node,className:'gps-heading-marker',iconSize:[MARKER_SIZE,MARKER_SIZE],iconAnchor:[MARKER_CENTER,MARKER_CENTER]}),opacity:0,interactive:false,keyboard:false,zIndexOffset:1000}).addTo(map);
   const svg=node.querySelector('svg'),control=L.control({position:'topright'});
   const button=document.createElement('button'),label=document.createTextNode('DIREZIONE DI MARCIA'),hint=document.createElement('small');
   button.type='button';button.className='gps-orientation-toggle';button.append(label,hint);button.setAttribute('aria-pressed','true');
