@@ -81,17 +81,77 @@
   const accepted=preview.operations.filter(e=>['created','updated','unchanged'].includes(e.action)).map(({studentId,lessonId,hash,revision})=>({studentId,lessonId,hash,revision}));
   const receipt=await sign({format:RECEIPT,version:VERSION,packetId:preview.packet.packetId,packetHash:preview.packet.checksum,instructorId:preview.packet.instructor.id,importedAt:now,mode:'receipt',outcome:accepted.length===preview.operations.length?'accepted':accepted.length?'partial':'review',accepted,review:preview.operations.filter(e=>!['created','updated','unchanged'].includes(e.action)).map(e=>({studentId:e.studentId,lessonId:e.lessonId,hash:e.hash,code:e.action}))});const latest=await authority();if(await hash(latest)!==preview.policyHash)bad('Permessi cambiati prima del salvataggio.');if(changes)await adapter.write(preview.students,before);return{counts:preview.counts,receipt};
  }
- async function deliver(file,share,navigator=globalThis.navigator,download){if(share&&navigator?.canShare?.({files:[file]})){try{await navigator.share({files:[file],title:file.name});return'shared'}catch(e){if(e.name==='AbortError')return'cancelled';throw Error('Condivisione non riuscita. Il file pronto è conservato.')}}await download(file);return'downloaded'}
+ function shareableFile(file,navigator,alternative){
+  if(typeof navigator?.share!=='function'||typeof navigator.canShare!=='function')return null;
+  for(const candidate of [alternative,file]){
+   if(!candidate)continue;
+   try{if(navigator.canShare({files:[candidate]}))return candidate}catch{}
+  }
+  return null;
+ }
+ function shareFailure(error){
+  const reason={
+   NotAllowedError:'Il browser ha negato la condivisione. Può dipendere dai permessi o dall’attivazione del tocco.',
+   InvalidStateError:'La pagina non è attiva o il menu di condivisione è già aperto.',
+   DataError:'Il dispositivo non è riuscito ad aprire il menu o a passare il file all’app scelta.',
+   NotSupportedError:'Il browser non supporta questa condivisione.',
+   TypeError:'Il browser ha rifiutato il file da condividere.'
+  }[error?.name];
+  return 'Condivisione non riuscita. '+(typeof reason==='string'?reason+' ':'')+'Il file è ancora pronto. Usa SCARICA / SALVA FILE.';
+ }
+ async function deliver(file,share,navigator=globalThis.navigator,download,alternative){
+  if(share){
+   const ready=shareableFile(file,navigator,alternative);
+   if(ready){try{await navigator.share({files:[ready],title:ready.name});return 'shared'}catch(e){if(e.name==='AbortError')return 'cancelled';throw Error(shareFailure(e))}}
+  }
+  if(!download)bad('Condivisione di questo file non supportata. Usa SCARICA / SALVA FILE.');
+  await download(file);return 'downloaded';
+ }
  function gate(fn){let busy=false;return async(...args)=>{if(busy)return;busy=true;try{return await fn(...args)}finally{busy=false}}}
  const PEER_FORMAT='AgendaInstructorLesson';
- function peerContent(lesson){const data=content(lesson);if(!lesson.lessonContext)bad('Contesto originale della guida assente. Riapri la scheda prima di condividere.');data.lessonContext=activities().validateContext(lesson.lessonContext);data.gpsOmitted=lesson.gpsOmitted===true||!!lesson.route?.length||!!lesson.errors?.some(e=>Number.isFinite(e.lat)||Number.isFinite(e.lng));return data}
- async function peerRevision(lesson,now=Date.now()){const data=peerContent(lesson),digest=await hash(data),m=metadata(lesson.instructorTransfer);return{data,hash:digest,revision:m?m.revision+(m.hash===digest?0:1):1,modifiedAt:m?.hash===digest?m.modifiedAt:(time(lesson.updatedAt)?lesson.updatedAt:now),parentHash:m?.hash===digest?m.parentHash||null:m?.hash||null,baseHash:m?.sourceHash||m?.hash||null}}
+ function gpsCoordinates(point){
+  if(!Number.isFinite(point?.lat)||Math.abs(point.lat)>90||!Number.isFinite(point.lng)||Math.abs(point.lng)>180)bad('Coordinate GPS della guida non valide.');
+  return {lat:point.lat,lng:point.lng};
+ }
+ function peerRoutePoint(point){
+  const data={...gpsCoordinates(point),breakBefore:!!point.breakBefore};
+  if(point.accuracy!=null){if(!Number.isFinite(point.accuracy)||point.accuracy<0)bad('Precisione GPS della guida non valida.');data.accuracy=point.accuracy}
+  if(point.time!=null){if(!Number.isFinite(point.time)||point.time<=0)bad('Orario GPS della guida non valido.');data.time=point.time}
+  return data;
+ }
+ function peerErrorLocation(error){
+  const locationStatus=error.locationStatus??'unavailable',gpsState=text(error.gpsState??'inactive',160);
+  if(!['available','unavailable','low_accuracy','stale'].includes(locationStatus))bad('Stato GPS dell’errore non valido.');
+  if(locationStatus!=='available')return {locationStatus,gpsState};
+  if(!Number.isFinite(error.accuracy)||error.accuracy<0||error.accuracy>100)bad('Precisione GPS dell’errore non valida.');
+  const location={...gpsCoordinates(error),accuracy:error.accuracy,locationStatus,gpsState};
+  if(error.routeIndex!=null){if(!Number.isSafeInteger(error.routeIndex)||error.routeIndex<0)bad('Riferimento GPS dell’errore non valido.');location.routeIndex=error.routeIndex}
+  if(error.routePointTime!=null){if(!Number.isFinite(error.routePointTime)||error.routePointTime<=0)bad('Orario GPS dell’errore non valido.');location.routePointTime=error.routePointTime}
+  return location;
+ }
+ function peerContent(lesson){
+  const data=content(lesson);
+  if(!lesson.lessonContext)bad('Contesto originale della guida assente. Riapri la scheda prima di condividere.');
+  if(lesson.route!=null&&!Array.isArray(lesson.route))bad('Tracciato GPS della guida non valido.');
+  if(lesson.route?.length){
+   data.route=lesson.route.map(peerRoutePoint);
+   if(lesson.tunnelReconstructions?.length){
+    const tunnels=globalThis.TunnelReconstruction||(typeof require==='function'?require('./tunnel-reconstruction.js'):null);
+    if(!tunnels)bad('Verifica delle stime in galleria non disponibile. Riapri l’app prima di condividere.');
+    data.tunnelReconstructions=clone(tunnels.validate(lesson.tunnelReconstructions));
+   }
+  }
+  data.errors=data.errors.map((error,i)=>({...error,...peerErrorLocation(lesson.errors[i])}));
+  data.gpsOmitted=lesson.gpsOmitted===true&&!data.route;
+  return data;
+ }
+ async function peerRevision(lesson,now=Date.now()){const data=peerContent(lesson),digest=await hash(data),m=metadata(lesson.instructorTransfer);return{data,hash:digest,revision:m?m.revision+(m.hash===digest?0:1):1,modifiedAt:m?.hash===digest?m.modifiedAt:Math.max(time(lesson.updatedAt)?lesson.updatedAt:now,(m?.modifiedAt||0)+1),parentHash:m?.hash===digest?m.parentHash||null:m?.hash||null,baseHash:m?.sourceHash||m?.hash||null}}
  async function createPeer(student,lesson,user,now=Date.now(),uuid=()=>crypto.randomUUID()){if(!canExport(user))bad('Condivisione della lezione non consentita.');if(!student?.lessons?.some(l=>l.id===lesson?.id)||!id(student.id))bad('Condividi soltanto una guida salvata.');const entry=await peerRevision(lesson,now),packet=await sign({format:PEER_FORMAT,version:VERSION,packetId:uuid(),createdAt:now,sender:{id:user.id,name:text(user.name||'',180)},student:{id:student.id,firstName:text(student.firstName||'',180),lastName:text(student.lastName||'',180)},lesson:entry});await validatePeer(packet);return packet}
  async function validatePeer(packet){await verifyEnvelope(packet,PEER_FORMAT);if(Object.keys(packet).some(k=>!['format','version','packetId','createdAt','sender','student','lesson','checksum'].includes(k))||!id(packet.packetId)||!time(packet.createdAt)||!id(packet.sender?.id)||typeof packet.sender?.name!=='string'||Object.keys(packet.sender).some(k=>!['id','name'].includes(k))||!id(packet.student?.id)||json(packet.student)!==json({id:packet.student.id,firstName:text(packet.student.firstName,180),lastName:text(packet.student.lastName,180)}))bad('Intestazione della singola lezione non valida.');text(packet.sender.name,180);const e=packet.lesson;if(!e||!Number.isSafeInteger(e.revision)||e.revision<1||!time(e.modifiedAt)||!hex(e.hash)||Object.keys(e).some(k=>!['data','revision','hash','modifiedAt','parentHash','baseHash'].includes(k))||typeof e.data?.gpsOmitted!=='boolean')bad('Revisione della lezione non valida.');for(const key of ['parentHash','baseHash'])if(e[key]!==null&&!hex(e[key]))bad('Revisione precedente non valida.');const clean=peerContent(e.data);if(json(clean)!==json(e.data)||await hash(clean)!==e.hash)bad('Contenuto o impronta della guida non validi.');if(new TextEncoder().encode(json(packet)).length>MAX_BYTES)bad('File troppo grande.');return clone(packet)}
  async function parsePeer(file){if(!file||!Number.isFinite(file.size)||file.size<=0||file.size>MAX_BYTES)bad('Dimensione della singola lezione non valida.');let packet;try{packet=JSON.parse(await file.text())}catch{bad('File non leggibile o incompleto.')}return validatePeer(packet)}
  function peerMetadata(e,originStudentId,previous={}){return{...previous,version:1,lessonId:e.data.id,ownerId:e.data.instructorId,originStudentId,revision:e.revision,hash:e.hash,modifiedAt:e.modifiedAt,parentHash:e.parentHash,sourceHash:e.hash,sent:previous.sent||[]}}
  async function recordPeerCreated(students,packet,user){if(!canExport(user))bad('Operazione non consentita.');await validatePeer(packet);const output=clone(students),lesson=output.find(s=>s.id===packet.student.id)?.lessons?.find(l=>l.id===packet.lesson.data.id);if(!lesson||await hash(peerContent(lesson))!==packet.lesson.hash)bad('Guida cambiata durante la preparazione. Ripeti la condivisione.');lesson.instructorTransfer=peerMetadata(packet.lesson,packet.student.id,lesson.instructorTransfer);return output}
- async function planPeer(students,packet,targetId,user){if(!canExport(user))bad('Importazione lezione non consentita.');await validatePeer(packet);const output=clone(students),target=output.find(s=>s.id===(targetId||packet.student.id)),matches=output.flatMap(s=>(s.lessons||[]).filter(l=>l.id===packet.lesson.data.id).map(l=>({s,l})));if(matches.length>1)bad('Identità lezione duplicata nell’archivio: verifica prima di importare.');const existing=matches[0],e=packet.lesson;let action='created',reason='';if(!target){action='missing';reason='Scegli una scheda locale esistente. Se manca, creala o importala prima.'}else if(existing&&existing.s.id!==target.id){action='conflicts';reason='Questa lezione è già collegata a un’altra scheda locale.'}else if(existing){const current=await peerRevision(existing.l),m=metadata(existing.l.instructorTransfer);if(existing.l.instructorId!==e.data.instructorId||m?.originStudentId&&m.originStudentId!==packet.student.id){action='conflicts';reason='Provenienza della lezione non coerente.'}else if(current.hash===e.hash)action='unchanged';else if(!m||m.sourceHash!==current.hash||e.revision<=m.revision||e.modifiedAt<=m.modifiedAt||(e.parentHash!==current.hash&&e.baseHash!==current.hash)){action='conflicts';reason='Versioni modificate o non confrontabili: nessuna sovrascrittura automatica.'}else action='updated'}if(['created','updated'].includes(action)){const lesson=portableInto(existing?.l,e.data);lesson.instructorTransfer=peerMetadata(e,packet.student.id,existing?.l.instructorTransfer);if(existing)target.lessons[target.lessons.indexOf(existing.l)]=lesson;else target.lessons.push(lesson);target.lessons.sort((a,b)=>a.createdAt-b.createdAt||String(a.id).localeCompare(String(b.id)))}return{students:output,packet:clone(packet),targetId:target?.id||null,action,reason,beforeHash:await hash(students),policyHash:await hash(user)}}
+ async function planPeer(students,packet,targetId,user){if(!canExport(user))bad('Importazione lezione non consentita.');await validatePeer(packet);const output=clone(students),target=output.find(s=>s.id===(targetId||packet.student.id)),matches=output.flatMap(s=>(s.lessons||[]).filter(l=>l.id===packet.lesson.data.id).map(l=>({s,l})));if(matches.length>1)bad('Identità lezione duplicata nell’archivio: verifica prima di importare.');const existing=matches[0],e=packet.lesson;let action='created',reason='';if(!target){action='missing';reason='Scegli una scheda locale esistente. Se manca, creala o importala prima.'}else if(existing&&existing.s.id!==target.id){action='conflicts';reason='Questa lezione è già collegata a un’altra scheda locale.'}else if(existing){const current=await peerRevision(existing.l),m=metadata(existing.l.instructorTransfer);if(existing.l.instructorId!==e.data.instructorId||m?.originStudentId&&m.originStudentId!==packet.student.id){action='conflicts';reason='Provenienza della lezione non coerente.'}else if(current.hash===e.hash)action='unchanged';else if(!m||m.sourceHash!==current.hash||e.revision<=m.revision||e.modifiedAt<=m.modifiedAt||(e.parentHash!==current.hash&&e.baseHash!==current.hash)){action='conflicts';reason='Versioni modificate o non confrontabili: nessuna sovrascrittura automatica.'}else action='updated'}if(['created','updated'].includes(action)){const lesson=portableInto(existing?.l,e.data);if(e.data.route){lesson.route=clone(e.data.route);if(e.data.tunnelReconstructions)lesson.tunnelReconstructions=clone(e.data.tunnelReconstructions);else delete lesson.tunnelReconstructions}lesson.errors=e.data.errors.map((error,i)=>e.data.route||error.locationStatus!=='unavailable'||error.gpsState!=='inactive'?clone(error):lesson.errors[i]);lesson.instructorTransfer=peerMetadata(e,packet.student.id,existing?.l.instructorTransfer);if(existing)target.lessons[target.lessons.indexOf(existing.l)]=lesson;else target.lessons.push(lesson);target.lessons.sort((a,b)=>a.createdAt-b.createdAt||String(a.id).localeCompare(String(b.id)))}return{students:output,packet:clone(packet),targetId:target?.id||null,action,reason,beforeHash:await hash(students),policyHash:await hash(user)}}
  async function applyPeer(preview,adapter,authority){const user=await authority();if(!canExport(user)||await hash(user)!==preview.policyHash)bad('Permessi o account cambiati. Riapri l’anteprima.');const before=await adapter.read();if(await hash(before)!==preview.beforeHash)bad('Archivio cambiato. Ripeti l’anteprima.');const verified=await planPeer(before,preview.packet,preview.targetId,user);if(verified.action!==preview.action)bad('Anteprima non più valida.');if(!['created','updated','unchanged'].includes(verified.action))bad(verified.reason);const latest=await authority();if(!canExport(latest)||await hash(latest)!==preview.policyHash)bad('Permessi cambiati prima del salvataggio.');if(verified.action!=='unchanged')await adapter.write(verified.students,before);return{action:verified.action}}
- return{PEER_FORMAT,createPeer,validatePeer,parsePeer,peerContent,peerRevision,recordPeerCreated,planPeer,applyPeer,FORMAT,RECEIPT,VERSION,MAX_BYTES,hash,canonical,content,metadata,revision,stamp,status,canExport,canImport,scopeAllowed,select,create,validate,parse,recordCreated,acknowledge,manualReceipt,validateReceipt,plan,apply,deliver,gate};
+ return{shareableFile,shareFailure,PEER_FORMAT,createPeer,validatePeer,parsePeer,peerContent,peerRevision,recordPeerCreated,planPeer,applyPeer,FORMAT,RECEIPT,VERSION,MAX_BYTES,hash,canonical,content,metadata,revision,stamp,status,canExport,canImport,scopeAllowed,select,create,validate,parse,recordCreated,acknowledge,manualReceipt,validateReceipt,plan,apply,deliver,gate};
 });

@@ -677,11 +677,11 @@
     const paragraph=document.createElement("p");
     paragraph.textContent="Condividi oppure usa SCARICA / SALVA FILE. Il file resta disponibile per 20 minuti senza rigenerazione.";
     content.appendChild(paragraph);
-    let url=URL.createObjectURL(file),busy=false,used=false,closed=false,until=0;
+    let url=URL.createObjectURL(file),shareJson=new File([file],file.name.replace(/\.agendabackup$/,".json"),{type:file.type}),busy=false,used=false,closed=false,until=0;
     const release=()=>{
       if(closed)return;closed=true;clearTimeout(expiry);
       modal.classList.add("hidden");actions.replaceChildren();content.replaceChildren();
-      const previous=url;url="";file=null;
+      const previous=url;url="";file=null;shareJson=null;
       if(used)window.setTimeout(()=>URL.revokeObjectURL(previous),60000);else URL.revokeObjectURL(previous);
       if(releasePreparedBackup===release)releasePreparedBackup=null;
     };
@@ -697,19 +697,20 @@
     };
     const save=document.createElement("button");save.type="button";save.textContent="CONDIVIDI BACKUP";
     save.onclick=async()=>{
-      if(closed||busy||Date.now()<until)return;
-      busy=true;save.disabled=true;
+      if(closed||busy)return;
+      const ready=window.LessonSecretaryTransfer.shareableFile(file,navigator,shareJson);
+      if(!ready){window.AgendaAuth?.recordEvent?.("share_unsupported");paragraph.textContent="Questo dispositivo non supporta la condivisione del file. Usa SCARICA / SALVA FILE.";return;}
+      busy=true;
       try{
-        let supported=false;
-        try{supported=typeof navigator.share==="function"&&typeof navigator.canShare==="function"&&navigator.canShare({files:[file]})}catch{}
-        if(!supported){window.AgendaAuth?.recordEvent?.("share_unsupported");paragraph.textContent="Condivisione di questo file non supportata. Usa SCARICA / SALVA FILE.";return;}
-        await navigator.share({title:"Backup completo Agenda Istruttori",files:[file]});
+        const sharing=navigator.share({title:"Backup completo Agenda Istruttori",files:[ready]});
+        save.disabled=true;
+        await sharing;
         window.AgendaAuth?.recordEvent?.("share_completed");
         paragraph.textContent="Condivisione completata. Il file resta disponibile anche per il download.";
       }catch(error){
         window.AgendaAuth?.recordEvent?.(error?.name==="AbortError"?"share_cancelled":"share_failed");
-        paragraph.textContent=error?.name==="AbortError"?"Condivisione annullata. Il backup è ancora disponibile.":"Condivisione non riuscita. Usa SCARICA / SALVA FILE senza rigenerare il backup.";
-      }finally{busy=false;until=Date.now()+1200;save.disabled=false;}
+        paragraph.textContent=error?.name==="AbortError"?"Condivisione annullata. Il backup è ancora disponibile.":window.LessonSecretaryTransfer.shareFailure(error);
+      }finally{busy=false;save.disabled=false;}
     };
     actions.append(cancel,save,download);modal.classList.remove("hidden");
   }
