@@ -677,11 +677,44 @@
     const paragraph=document.createElement("p");
     paragraph.textContent="Condividi oppure usa SCARICA / SALVA FILE. Il file resta disponibile per 20 minuti senza rigenerazione.";
     content.appendChild(paragraph);
+    const diagnosisButton=document.createElement("button");
+    diagnosisButton.type="button";
+    diagnosisButton.className="secondary hidden";
+    diagnosisButton.textContent="COPIA DIAGNOSI";
+    const copyStatus=document.createElement("p");
+    copyStatus.setAttribute("role","status");
+    const manualCopy=document.createElement("textarea");
+    manualCopy.readOnly=true;
+    manualCopy.className="hidden";
+    manualCopy.setAttribute("aria-label","Diagnosi condivisione");
+    content.append(diagnosisButton,copyStatus,manualCopy);
+    let diagnosis="";
+    const describeFile=value=>({type:value.type,size:value.size});
+    const describeError=error=>error?{name:error.name??null,message:error.message??null}:null;
+    const showDiagnosis=(details,error)=>{
+      diagnosis=JSON.stringify({...details,error:describeError(error)},null,2);
+      diagnosisButton.classList.remove("hidden");
+    };
+    diagnosisButton.onclick=async()=>{
+      const text=diagnosis;
+      if(!text)return;
+      try{
+        await navigator.clipboard.writeText(text);
+        if(diagnosis===text)copyStatus.textContent="Diagnosi copiata.";
+      }catch{
+        if(diagnosis!==text)return;
+        manualCopy.value=text;
+        manualCopy.classList.remove("hidden");
+        manualCopy.focus();
+        manualCopy.select();
+        copyStatus.textContent="Copia il testo selezionato.";
+      }
+    };
     let url=URL.createObjectURL(file),shareJson=new File([file],file.name.replace(/\.agendabackup$/,".json"),{type:file.type}),busy=false,used=false,closed=false,until=0;
     const release=()=>{
       if(closed)return;closed=true;clearTimeout(expiry);
       modal.classList.add("hidden");actions.replaceChildren();content.replaceChildren();
-      const previous=url;url="";file=null;shareJson=null;
+      const previous=url;url="";file=null;shareJson=null;diagnosis="";
       if(used)window.setTimeout(()=>URL.revokeObjectURL(previous),60000);else URL.revokeObjectURL(previous);
       if(releasePreparedBackup===release)releasePreparedBackup=null;
     };
@@ -698,16 +731,33 @@
     const save=document.createElement("button");save.type="button";save.textContent="CONDIVIDI BACKUP";
     save.onclick=async()=>{
       if(closed||busy)return;
-      const ready=window.LessonSecretaryTransfer.shareableFile(file,navigator,shareJson);
-      if(!ready){window.AgendaAuth?.recordEvent?.("share_unsupported");paragraph.textContent="Questo dispositivo non supporta la condivisione del file. Usa SCARICA / SALVA FILE.";return;}
+      diagnosis="";
+      diagnosisButton.classList.add("hidden");
+      manualCopy.classList.add("hidden");
+      manualCopy.value="";
+      copyStatus.textContent="";
+      const details={file:describeFile(file),canShare:[],toccoAttivo:null};
+      const ready=window.LessonSecretaryTransfer.shareableFile(file,navigator,shareJson,(candidate,esito,error)=>{
+        details.canShare.push({...describeFile(candidate),esito,...(error?{error:describeError(error)}:{})});
+      });
+      if(!ready){
+        if(!details.canShare.length)details.canShare=typeof navigator.canShare!=="function"?"non disponibile":"non eseguito";
+        window.AgendaAuth?.recordEvent?.("share_unsupported");
+        paragraph.textContent="Questo dispositivo non supporta la condivisione del file. Usa SCARICA / SALVA FILE.";
+        showDiagnosis(details);
+        return;
+      }
       busy=true;
+      details.file=describeFile(ready);
       try{
+        details.toccoAttivo=navigator.userActivation?.isActive??null;
         const sharing=navigator.share({title:"Backup completo Agenda Istruttori",files:[ready]});
         save.disabled=true;
         await sharing;
         window.AgendaAuth?.recordEvent?.("share_completed");
         paragraph.textContent="Condivisione completata. Il file resta disponibile anche per il download.";
       }catch(error){
+        if(!closed)showDiagnosis(details,error);
         window.AgendaAuth?.recordEvent?.(error?.name==="AbortError"?"share_cancelled":"share_failed");
         paragraph.textContent=error?.name==="AbortError"?"Condivisione annullata. Il backup è ancora disponibile.":window.LessonSecretaryTransfer.shareFailure(error);
       }finally{busy=false;save.disabled=false;}

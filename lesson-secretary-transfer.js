@@ -81,11 +81,15 @@
   const accepted=preview.operations.filter(e=>['created','updated','unchanged'].includes(e.action)).map(({studentId,lessonId,hash,revision})=>({studentId,lessonId,hash,revision}));
   const receipt=await sign({format:RECEIPT,version:VERSION,packetId:preview.packet.packetId,packetHash:preview.packet.checksum,instructorId:preview.packet.instructor.id,importedAt:now,mode:'receipt',outcome:accepted.length===preview.operations.length?'accepted':accepted.length?'partial':'review',accepted,review:preview.operations.filter(e=>!['created','updated','unchanged'].includes(e.action)).map(e=>({studentId:e.studentId,lessonId:e.lessonId,hash:e.hash,code:e.action}))});const latest=await authority();if(await hash(latest)!==preview.policyHash)bad('Permessi cambiati prima del salvataggio.');if(changes)await adapter.write(preview.students,before);return{counts:preview.counts,receipt};
  }
- function shareableFile(file,navigator,alternative){
+ function shareableFile(file,navigator,alternative,onCheck){
   if(typeof navigator?.share!=='function'||typeof navigator.canShare!=='function')return null;
   for(const candidate of [alternative,file]){
    if(!candidate)continue;
-   try{if(navigator.canShare({files:[candidate]}))return candidate}catch{}
+   let supported;
+   try{supported=Boolean(navigator.canShare({files:[candidate]}))}
+   catch(error){onCheck?.(candidate,null,error);continue}
+   onCheck?.(candidate,supported);
+   if(supported)return candidate;
   }
   return null;
  }
