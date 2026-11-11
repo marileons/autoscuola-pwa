@@ -116,6 +116,9 @@
         validateRateVersion(item.payload);
         if (item.recordId !== `rate:${item.payload.id}`) throw new Error("Chiave tariffa backup incoerente");
         rateIds.add(item.payload.id);
+      } else if (item.payload?.kind === "monthlyPayslip") {
+        const { month, amountCents, schemaVersion } = item.payload;
+        if (schemaVersion !== 1 || typeof month !== "string" || !validDate(month + "-01") || item.recordId !== "bp:" + month || !safeInteger(amountCents)) throw new Error("Busta paga mensile non valida");
       }
       else throw new Error("Tipo record backup non supportato");
       recordIds.add(item.recordId);

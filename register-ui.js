@@ -62,6 +62,7 @@
     let reportService = null;
     let deletionService = null;
     let currentReport = null;
+    let payslipMonth = null, savingPayslip = false;
     let printableUrl = null, inlinePrintController = null;
     const openedPrintableUrls=new Set();
     function releasePrintableReport() {
@@ -91,6 +92,8 @@
     function setLockedUi() {
       releasePrintableReport();
       ledger = null;
+      closePayslip();
+      hide("registerOpenPayslip");
       byId("registerLockBadge").textContent = "BLOCCATO";
       byId("registerLockBadge").classList.remove("unlocked");
       backupService = null;
@@ -263,6 +266,52 @@
       const edit = doc.createElement("button"); edit.type = "button"; edit.className = "secondary full"; edit.textContent = "MODIFICA GIORNATA"; edit.onclick = () => openDayEditor(day);
       body.append(edit); details.append(body); return details;
     }
+    function payslipError(message) {
+      const error = byId("registerPayslipError");
+      error.textContent = message;
+      error.classList.toggle("hidden", !message);
+      byId("registerPayslipAmount").setAttribute("aria-invalid", String(Boolean(message)));
+    }
+    function closePayslip() {
+      payslipMonth = null;
+      hide("registerPayslipForm");
+      payslipError("");
+    }
+    function openPayslip() {
+      if (savingPayslip || mode !== "month" || currentReport?.period?.start !== currentRange().start) return;
+      payslipMonth = monthKey(cursor);
+      const amount = byId("registerPayslipAmount");
+      amount.value = (currentReport.totals.payslipCents / 100).toFixed(2).replace(".", ",");
+      payslipError("");
+      reveal("registerPayslipForm");
+      amount.focus();
+    }
+    async function submitPayslip(event) {
+      event.preventDefault();
+      if (savingPayslip || !payslipMonth || mode !== "month" || payslipMonth !== monthKey(cursor) || !ledger) return;
+      const amount = byId("registerPayslipAmount");
+      const value = amount.value.trim().replace(/\s*€$/, "");
+      const parts = /^(\d+)(?:[,.](\d{1,2}))?$/.exec(value);
+      const cents = parts ? Number(parts[1]) * 100 + Number((parts[2] || "").padEnd(2, "0")) : NaN;
+      if (!Number.isSafeInteger(cents)) {
+        payslipError(value ? "Inserisci un importo valido in euro, ad esempio 600,00." : "Inserisci l’importo della busta paga.");
+        amount.focus();
+        return;
+      }
+      const currentLedger = ledger, month = payslipMonth;
+      savingPayslip = true;
+      try {
+        await currentLedger.saveMonthlyPayslip(month, cents);
+        if (ledger === currentLedger && payslipMonth === month) {
+          closePayslip();
+          await render();
+        }
+      } catch (error) {
+        if (payslipMonth === month) payslipError(error.message || "Impossibile salvare la busta paga.");
+      } finally {
+        savingPayslip = false;
+      }
+    }
     async function render() {
       if (!ledger) return;
       getVault().touch();
@@ -275,6 +324,7 @@
       let result;
       try { result = await calculateSummary(); } catch (error) {
         const reason = error.message || "Errore durante il calcolo del riepilogo.";
+        hide("registerOpenPayslip");
         setMessage(reason, true);
         byId("registerSummary").replaceChildren(
           summaryRow("Riepilogo", "Non disponibile"),
@@ -294,6 +344,7 @@
         summaryRow("Saldo residuo", formatMoney(result.balanceCents))
       );
       byId("registerSummary").replaceChildren(...rows);
+      byId("registerOpenPayslip").classList.toggle("hidden", mode !== "month");
       return true;
     }
     function closeEditors() { hide("registerDayEditor", "registerRatesPanel", "registerSecurityPanel", "registerBackupPanel", "registerPrintPanel", "registerDeletionPanel"); reveal("registerWorkspace"); }
@@ -301,7 +352,8 @@
       const employment = employmentFor(byId("registerDayDate").value || dateInputToday());
       const row = doc.createElement("div"); row.className = "register-block-editor"; row.dataset.blockId = block.id || "";
       const select = doc.createElement("select"); select.className = "register-block-category"; select.setAttribute("aria-label", "Categoria attività");
-      const options = employment?.employmentType === "FULL_TIME" ? [...CATEGORIES, "P", "F", Catalog.PAYSLIP_CATEGORY] : [...CATEGORIES, Catalog.PAYSLIP_CATEGORY];
+      const historicalPayslip = block.category === Catalog.PAYSLIP_CATEGORY;
+      const options = historicalPayslip ? [Catalog.PAYSLIP_CATEGORY] : employment?.employmentType === "FULL_TIME" ? [...CATEGORIES, "P", "F"] : CATEGORIES;
       options.forEach((value) => { const option = doc.createElement("option"); option.value = value; option.textContent = Catalog.label(value); option.selected = value === Catalog.normalizeCategory(block.category); select.append(option); });
       const duration = doc.createElement("div"); duration.className = "register-block-duration";
       const parts = splitMinutes(block.minutes || 60);
@@ -311,6 +363,7 @@
       const minutes = doc.createElement("input"); minutes.type = "number"; minutes.inputMode = "numeric"; minutes.min = "0"; minutes.max = "59"; minutes.step = "1"; minutes.required = true; minutes.className = "register-block-minute-part"; minutes.value = parts.minutes; minutes.setAttribute("aria-label", "Minuti attività");
       const amountLabel = doc.createElement("label"); amountLabel.textContent = "IMPORTO IN EURO"; amountLabel.style.gridColumn = "1 / -1";
       const amount = doc.createElement("input"); amount.type = "number"; amount.inputMode = "decimal"; amount.min = "0.01"; amount.step = "0.01"; amount.required = true;
+      amount.readOnly = historicalPayslip;
       amount.className = "register-block-amount"; amount.value = block.amountCents == null ? "" : (block.amountCents / 100).toFixed(2);
       amountLabel.append(amount);
       hoursLabel.append(hours); minutesLabel.append(minutes); duration.append(hoursLabel, minutesLabel, amountLabel);
@@ -333,7 +386,8 @@
       const fullTime = employmentFor(byId("registerDayDate").value)?.employmentType === "FULL_TIME";
       byId("registerBlocks").querySelectorAll(".register-block-category").forEach((select) => {
         const selected = Catalog.normalizeCategory(select.value);
-        const allowed = fullTime ? [...CATEGORIES, "P", "F", Catalog.PAYSLIP_CATEGORY] : [...CATEGORIES, Catalog.PAYSLIP_CATEGORY];
+        if (selected === Catalog.PAYSLIP_CATEGORY) return;
+        const allowed = fullTime ? [...CATEGORIES, "P", "F"] : CATEGORIES;
         select.replaceChildren(...allowed.map((value) => {
           const option = doc.createElement("option"); option.value = value; option.textContent = Catalog.label(value);
           option.selected = value === selected || (!allowed.includes(selected) && value === CATEGORIES[0]);
@@ -504,11 +558,15 @@
       hide("registerWorkspace", "registerDayEditor", "registerRatesPanel", "registerSecurityPanel", "registerBackupPanel", "registerPrintPanel"); reveal("registerDeletionPanel");
     }
     function changeMode(next) {
+      closePayslip();
+      hide("registerOpenPayslip");
       mode = next; cursor = next === "week" ? mondayOf(cursor) : `${monthKey(cursor)}-01`;
       byId("registerWeekTab").classList.toggle("active", mode === "week"); byId("registerMonthTab").classList.toggle("active", mode === "month");
       byId("registerWeekTab").setAttribute("aria-pressed", String(mode === "week")); byId("registerMonthTab").setAttribute("aria-pressed", String(mode === "month")); void render();
     }
     function movePeriod(direction) {
+      closePayslip();
+      hide("registerOpenPayslip");
       if (mode === "week") cursor = addDays(mondayOf(cursor), direction * 7);
       else { const date = parseIso(`${monthKey(cursor)}-01`); date.setUTCMonth(date.getUTCMonth() + direction); cursor = isoDate(date); }
       void render();
@@ -523,6 +581,10 @@
       byId("registerRecoveryContinue").onclick = async () => { byId("registerRecoveryOnceCode").textContent = ""; await prepareLedger(); };
       byId("registerWeekTab").onclick = () => changeMode("week"); byId("registerMonthTab").onclick = () => changeMode("month");
       byId("registerPreviousPeriod").onclick = () => movePeriod(-1); byId("registerNextPeriod").onclick = () => movePeriod(1);
+      byId("registerOpenPayslip").onclick = openPayslip;
+      byId("registerPayslipForm").onsubmit = submitPayslip;
+      byId("registerPayslipAmount").oninput = () => payslipError("");
+      byId("registerCancelPayslip").onclick = closePayslip;
       byId("registerAddDay").onclick = () => openDayEditor(); byId("registerAddBlock").onclick = () => addBlockRow(); byId("registerDayForm").onsubmit = submitDay; byId("registerCancelDay").onclick = () => { byId("registerDayDate").disabled = false; closeEditors(); };
       byId("registerDayDate").onchange = refreshBlockCategories;
       byId("registerOpenRates").onclick = openRates; byId("registerRatesForm").onsubmit = submitRates; byId("registerCancelRates").onclick = closeEditors;

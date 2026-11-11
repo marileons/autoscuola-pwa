@@ -130,6 +130,16 @@
       await vault.putRecord(`rate:${version.id}`, version);
       return clone(version);
     }
+    async function getMonthlyPayslip(month) {
+      if (!validDate(month + "-01")) throw new TypeError("Mese non valido");
+      const record = await vault.getRecord("bp:" + month);
+      return record?.amountCents ?? null;
+    }
+    async function saveMonthlyPayslip(month, amountCents) {
+      if (!validDate(month + "-01")) throw new TypeError("Mese non valido");
+      assertInteger(amountCents, "Importo busta paga");
+      await vault.putRecord("bp:" + month, { kind: "monthlyPayslip", schemaVersion: 1, month, amountCents });
+    }
     async function getDay(date) {
       if (!validDate(date)) throw new TypeError("Data non valida");
       const record = await vault.getRecord(`day:${date}`);
@@ -268,6 +278,8 @@
       listRateVersions,
       rateForDate,
       saveDay,
+      getMonthlyPayslip,
+      saveMonthlyPayslip,
       getDay,
       listDays,
       listDayRevisions,

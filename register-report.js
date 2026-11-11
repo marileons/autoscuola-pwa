@@ -97,7 +97,9 @@
       const overtimeMinutes = flatBlocks.reduce((sum, block) => sum + (block.overtimeMinutes || 0), 0);
       const groupedComponents = aggregateComponents(components);
       const totalAmountCents = groupedComponents.reduce((sum, item) => sum + item.amountCents, 0);
-      const payslipCents = flatBlocks.reduce((sum, block) => sum + (block.category === Catalog.PAYSLIP_CATEGORY ? block.amountCents : 0), 0);
+      const historicalPayslipCents = flatBlocks.reduce((sum, block) => sum + (block.category === Catalog.PAYSLIP_CATEGORY ? block.amountCents : 0), 0);
+      const monthlyPayslip = mode === "month" ? await ledger.getMonthlyPayslip?.(period.start.slice(0, 7)) : null;
+      const payslipCents = monthlyPayslip ?? historicalPayslipCents;
       const employments = [...new Set(days.map((day) => day.employmentType))];
       if (!employments.length) {
         const employment = employmentFor(employmentPeriods, period.start);
