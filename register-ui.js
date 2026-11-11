@@ -234,6 +234,8 @@
         overtimeAmountCents: currentReport.totals.overtimeAmountCents,
         fullTime: currentReport.employmentTypes.includes("FULL_TIME"),
         amountCents: currentReport.totals.totalAmountCents,
+        payslipCents: currentReport.totals.payslipCents,
+        balanceCents: currentReport.totals.balanceCents,
         days: currentReport.totals.dayCount
       };
     }
@@ -247,14 +249,14 @@
       const details = doc.createElement("details"); details.className = "register-day-card";
       const summary = doc.createElement("summary");
       const title = doc.createElement("span"); title.textContent = formatDate(day.date);
-      const total = day.blocks.reduce((sum, block) => sum + block.minutes, 0);
+      const total = day.blocks.reduce((sum, block) => sum + (block.minutes || 0), 0);
       const meta = doc.createElement("strong"); meta.textContent = formatMinutes(total);
       summary.append(title, meta); details.append(summary);
       const body = doc.createElement("div"); body.className = "register-day-body";
       day.blocks.forEach((block) => {
         const row = doc.createElement("div"); row.className = "register-block-row";
         const category = doc.createElement("strong"); category.textContent = `${block.order}. ${Catalog.label(block.category)}`;
-        const duration = doc.createElement("span"); duration.textContent = formatMinutes(block.minutes);
+        const duration = doc.createElement("span"); duration.textContent = block.category === Catalog.PAYSLIP_CATEGORY ? formatMoney(block.amountCents) : formatMinutes(block.minutes);
         row.append(category, duration); body.append(row);
       });
       if (day.note) { const note = doc.createElement("p"); note.textContent = day.note; body.append(note); }
@@ -287,7 +289,9 @@
       ];
       if (result.fullTime) rows.push(summaryRow("Straordinario", `${formatMinutes(result.overtimeMinutes)} — ${formatMoney(result.overtimeAmountCents)}`));
       rows.push(
-        summaryRow("Compenso", formatMoney(result.amountCents))
+        summaryRow("Compenso maturato", formatMoney(result.amountCents)),
+        summaryRow("Busta paga (BP)", formatMoney(result.payslipCents)),
+        summaryRow("Saldo residuo", formatMoney(result.balanceCents))
       );
       byId("registerSummary").replaceChildren(...rows);
       return true;
@@ -297,7 +301,7 @@
       const employment = employmentFor(byId("registerDayDate").value || dateInputToday());
       const row = doc.createElement("div"); row.className = "register-block-editor"; row.dataset.blockId = block.id || "";
       const select = doc.createElement("select"); select.className = "register-block-category"; select.setAttribute("aria-label", "Categoria attività");
-      const options = employment?.employmentType === "FULL_TIME" ? [...CATEGORIES, "P", "F"] : CATEGORIES;
+      const options = employment?.employmentType === "FULL_TIME" ? [...CATEGORIES, "P", "F", Catalog.PAYSLIP_CATEGORY] : [...CATEGORIES, Catalog.PAYSLIP_CATEGORY];
       options.forEach((value) => { const option = doc.createElement("option"); option.value = value; option.textContent = Catalog.label(value); option.selected = value === Catalog.normalizeCategory(block.category); select.append(option); });
       const duration = doc.createElement("div"); duration.className = "register-block-duration";
       const parts = splitMinutes(block.minutes || 60);
@@ -305,7 +309,21 @@
       const hours = doc.createElement("input"); hours.type = "number"; hours.inputMode = "numeric"; hours.min = "0"; hours.step = "1"; hours.required = true; hours.className = "register-block-hours"; hours.value = parts.hours; hours.setAttribute("aria-label", "Ore attività");
       const minutesLabel = doc.createElement("label"); minutesLabel.textContent = "MINUTI";
       const minutes = doc.createElement("input"); minutes.type = "number"; minutes.inputMode = "numeric"; minutes.min = "0"; minutes.max = "59"; minutes.step = "1"; minutes.required = true; minutes.className = "register-block-minute-part"; minutes.value = parts.minutes; minutes.setAttribute("aria-label", "Minuti attività");
-      hoursLabel.append(hours); minutesLabel.append(minutes); duration.append(hoursLabel, minutesLabel);
+      const amountLabel = doc.createElement("label"); amountLabel.textContent = "IMPORTO IN EURO"; amountLabel.style.gridColumn = "1 / -1";
+      const amount = doc.createElement("input"); amount.type = "number"; amount.inputMode = "decimal"; amount.min = "0.01"; amount.step = "0.01"; amount.required = true;
+      amount.className = "register-block-amount"; amount.value = block.amountCents == null ? "" : (block.amountCents / 100).toFixed(2);
+      amountLabel.append(amount);
+      hoursLabel.append(hours); minutesLabel.append(minutes); duration.append(hoursLabel, minutesLabel, amountLabel);
+      const syncFields = () => {
+        const isPayslip = select.value === Catalog.PAYSLIP_CATEGORY;
+        hoursLabel.classList.toggle("hidden", isPayslip);
+        minutesLabel.classList.toggle("hidden", isPayslip);
+        amountLabel.classList.toggle("hidden", !isPayslip);
+        hours.disabled = minutes.disabled = isPayslip;
+        amount.disabled = !isPayslip;
+      };
+      select.addEventListener("change", syncFields);
+      syncFields();
       const moveUp = doc.createElement("button"); moveUp.type = "button"; moveUp.className = "secondary"; moveUp.textContent = "↑"; moveUp.setAttribute("aria-label", "Sposta prima"); moveUp.onclick = () => row.previousElementSibling && row.parentElement.insertBefore(row, row.previousElementSibling);
       const moveDown = doc.createElement("button"); moveDown.type = "button"; moveDown.className = "secondary"; moveDown.textContent = "↓"; moveDown.setAttribute("aria-label", "Sposta dopo"); moveDown.onclick = () => row.nextElementSibling && row.parentElement.insertBefore(row.nextElementSibling, row);
       const remove = doc.createElement("button"); remove.type = "button"; remove.className = "danger"; remove.textContent = "×"; remove.setAttribute("aria-label", "Rimuovi attività"); remove.onclick = () => row.remove();
@@ -315,7 +333,7 @@
       const fullTime = employmentFor(byId("registerDayDate").value)?.employmentType === "FULL_TIME";
       byId("registerBlocks").querySelectorAll(".register-block-category").forEach((select) => {
         const selected = Catalog.normalizeCategory(select.value);
-        const allowed = fullTime ? [...CATEGORIES, "P", "F"] : CATEGORIES;
+        const allowed = fullTime ? [...CATEGORIES, "P", "F", Catalog.PAYSLIP_CATEGORY] : [...CATEGORIES, Catalog.PAYSLIP_CATEGORY];
         select.replaceChildren(...allowed.map((value) => {
           const option = doc.createElement("option"); option.value = value; option.textContent = Catalog.label(value);
           option.selected = value === selected || (!allowed.includes(selected) && value === CATEGORIES[0]);
@@ -339,7 +357,9 @@
           id: row.dataset.blockId || undefined,
           order: index + 1,
           category: row.querySelector("select").value,
-          minutes: durationToMinutes(row.querySelector(".register-block-hours").value, row.querySelector(".register-block-minute-part").value)
+          ...(row.querySelector("select").value === Catalog.PAYSLIP_CATEGORY
+            ? { amountCents: centsFromInput(row.querySelector(".register-block-amount").value) }
+            : { minutes: durationToMinutes(row.querySelector(".register-block-hours").value, row.querySelector(".register-block-minute-part").value) })
         }));
         await ledger.saveDay({ date, blocks, note: byId("registerDayNote").value, revisionReason: "MODIFICA DA INTERFACCIA" });
         byId("registerDayDate").disabled = false; closeEditors();

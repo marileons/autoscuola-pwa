@@ -91,7 +91,8 @@
     const orders = new Set(), ids = new Set();
     for (const block of day.blocks) {
       if (!block || typeof block.id !== "string" || !block.id || ids.has(block.id)) throw new Error("Blocco attività non valido");
-      if (!safeInteger(block.order, 1) || orders.has(block.order) || !ALL_CATEGORIES.has(block.category) || !safeInteger(block.minutes, 1)) throw new Error("Blocco attività non valido");
+      if (!safeInteger(block.order, 1) || orders.has(block.order) || !(block.category === Catalog.PAYSLIP_CATEGORY ? safeInteger(block.amountCents, 1) : ALL_CATEGORIES.has(block.category) && safeInteger(block.minutes, 1))) throw new Error("Blocco attività non valido");
+      if (block.category === Catalog.PAYSLIP_CATEGORY) { ids.add(block.id); orders.add(block.order); continue; }
       if (typeof block.rateVersionId !== "string" || !block.rateVersionId) throw new Error("Versione tariffaria blocco non valida");
       validateRateSnapshot(block.rateSnapshot); Catalog.requireRate(block.rateSnapshot, block.category); ids.add(block.id); orders.add(block.order);
     }
@@ -120,7 +121,7 @@
       recordIds.add(item.recordId);
     }
     for (const day of days) for (const block of day.blocks) {
-      if (!rateIds.has(block.rateVersionId)) throw new Error("Versione tariffaria referenziata non presente nel backup");
+      if (block.category !== Catalog.PAYSLIP_CATEGORY && !rateIds.has(block.rateVersionId)) throw new Error("Versione tariffaria referenziata non presente nel backup");
     }
     const revisionIds = new Set();
     for (const item of snapshot.revisions) {
@@ -129,7 +130,7 @@
       if (revision?.kind !== "dayRevision" || revision.schemaVersion !== 1 || !safeInteger(revision.revision, 1) || !dayIds.has(revision.dayId)) throw new Error("Revisione giornata non valida");
       validateDay(revision.snapshot);
       if (revision.snapshot.id !== revision.dayId || revision.snapshot.date !== revision.date || item.recordId !== revision.dayId) throw new Error("Revisione incoerente con la giornata");
-      for (const block of revision.snapshot.blocks) if (!rateIds.has(block.rateVersionId)) throw new Error("Tariffa revisione non presente nel backup");
+      for (const block of revision.snapshot.blocks) if (block.category !== Catalog.PAYSLIP_CATEGORY && !rateIds.has(block.rateVersionId)) throw new Error("Tariffa revisione non presente nel backup");
       revisionIds.add(item.revisionId);
     }
     return clone(snapshot);

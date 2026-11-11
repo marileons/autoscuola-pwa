@@ -38,7 +38,7 @@
   }
   function minutesByCategory(days) {
     const result = Object.fromEntries([...WORK_CATEGORIES, "P", "F"].map((category) => [category, 0]));
-    days.flatMap((day) => day.blocks).forEach((block) => { const category = Catalog.normalizeCategory(block.category); result[category] = (result[category] || 0) + block.minutes; });
+    days.flatMap((day) => day.blocks).forEach((block) => { const category = Catalog.normalizeCategory(block.category); if (category === Catalog.PAYSLIP_CATEGORY) return; result[category] = (result[category] || 0) + block.minutes; });
     return result;
   }
   function aggregateComponents(components) {
@@ -59,7 +59,7 @@
       const period = rangeFor(mode, cursor);
       const allDays = await ledger.listDays();
       const visibleDays = allDays.filter((day) => day.date >= period.start && day.date <= period.end);
-      const weeks = [...new Set(visibleDays.map((day) => mondayOf(day.date)))].sort();
+      const weeks = [...new Set(visibleDays.filter(day => day.blocks.some(block => block.category !== Catalog.PAYSLIP_CATEGORY)).map(day => mondayOf(day.date)))].sort();
       const weeklyResults = [];
       for (const weekStart of weeks) weeklyResults.push({ weekStart, result: await ledger.calculateWeek(weekStart) });
       const components = weeklyResults.flatMap(({ result }) => result.components)
@@ -74,6 +74,7 @@
           date: day.date, note: day.note, employmentType: day.employmentType,
           revision: day.revision, revisionCount: revisions.length,
           blocks: day.blocks.map((block) => {
+            if (block.category === Catalog.PAYSLIP_CATEGORY) return { order: block.order, category: block.category, amountCents: block.amountCents };
             const computed = classification.get(`${day.date}|${block.order}`) || {};
             const isAbsence = block.category === "P" || block.category === "F";
             return {
@@ -91,10 +92,12 @@
       const flatBlocks = days.flatMap((day) => day.blocks);
       const workMinutes = WORK_CATEGORIES.reduce((sum, category) => sum + categories[category], 0);
       const absenceRecordedMinutes = categories.P + categories.F;
-      const absencePaidMinutes = flatBlocks.reduce((sum, block) => sum + block.paidAbsenceMinutes, 0);
-      const ordinaryWorkMinutes = flatBlocks.reduce((sum, block) => sum + block.ordinaryMinutes, 0);
-      const overtimeMinutes = flatBlocks.reduce((sum, block) => sum + block.overtimeMinutes, 0);
+      const absencePaidMinutes = flatBlocks.reduce((sum, block) => sum + (block.paidAbsenceMinutes || 0), 0);
+      const ordinaryWorkMinutes = flatBlocks.reduce((sum, block) => sum + (block.ordinaryMinutes || 0), 0);
+      const overtimeMinutes = flatBlocks.reduce((sum, block) => sum + (block.overtimeMinutes || 0), 0);
       const groupedComponents = aggregateComponents(components);
+      const totalAmountCents = groupedComponents.reduce((sum, item) => sum + item.amountCents, 0);
+      const payslipCents = flatBlocks.reduce((sum, block) => sum + (block.category === Catalog.PAYSLIP_CATEGORY ? block.amountCents : 0), 0);
       const employments = [...new Set(days.map((day) => day.employmentType))];
       if (!employments.length) {
         const employment = employmentFor(employmentPeriods, period.start);
@@ -112,7 +115,7 @@
           absenceUnpaidMinutes: absenceRecordedMinutes - absencePaidMinutes,
           categoryPremiumCents: groupedComponents.filter((item) => item.component === "CATEGORY_PREMIUM").reduce((sum, item) => sum + item.amountCents, 0),
           overtimeAmountCents: groupedComponents.filter((item) => item.component === "OVERTIME").reduce((sum, item) => sum + item.amountCents, 0),
-          totalAmountCents: groupedComponents.reduce((sum, item) => sum + item.amountCents, 0)
+          totalAmountCents, payslipCents, balanceCents: totalAmountCents - payslipCents
         }
       };
     }
@@ -126,9 +129,9 @@
     const categoryRows = [...WORK_CATEGORIES, "P", "F"].filter((category) => report.categories[category] > 0)
       .map((category) => `<tr><td>${escapeHtml(Catalog.label(category))}</td><td>${escapeHtml(formatMinutes(report.categories[category]))}</td></tr>`);
     const componentRows = report.components.map((item) => `<tr><td>${escapeHtml(COMPONENT_LABELS[item.component] || item.component)}</td><td>${escapeHtml(Catalog.label(item.category))}</td><td>${escapeHtml(formatMinutes(item.minutes))}</td><td>${escapeHtml(formatMoney(item.rateCentsPerHour))}/h</td><td>${escapeHtml(formatMoney(item.amountCents))}</td></tr>`);
-    const dayRows = report.days.map((day) => `<tr><td>${escapeHtml(formatDate(day.date))}</td><td>${escapeHtml(day.blocks.map((block) => `${block.category} ${formatMinutes(block.minutes)}`).join(" · "))}</td><td>${escapeHtml(day.note || "—")}</td><td>Rev. ${escapeHtml(day.revision)} / ${escapeHtml(day.revisionCount)}</td></tr>`);
+    const dayRows = report.days.map((day) => `<tr><td>${escapeHtml(formatDate(day.date))}</td><td>${escapeHtml(day.blocks.map((block) => `${block.category} ${block.category === Catalog.PAYSLIP_CATEGORY ? formatMoney(block.amountCents) : formatMinutes(block.minutes)}`).join(" · "))}</td><td>${escapeHtml(day.note || "—")}</td><td>Rev. ${escapeHtml(day.revision)} / ${escapeHtml(day.revisionCount)}</td></tr>`);
     const componentCards = report.components.map((item) => `<div class="report-mobile-card"><strong>${escapeHtml(COMPONENT_LABELS[item.component] || item.component)}</strong><span>${escapeHtml(Catalog.label(item.category))} · ${escapeHtml(formatMinutes(item.minutes))}</span><span>${escapeHtml(formatMoney(item.rateCentsPerHour))}/h</span><b>${escapeHtml(formatMoney(item.amountCents))}</b></div>`).join("");
-    const dayCards = report.days.map((day) => `<div class="report-mobile-card"><strong>${escapeHtml(formatDate(day.date))}</strong><span>${escapeHtml(day.blocks.map((block) => `${block.category} ${formatMinutes(block.minutes)}`).join(" · "))}</span><span>${escapeHtml(day.note || "Nessuna nota")}</span><b>Rev. ${escapeHtml(day.revision)} / ${escapeHtml(day.revisionCount)}</b></div>`).join("");
+    const dayCards = report.days.map((day) => `<div class="report-mobile-card"><strong>${escapeHtml(formatDate(day.date))}</strong><span>${escapeHtml(day.blocks.map((block) => `${block.category} ${block.category === Catalog.PAYSLIP_CATEGORY ? formatMoney(block.amountCents) : formatMinutes(block.minutes)}`).join(" · "))}</span><span>${escapeHtml(day.note || "Nessuna nota")}</span><b>Rev. ${escapeHtml(day.revision)} / ${escapeHtml(day.revisionCount)}</b></div>`).join("");
     const employment = report.employmentTypes.map((item) => item.replace("_", " ")).join(" / ") || "Non disponibile";
     return `<article class="register-print-document">
       <header class="report-header"><div><p>AGENDA ISTRUTTORI v1.21</p><h2>Prospetto ${report.kind === "weekly" ? "settimanale" : "mensile"}</h2></div><strong>${escapeHtml(report.period.label)}</strong></header>
@@ -138,7 +141,7 @@
         <div><span>P/F registrati</span><strong>${escapeHtml(formatMinutes(report.totals.absenceRecordedMinutes))}</strong></div><div><span>P/F valorizzati</span><strong>${escapeHtml(formatMinutes(report.totals.absencePaidMinutes))}</strong></div><div><span>P/F non valorizzati</span><strong>${escapeHtml(formatMinutes(report.totals.absenceUnpaidMinutes))}</strong></div>
       </div></section>
       <section><h3>Attività per categoria</h3>${categoryRows.length ? table(["Categoria", "Durata"], categoryRows) : "<p>Nessuna attività nel periodo.</p>"}</section>
-      <section><h3>Compensi e tariffe applicate</h3>${componentRows.length ? `<div class="report-wide">${table(["Componente", "Categoria", "Durata", "Tariffa", "Importo"], componentRows)}</div><div class="report-mobile-only">${componentCards}</div>` : "<p>Nessun compenso nel periodo.</p>"}<div class="report-totals"><span>Maggiorazioni categoria: <strong>${escapeHtml(formatMoney(report.totals.categoryPremiumCents))}</strong></span><span>Straordinario: <strong>${escapeHtml(formatMoney(report.totals.overtimeAmountCents))}</strong></span><span>Totale: <strong>${escapeHtml(formatMoney(report.totals.totalAmountCents))}</strong></span></div></section>
+      <section><h3>Compensi e tariffe applicate</h3>${componentRows.length ? `<div class="report-wide">${table(["Componente", "Categoria", "Durata", "Tariffa", "Importo"], componentRows)}</div><div class="report-mobile-only">${componentCards}</div>` : "<p>Nessun compenso nel periodo.</p>"}<div class="report-totals"><span>Maggiorazioni categoria: <strong>${escapeHtml(formatMoney(report.totals.categoryPremiumCents))}</strong></span><span>Straordinario: <strong>${escapeHtml(formatMoney(report.totals.overtimeAmountCents))}</strong></span><span>Compenso maturato: <strong>${escapeHtml(formatMoney(report.totals.totalAmountCents))}</strong></span><span>Busta paga (BP): <strong>${escapeHtml(formatMoney(report.totals.payslipCents ?? 0))}</strong></span><span>Saldo residuo: <strong>${escapeHtml(formatMoney(report.totals.balanceCents ?? report.totals.totalAmountCents))}</strong></span></div></section>
       <section><h3>Giornate, note e revisioni</h3>${dayRows.length ? `<div class="report-wide">${table(["Data", "Attività", "Note", "Prospetto"], dayRows, "report-days")}</div><div class="report-mobile-only">${dayCards}</div>` : "<p>Nessuna giornata nel periodo.</p>"}</section>
       <footer><p>Prospetto generato localmente. Nessun dato economico è stato inviato o archiviato su server.</p><p>Settimane di calcolo: ${escapeHtml(report.weeksCalculated.join(", ") || "nessuna")}</p></footer>
     </article>`;

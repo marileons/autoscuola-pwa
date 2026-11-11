@@ -71,7 +71,7 @@
     day.blocks = (day.blocks || []).map((block) => ({
       ...block,
       category: Catalog.normalizeCategory(block.category),
-      rateSnapshot: normalizeStoredRates(block.rateSnapshot)
+      ...(block.category === Catalog.PAYSLIP_CATEGORY ? {} : { rateSnapshot: normalizeStoredRates(block.rateSnapshot) })
     }));
     return day;
   }
@@ -144,7 +144,7 @@
 
     async function normalizeBlocks(inputBlocks, employment, date, existingDay) {
       if (!Array.isArray(inputBlocks)) throw new TypeError("Blocchi attività mancanti");
-      const selectedRate = await rateForDate(date);
+      const selectedRate = inputBlocks.some(block => block.category !== Catalog.PAYSLIP_CATEGORY) ? await rateForDate(date) : null;
       const previousById = new Map((existingDay?.blocks || []).map((block) => [block.id, block]));
       const orders = new Set();
       const blocks = inputBlocks.map((input, index) => {
@@ -153,6 +153,11 @@
         if (orders.has(order)) throw new RangeError("Ordine blocco duplicato");
         orders.add(order);
         const category = Catalog.normalizeCategory(String(input.category || ""));
+        const id = String(input.id || idFactory());
+        if (category === Catalog.PAYSLIP_CATEGORY) {
+          assertInteger(input.amountCents, "Importo busta paga", 1);
+          return { id, order, category, amountCents: input.amountCents };
+        }
         if (!WORK_CATEGORIES.includes(category) && !ABSENCE_CATEGORIES.includes(category)) {
           throw new TypeError("Categoria attività non valida");
         }
@@ -160,7 +165,6 @@
           throw new RangeError("P/F sono disponibili soltanto per FULL TIME");
         }
         assertInteger(input.minutes, "Durata blocco", 1);
-        const id = String(input.id || idFactory());
         const previous = previousById.get(id);
         let rateVersionId = previous?.rateVersionId || selectedRate.id;
         let rateSnapshot = previous?.rateSnapshot || selectedRate.rates;
@@ -242,7 +246,7 @@
       if (days.some((day) => day.employmentType !== employment.employmentType)) {
         throw new RangeError("La settimana contiene tipi lavorativi incoerenti");
       }
-      const blocks = days.flatMap((day) => day.blocks.map((block) => ({
+      const blocks = days.flatMap((day) => day.blocks.filter(block => block.category !== Catalog.PAYSLIP_CATEGORY).map((block) => ({
         date: day.date,
         order: block.order,
         category: block.category,
