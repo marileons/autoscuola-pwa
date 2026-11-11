@@ -103,10 +103,34 @@
   }[error?.name];
   return 'Condivisione non riuscita. '+(typeof reason==='string'?reason+' ':'')+'Il file è ancora pronto. Usa SCARICA / SALVA FILE.';
  }
- async function deliver(file,share,navigator=globalThis.navigator,download,alternative){
+ async function deliver(file,share,navigator=globalThis.navigator,download,alternative,diagnosis){
   if(share){
-   const ready=shareableFile(file,navigator,alternative);
-   if(ready){try{await navigator.share({files:[ready],title:ready.name});return 'shared'}catch(e){if(e.name==='AbortError')return 'cancelled';throw Error(shareFailure(e))}}
+   const fileInfo=value=>({extension:/\.[^.]+$/.exec(value.name)?.[0]??null,type:value.type,size:value.size});
+   const errorInfo=error=>{
+    let message=String(error?.message??'');
+    for(const candidate of [file,alternative]){
+     if(!candidate?.name)continue;
+     for(const name of [candidate.name,encodeURIComponent(candidate.name)])message=message.replaceAll(name,'[nome file]');
+    }
+    return {name:error?.name??null,message};
+   };
+   if(diagnosis)Object.assign(diagnosis,{file:fileInfo(file),canShare:[],toccoAttivo:navigator?.userActivation?.isActive??null,error:null});
+   const ready=shareableFile(file,navigator,alternative,diagnosis?(candidate,esito,error)=>{
+    diagnosis.canShare.push({...fileInfo(candidate),esito,...(error?{error:errorInfo(error)}:{})});
+   }:undefined);
+   if(ready){
+    if(diagnosis){
+     diagnosis.file=fileInfo(ready);
+     diagnosis.toccoAttivo=navigator?.userActivation?.isActive??null;
+    }
+    try{await navigator.share({files:[ready],title:ready.name});return 'shared'}
+    catch(error){
+     if(diagnosis)diagnosis.error=errorInfo(error);
+     if(error?.name==='AbortError')return 'cancelled';
+     throw Error(shareFailure(error));
+    }
+   }
+   if(diagnosis&&!diagnosis.canShare.length)diagnosis.canShare=typeof navigator?.canShare==='function'?'non eseguito':'non disponibile';
   }
   if(!download)bad('Condivisione di questo file non supportata. Usa SCARICA / SALVA FILE.');
   await download(file);return 'downloaded';
