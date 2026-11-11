@@ -93,7 +93,7 @@
  #appShell .interior-view button.danger{background:transparent!important;color:#ffc2be!important;border:1px solid #c58080!important;box-shadow:none!important}#appShell .interior-view button.danger svg{color:inherit}
  #appShell #student .student-secondary>summary{min-height:48px;cursor:pointer;font-weight:800;padding:12px 0;color:#fff7e8}
  #appShell #student .student-action-group{display:flex;flex-wrap:wrap;gap:12px;align-items:center}#appShell #student .student-action-group>*{width:auto;max-width:100%;margin:0}#appShell #student .student-action-group .danger{margin-left:12px}
- #appShell #student .lesson-history-row{display:block;padding:12px 16px}#appShell #student .lesson-history-row .lesson-card-main{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 16px}#appShell #student .lesson-history-row .lesson-items{display:none}
+ #appShell #student .lesson-history-row{display:block;padding:12px 16px}#appShell #student .lesson-history-row .lesson-card-main{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 16px}
  @media(max-width:850px){#appShell #lesson .lesson-workspace{grid-template-columns:minmax(0,1fr)}#appShell #lesson .lesson-summary{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#appShell #lesson .lesson-summary .gps-indicator{grid-column:1/-1;justify-self:start}}
  @media(max-width:600px){#appShell #lesson .lesson-summary .gps-indicator{grid-column:auto}#appShell #student .lesson-history-row .lesson-card-main{grid-template-columns:minmax(0,1fr)}#appShell #student .student-action-group>*{width:100%}#appShell #student .student-action-group .danger{margin-left:0}}
 }
