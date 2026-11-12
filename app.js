@@ -703,43 +703,10 @@ function peerLessonEnsure(view){if(view.epoch!==peerLessonEpoch||view.account!==
 function peerLessonButton(view,label,handler,secondary=false){const button=document.createElement("button");button.type="button";button.textContent=label;if(secondary)button.className="secondary";button.onclick=async()=>{if(peerLessonBusy)return;peerLessonBusy=true;button.disabled=true;try{peerLessonEnsure(view);const blocked=localLessonOperationBlock();if(blocked)throw Error(blocked);await handler();peerLessonEnsure(view)}catch(error){if(view.epoch===peerLessonEpoch)view.message.textContent=error.message||"Operazione non riuscita. Dati precedenti conservati."}finally{peerLessonBusy=false;if(button.isConnected)button.disabled=false}};view.actions.append(button);return button}
 function downloadPeerLesson(file){const url=URL.createObjectURL(file),link=document.createElement("a");link.href=url;link.download=file.name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
 function addPeerLessonShare(view,core,shareText){
-  let diagnosis=null;
-  const manualCopy=document.createElement("textarea");
-  manualCopy.readOnly=true;
-  manualCopy.hidden=true;
-  manualCopy.setAttribute("aria-label","Diagnosi condivisione");
-  view.body.append(manualCopy);
   peerLessonButton(view,"CONDIVIDI BACKUP",async()=>{
-    const details={};
-    diagnosis=null;
-    copy.hidden=true;
-    manualCopy.hidden=true;
-    manualCopy.value="";
-    try{
-      const result=await core.deliver(shareText,true,navigator,undefined,undefined,details);
-      view.message.textContent=result==="cancelled"?"Condivisione annullata: file pronto conservato.":"Condivisione completata. Importazione non confermata.";
-      if(result==="cancelled"){diagnosis=details;copy.hidden=false}
-    }catch(error){
-      diagnosis=details;
-      copy.hidden=false;
-      throw error;
-    }
+    const result=await core.deliver(shareText,true,navigator);
+    view.message.textContent=result==="cancelled"?"Condivisione annullata: file pronto conservato.":"Condivisione completata. Importazione non confermata.";
   });
-  const copy=peerLessonButton(view,"COPIA DIAGNOSI",async()=>{
-    if(!diagnosis)return;
-    const text=JSON.stringify(diagnosis,null,2);
-    try{
-      await navigator.clipboard.writeText(text);
-      view.message.textContent="Diagnosi copiata.";
-    }catch{
-      manualCopy.value=text;
-      manualCopy.hidden=false;
-      manualCopy.focus();
-      manualCopy.select();
-      view.message.textContent="Copia il testo selezionato.";
-    }
-  },true);
-  copy.hidden=true;
 }
 async function openPeerLessonExport(studentId,lessonId){if(!peerLessonAllowed()||peerLessonBusy||pathChangeBusy)return;const blocked=localLessonOperationBlock();if(blocked)return alert(blocked);const view=peerLessonDocument("CONDIVIDI QUESTA LEZIONE");peerLessonBusy=true;try{const core=window.LessonSecretaryTransfer,before=await window.LessonSecretaryTransferBridge.read();peerLessonEnsure(view);const people=JSON.parse(JSON.stringify(before)),person=people.find(s=>s.id===studentId),saved=person?.lessons.find(l=>l.id===lessonId);if(!saved)throw Error("Guida non salvata o non più disponibile.");if(!saved.lessonContext)saved.lessonContext=captureStudentPathContext(person);const packet=await core.createPeer(person,saved,window.AgendaAuth.currentUser()),next=await core.recordPeerCreated(people,packet,window.AgendaAuth.currentUser());peerLessonEnsure(view);await window.LessonSecretaryTransferBridge.write(next,before,view.account,peerLessonAllowed);peerLessonEnsure(view);const file=new File([JSON.stringify(packet)],["Guida",safeFilePart(packet.student.lastName,"Senza_cognome").slice(0,70),safeFilePart(packet.student.firstName,"Senza_nome").slice(0,70),packet.lesson.data.date].join("_").replace(/[\u0000-\u001f]/g,"_")+".agenda-lezione",{type:"application/json"}),shareText=new File([file],file.name.slice(0,-".agenda-lezione".length)+".txt",{type:"text/plain"}),details=document.createElement("p");details.textContent=[person.lastName,person.firstName].filter(Boolean).join(" ")+" · "+new Date(saved.createdAt).toLocaleString("it-IT")+" · "+saved.instructorName+" · "+LABELS[saved.lessonContext.category];view.body.append(details);view.message.textContent="Una sola guida pronta. La copia del mittente resta conservata; la condivisione non prova l’importazione e non conferma il trasferimento alla Segreteria.";addPeerLessonShare(view,core,shareText);peerLessonButton(view,"SCARICA / SALVA FILE",async()=>{await core.deliver(file,false,navigator,downloadPeerLesson);view.message.textContent="Download dello stesso file avviato."},true)}catch(error){if(view.epoch===peerLessonEpoch)view.message.textContent=error.message}finally{peerLessonBusy=false}}
 function openPeerLessonImport(){if(!peerLessonAllowed()||peerLessonBusy)return;const blocked=localLessonOperationBlock();if(blocked)return alert(blocked);const view=peerLessonDocument("IMPORTA LEZIONE"),label=document.createElement("label"),input=document.createElement("input"),targetLabel=document.createElement("label"),target=document.createElement("select"),detail=document.createElement("p"),destination=document.createElement("p");label.textContent="FILE .agenda-lezione, .json o .txt";input.type="file";input.accept=".agenda-lezione,.json,.txt,application/json,text/plain";label.append(input);targetLabel.textContent="Scheda locale di destinazione (conferma l’abbinamento)";targetLabel.append(target);view.body.append(label,targetLabel,destination,detail);let packet=null,preview=null,generation=0;const apply=peerLessonButton(view,"CONFERMA IMPORTAZIONE",async()=>{if(!preview||!['created','updated'].includes(preview.action))return;const result=await window.LessonSecretaryTransfer.applyPeer(preview,{read:()=>window.LessonSecretaryTransferBridge.read(),write:(next,before)=>{peerLessonEnsure(view);return window.LessonSecretaryTransferBridge.write(next,before,view.account)}},async()=>{peerLessonEnsure(view);return window.AgendaAuth.currentUser()});view.message.textContent=result.action==="created"?"Guida aggiunta. Le altre guide sono rimaste intatte.":"Aggiornamento della guida salvato.";preview=null;renderHomeStudentCounts();apply.disabled=true});apply.disabled=true;
