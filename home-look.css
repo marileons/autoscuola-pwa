@@ -57,7 +57,7 @@ body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement
 @media(prefers-reduced-motion:reduce){:is(#home,#secretaryHome) .categories>button{transition:none}}
 /* Explicitly retire the previous Home-only artwork treatments and grid spans. */
 body:has(:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement).active) #appShell>main{background:transparent!important}
-#appShell main>:is(#home,#secretaryHome,#otherFunctions,#secretaryMenu,#userManagement){background:transparent!important;}
+#appShell main>:is(#home,#secretaryHome,#secretaryMenu,#userManagement){background:transparent!important;}
 #appShell :is(#home,#secretaryHome) .categories>button{grid-column:auto!important;min-height:205px!important;align-items:flex-start!important;border:1px solid #62b3bf!important;border-left:1px solid #62b3bf!important;}
 #appShell :is(#home,#secretaryHome) .categories>button.auto-hero{grid-column:1/-1!important;min-height:260px!important;justify-content:center!important}
 #appShell :is(#home,#secretaryHome) .categories>button.pro-card{min-height:175px!important}
@@ -186,3 +186,18 @@ body.only-two-paths #appShell :is(#home,#secretaryHome) .categories>button[data-
 #homeSectionsUser{min-height:44px;width:100%;max-width:100%;font:inherit;background:#073e4b;color:#fff4e1;border:1px solid #60929b;border-radius:10px;padding:10px}
 #homeSectionsTarget{overflow-wrap:anywhere}#homeSectionsDialog .home-sections-source{color:#ffd18b;font-weight:800}
 #homeSectionsDialog .home-sections-actions button{max-width:100%;white-space:normal}
+
+.home-guide-intro{display:flex;align-items:center;gap:12px}
+#home .home-guide-intro p{margin:0;min-width:0}
+#openOtherFunctions,#closeOtherFunctions{flex:0 0 auto;width:44px;min-height:44px;padding:0;font-size:24px}
+dialog#otherFunctions:not([open]){display:none}
+dialog#otherFunctions[open]{position:fixed;inset:0 auto 0 0;margin:0;width:min(360px,calc(100% - 22px));max-width:none;height:100dvh;max-height:none;box-sizing:border-box;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;color:#FFF7E6;background:#063441!important;border-radius:0 16px 16px 0}
+dialog#otherFunctions::backdrop{background:rgba(0,19,26,.58)}
+#otherFunctions .side-menu-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+#otherFunctions .side-menu-heading h2{margin:0}
+#appShell #otherFunctions .other-functions-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:9px}
+#reservedCalendarActions[hidden]{display:none!important}
+
+#appShell #otherFunctions .other-functions-grid{gap:7px}
+#appShell #otherFunctions .home-pro-action{min-height:44px!important;padding:8px 12px!important}
+#appShell #otherFunctions .home-pro-label{font-size:14px!important}

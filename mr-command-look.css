@@ -24,7 +24,7 @@
  body:has(.interior-view.active) .choice-modal .choice-card button:not(.secondary):not(.danger):hover:not(:disabled),
  body .lesson-summary-dialog button:not(.secondary):hover:not(:disabled),body #homeSectionsDialog .home-sections-actions button:not(.secondary):hover:not(:disabled){background:var(--mr-command-current-hover)!important}
  body #appShell .home-brand :is(.home-wordmark,.home-wordmark b),body #appShell .app-header>h1{color:var(--mr-path-auto)!important}
- body #appShell .home-brand .home-brand-user{color:#C5F4DF!important}
+ body #appShell .home-brand .home-brand-user{color:#FFF7E6!important}
  body #appShell .mr-top-navigation{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 16px;min-width:0}
  body #appShell .mr-top-navigation[hidden],body #appShell .mr-top-navigation button[hidden]{display:none!important}
  body #appShell .mr-top-navigation button{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;min-width:44px;min-height:44px;margin:0;padding:10px 16px;border:1px solid #82a9b2!important;border-radius:12px;background:#0a3c4d!important;color:#fff7e8!important;font:750 15px/1.35 'Nunito Sans',system-ui,sans-serif;white-space:normal;max-width:100%}
@@ -302,3 +302,16 @@ body #appShell #otherFunctions>#openUserManagement:focus-visible{outline:3px sol
 }
 
 #categoryHub .student-result-heading .auto-path-complete{color:#64F29C}
+
+ @media screen{
+ body #appShell main > dialog#otherFunctions[open] :is(button,a.home-pro-action,#logout,#otherFunctionsHome){border:2px solid #A7F3D0!important}
+ body #appShell dialog#otherFunctions #openUserManagement{background:#4f2769!important;color:#fff!important}
+ body #appShell dialog#otherFunctions #openUserManagement :is(svg,.ui-icon,.home-pro-label){color:#fff!important;filter:none!important}
+ body #appShell dialog#otherFunctions #openUserManagement:hover:not(:disabled){background:#60317d!important}
+}
+
+@layer mr-branch-borders{
+ @media screen{
+ body #appShell main > dialog#otherFunctions[open] :is(button,a.home-pro-action,#logout,#otherFunctionsHome){border:2px solid #A7F3D0!important}
+ }
+}

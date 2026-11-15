@@ -53,6 +53,7 @@
 
   async function lockReservedArea() {
     reservedUnlocked = false;
+    document.getElementById("reservedCalendarActions").hidden = true;
     clearTimeout(reservedTimer);
     removeAuditPanel();
     document.getElementById("userList")?.replaceChildren();
@@ -254,7 +255,7 @@
       }
       await loadScript("shared-calendar-exam-report.js?v=site-labels-1");
       await loadScript("student-report-print.js?v=1.21-student-report-print-v1");
-      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-categories.js?v=1.21-register-codes-1-bp-1", "register-economic-engine.js?v=1.21-register-v2-codes-1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2-codes-1-bp-1-monthly-1", "register-report.js?v=1.21-register-report-v3-codes-1-bp-1-monthly-1", "register-backup.js?v=1.21-register-backup-v2-codes-1-bp-1-monthly-1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6-codes-1-bp-1-monthly-1", "driving-errors.js?v=1.21-error-symbols-3-place-1-times-1", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2-notes-1", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-window-1-safe-return-1-command-look-2-heading-1-text-contrast-1-ga-course-1-ga-program-2-additional-auto-1-catalog-1-shared-editor-1-progress-1-branch-look-1-guide-hours-4-saved-time-1-auto-path-color-1-search-hours-1-peer-gps-1-history-activities-1-search-archive-1-lesson-diag-1-peer-txt-1-share-clean-1", "examiner-routes-ui.js?v=1.21-exam-routes-v1-manual-gps-1-orientation-1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1-ga-origin-1-ga-program-2-direct-share-1-backup-diag-1-share-clean-1-save-only-1", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); if(src==="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"){try{await loadScript("assets/vendor/leaflet-rotate-0.3.0.js?v=1");}catch{/* Optional view extension: keep ordinary Leaflet available. */}finally{window.L?.Map?.mergeOptions({preventPageGestures:false})}try{await loadScript("gps-map-orientation.js?v=5-panda-size54-1-shared-body-1-stripes-1")}catch{window.GpsMapOrientation=null}} }
+      for (const src of ["https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "register-categories.js?v=1.21-register-codes-1-bp-1", "register-economic-engine.js?v=1.21-register-v2-codes-1", "register-local-vault.js?v=1.21-register-v1", "register-ledger.js?v=1.21-register-v2-codes-1-bp-1-monthly-1", "register-report.js?v=1.21-register-report-v3-codes-1-bp-1-monthly-1", "register-backup.js?v=1.21-register-backup-v2-codes-1-bp-1-monthly-1", "register-deletion.js?v=1.21-register-deletion-v1", "register-ui.js?v=1.21-register-ui-v6-codes-1-bp-1-monthly-1", "driving-errors.js?v=1.21-error-symbols-3-place-1-times-1", "student-multi-actions.js?v=1.21-student-actions-v1", "examiner-routes.js?v=1.21-exam-routes-v1", "exams.js?v=1.21-exams-v2-notes-1", "home-sections.js?v=users-2", "app.js?v=home-users-tunnel-diagnostics-2-summary-1-place-1-times-1-gps-icons-1-tunnel-details-1-window-1-safe-return-1-command-look-2-heading-1-text-contrast-1-ga-course-1-ga-program-2-additional-auto-1-catalog-1-shared-editor-1-progress-1-branch-look-1-guide-hours-4-saved-time-1-auto-path-color-1-search-hours-1-peer-gps-1-history-activities-1-search-archive-1-lesson-diag-1-peer-txt-1-share-clean-1-drawer-1", "examiner-routes-ui.js?v=1.21-exam-routes-v1-manual-gps-1-orientation-1", "student-photo.js?v=1.21-photo-v1", "documents.js?v=home-sections-1", "full-backup-stream.js?v=1.21-full-backup-stream-v2", "full-backup.js?v=tunnels-1-ga-origin-1-ga-program-2-direct-share-1-backup-diag-1-share-clean-1-save-only-1", "r10-features.js?v=site-labels-1"]) { if(currentUser?.role==="SEGRETERIA" && !["home-sections.js","driving-errors.js","student-multi-actions.js","exams.js","app.js","documents.js","r10-features.js"].includes(src.split("?")[0]))continue; await loadScript(src); if(src==="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"){try{await loadScript("assets/vendor/leaflet-rotate-0.3.0.js?v=1");}catch{/* Optional view extension: keep ordinary Leaflet available. */}finally{window.L?.Map?.mergeOptions({preventPageGestures:false})}try{await loadScript("gps-map-orientation.js?v=5-panda-size54-1-shared-body-1-stripes-1")}catch{window.GpsMapOrientation=null}} }
       if (window.AgendaAppReady) await window.AgendaAppReady;
       await loadScript("shared-calendar-store.js?v=1");
       await loadScript("lesson-secretary-transfer-ui.js?v=site-labels-1");
@@ -272,7 +273,7 @@
     if(currentUser?.sharedCalendarEnabled===true && applicationLoaded){
       try {
         await loadScript("shared-calendar-store.js?v=1");
-        await loadScript("shared-calendar.js?v=site-labels-1-menu-icons-1");
+        await loadScript("shared-calendar.js?v=site-labels-1-menu-icons-1-drawer-1");
         window.SharedCalendar.mount(currentUser);
       } catch {
         window.SharedCalendar?.dispose?.();
@@ -380,7 +381,7 @@
   async function openUsers() {
     if (!currentUser?.capabilities?.manageUsers) return;
     try { if (!(await enterReservedArea())) return; } catch (error) { message(error.message, true); return; }
-    if (currentUser.role === "USER_MANAGER") showManagerShell(); else window.show("userManagement");
+    if (currentUser.role === "USER_MANAGER") showManagerShell(); else { window.show("userManagement"); document.getElementById("reservedCalendarActions").hidden = false; }
     syncAuditPanel();
     await refreshUsers();
     configureUserManagementForm();
@@ -676,6 +677,7 @@
     logout,
     updateAccountSummary,
     currentUser: () => currentUser,
+    reservedAreaUnlocked: () => reservedUnlocked && currentUser?.capabilities?.manageUsers === true,
     gpsMarkerProfile: () => markerProfileSuppressed || !currentUser ? null : {id:currentUser.id,gpsMarkerInitials:currentUser.gpsMarkerInitials,gpsMarkerStyle:currentUser.gpsMarkerStyle},
     lockRegisterVault,
     lockReservedArea
