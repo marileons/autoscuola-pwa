@@ -609,7 +609,6 @@ $("openOtherFunctions").onclick=openOtherFunctions;
 $("closeOtherFunctions").onclick=()=>$("otherFunctions").close();
 $("otherFunctions").addEventListener("close",()=>{if(!$("otherFunctions").open)$("openOtherFunctions").setAttribute("aria-expanded","false")});
 $("openRegister").onclick=()=>window.RegisterUI.open();
-$("otherFunctionsHome").onclick=()=>show("home");
 $("examinerFormHome").onclick=()=>show("home");
 document.querySelectorAll("[data-other-functions-back]").forEach(button=>{if(button.id!=="backExaminerForm")button.onclick=()=>show("otherFunctions")});
 document.querySelectorAll("[data-general-students-back]").forEach(button=>button.onclick=()=>show("generalStudentManagement"));
@@ -740,7 +739,7 @@ window.LocalLessonActions={reset:resetLocalLessonActions,sync:syncLocalLessonAct
   if(['home','secretaryHome'].includes(view.id))continue;
   // Messages and hidden viewers do not turn an existing top pair into a footer.
   const first=[...view.children].find(n=>!n.matches('p,[hidden],.hidden'));
-  const topKinds=new Set(sources.filter(b=>b===first||first?.matches('.other-functions-subnav,.lesson-heading,.register-topbar')&&first.contains(b)||b.id==='otherFunctionsHome').map(kind));
+  const topKinds=new Set(sources.filter(b=>b===first||first?.matches('.other-functions-subnav,.lesson-heading,.register-topbar')&&first.contains(b)).map(kind));
   const bottom=sources.filter(b=>!topKinds.has(kind(b)));
   if(!bottom.length)continue;
   const nav=document.createElement('nav');nav.className='mr-top-navigation';nav.setAttribute('aria-label','Navigazione superiore');

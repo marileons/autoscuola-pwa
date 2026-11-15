@@ -304,7 +304,7 @@ body #appShell #otherFunctions>#openUserManagement:focus-visible{outline:3px sol
 #categoryHub .student-result-heading .auto-path-complete{color:#64F29C}
 
  @media screen{
- body #appShell main > dialog#otherFunctions[open] :is(button,a.home-pro-action,#logout,#otherFunctionsHome){border:2px solid #A7F3D0!important}
+ body #appShell main > dialog#otherFunctions[open] :is(button,a.home-pro-action,#logout){border:2px solid #A7F3D0!important}
  body #appShell dialog#otherFunctions #openUserManagement{background:#4f2769!important;color:#fff!important}
  body #appShell dialog#otherFunctions #openUserManagement :is(svg,.ui-icon,.home-pro-label){color:#fff!important;filter:none!important}
  body #appShell dialog#otherFunctions #openUserManagement:hover:not(:disabled){background:#60317d!important}
@@ -312,6 +312,6 @@ body #appShell #otherFunctions>#openUserManagement:focus-visible{outline:3px sol
 
 @layer mr-branch-borders{
  @media screen{
- body #appShell main > dialog#otherFunctions[open] :is(button,a.home-pro-action,#logout,#otherFunctionsHome){border:2px solid #A7F3D0!important}
+ body #appShell main > dialog#otherFunctions[open] :is(button,a.home-pro-action,#logout){border:2px solid #A7F3D0!important}
  }
 }

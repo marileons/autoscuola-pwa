@@ -201,3 +201,10 @@ dialog#otherFunctions::backdrop{background:rgba(0,19,26,.58)}
 #appShell #otherFunctions .other-functions-grid{gap:7px}
 #appShell #otherFunctions .home-pro-action{min-height:44px!important;padding:8px 12px!important}
 #appShell #otherFunctions .home-pro-label{font-size:14px!important}
+
+#userManagement #reservedCalendarActions{display:grid;gap:8px;margin-block:8px 12px}
+#userManagement #reservedCalendarActions .sc-home-entry{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:8px 12px!important;margin:0!important;font-size:inherit!important}
+#userManagement #reservedCalendarActions .home-pro-label{font-size:inherit!important;line-height:1.25}
+#userManagement #reservedCalendarActions .sc-home-entry .ui-icon{width:20px;height:20px;flex:0 0 20px}
+#userManagement #reservedCalendarActions .sc-home-entry .ui-icon svg{width:100%;height:100%}
+#userManagement #reservedCalendarActions p:empty{display:none}
