@@ -96,3 +96,28 @@ test("prospetto e PDF distinguono GOLD AUTO e GOLD MOTO", async () => {
 test("il modulo prospetti non usa rete, servizi PDF o persistenza", () => {
   assert.doesNotMatch(reportSource, /\bfetch\s*\(|XMLHttpRequest|WebSocket|localStorage|sessionStorage|putRecord|appendRevision|replaceSnapshot|pdfmake|jspdf/i);
 });
+
+test("Gold full-time usa le ore Auto e Moto dello stesso giorno e aggiorna il saldo BP", async () => {
+  const date = "2026-01-05";
+  const blocks = (normal, gold, work = 300) => [
+    { order: 1, category: normal, minutes: work },
+    { order: 2, category: gold, minutes: 120 }
+  ];
+  const { ledger, reports } = await fixture();
+  await assert.rejects(ledger.saveDay({ date, blocks: blocks("LG/M", "GOLD AUTO") }), /GOLD AUTO superano le ore LG\/A/);
+  const auto = await ledger.saveDay({ date, blocks: blocks("LG/A", "GOLD AUTO") });
+  await assert.rejects(ledger.saveDay({ date, blocks: auto.blocks.map(block => block.category === "LG/A" ? { ...block, minutes: 60 } : block) }), /GOLD AUTO superano/);
+  assert.equal((await ledger.getDay(date)).revision, auto.revision);
+  await ledger.saveDay({ date: "2026-01-06", blocks: blocks("LG/M", "GOLD MOTO") });
+  await ledger.saveMonthlyPayslip("2026-01", 6000);
+  const report = await reports.build({ mode: "month", cursor: date, account: { name: "Fittizio" } });
+  assert.equal(report.totals.workMinutes, 600);
+  assert.deepEqual(["LG/A", "GOLD AUTO", "LG/M", "GOLD MOTO"].map(code => report.categories[code]), [180, 120, 180, 120]);
+  assert.equal(report.totals.totalAmountCents, 15400);
+  assert.equal(report.totals.balanceCents, 9400);
+  const part = await fixture([{ employmentType: "PART_TIME", effectiveFrom: date }]);
+  await part.ledger.saveDay({ date, blocks: blocks("LG/A", "GOLD AUTO") });
+  const partReport = await part.reports.build({ mode: "month", cursor: date, account: { name: "Fittizio" } });
+  assert.equal(partReport.totals.workMinutes, 420);
+  assert.equal(partReport.totals.totalAmountCents, 9800);
+});

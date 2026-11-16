@@ -10,7 +10,7 @@
   const MONTHS = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
   const COMPONENT_LABELS = Object.freeze({
     CATEGORY_WORK: "Attività per categoria", ORDINARY_BASE: "Base ordinaria LG/A",
-    CATEGORY_PREMIUM: "Maggiorazione categoria", OVERTIME: "Straordinario",
+    CATEGORY_PREMIUM: "Maggiorazione categoria", GOLD_DIFFERENCE: "Differenza tariffa Gold", OVERTIME: "Straordinario",
     PAID_ABSENCE: "Permesso/Ferie valorizzato"
   });
 
@@ -38,7 +38,17 @@
   }
   function minutesByCategory(days) {
     const result = Object.fromEntries([...WORK_CATEGORIES, "P", "F"].map((category) => [category, 0]));
-    days.flatMap((day) => day.blocks).forEach((block) => { const category = Catalog.normalizeCategory(block.category); if (category === Catalog.PAYSLIP_CATEGORY) return; result[category] = (result[category] || 0) + block.minutes; });
+    for (const day of days) {
+      for (const block of day.blocks) {
+        const category = Catalog.normalizeCategory(block.category);
+        if (category === Catalog.PAYSLIP_CATEGORY) continue;
+        const normal = Catalog.goldNormalCategory(category);
+        if (day.employmentType === "FULL_TIME" && normal) {
+          result[category] += block.matchedGoldMinutes;
+          result[normal] -= block.matchedGoldMinutes;
+        } else result[category] += block.minutes;
+      }
+    }
     return result;
   }
   function aggregateComponents(components) {
@@ -81,6 +91,7 @@
               order: block.order, category: Catalog.normalizeCategory(block.category), minutes: block.minutes,
               rateVersionId: block.rateVersionId, rateSnapshot: block.rateSnapshot,
               ordinaryMinutes: isAbsence ? 0 : (day.employmentType === "PART_TIME" ? block.minutes : computed.ordinaryMinutes || 0),
+              matchedGoldMinutes: computed.matchedGoldMinutes || 0,
               overtimeMinutes: computed.overtimeMinutes || 0,
               paidAbsenceMinutes: computed.paidMinutes || 0,
               unpaidAbsenceMinutes: computed.unpaidMinutes || 0
@@ -115,7 +126,7 @@
           dayCount: days.length, workMinutes, ordinaryWorkMinutes, overtimeMinutes,
           absenceRecordedMinutes, absencePaidMinutes,
           absenceUnpaidMinutes: absenceRecordedMinutes - absencePaidMinutes,
-          categoryPremiumCents: groupedComponents.filter((item) => item.component === "CATEGORY_PREMIUM").reduce((sum, item) => sum + item.amountCents, 0),
+          categoryPremiumCents: groupedComponents.filter((item) => ["CATEGORY_PREMIUM", "GOLD_DIFFERENCE"].includes(item.component)).reduce((sum, item) => sum + item.amountCents, 0),
           overtimeAmountCents: groupedComponents.filter((item) => item.component === "OVERTIME").reduce((sum, item) => sum + item.amountCents, 0),
           totalAmountCents, payslipCents, balanceCents: totalAmountCents - payslipCents
         }

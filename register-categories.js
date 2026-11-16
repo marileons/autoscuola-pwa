@@ -11,6 +11,12 @@
   const DESCRIPTIONS = Object.freeze({ EXA: "ESAMI AUTO", EXM: "ESAMI MOTO", LAV: "LAVAGGIO AUTO" });
   function normalizeCategory(code) { return code === "EX" ? "EXA" : code === "GOLD" ? "GOLD AUTO" : code; }
   function label(code) { const normalized = normalizeCategory(code); if (normalized === PAYSLIP_CATEGORY) return "BP · Busta paga"; return DESCRIPTIONS[normalized] ? `${normalized} — ${DESCRIPTIONS[normalized]}` : normalized; }
+  function goldNormalCategory(code) {
+    const category = normalizeCategory(code);
+    if (category === "GOLD AUTO") return "LG/A";
+    if (category === "GOLD MOTO") return "LG/M";
+    return null;
+  }
   function rateValue(categories, code) {
     if (code === "EXA") {
       if (categories.EXA !== undefined && categories.EX !== undefined && categories.EXA !== categories.EX) throw new TypeError("Tariffe EX ed EXA discordanti: verificare il file o la configurazione.");
@@ -22,5 +28,5 @@
     const code = normalizeCategory(category);
     if (OPTIONAL_RATE_CATEGORIES.includes(code) && !Number.isSafeInteger(rates?.categories?.[code])) throw new RangeError(`Tariffa ${label(code)} non configurata per questa decorrenza. Inseriscila manualmente in TARIFFE PERSONALI.`);
   }
-  return Object.freeze({ WORK_CATEGORIES, PAYSLIP_CATEGORY, OPTIONAL_RATE_CATEGORIES, REQUIRED_RATE_CATEGORIES, DESCRIPTIONS, normalizeCategory, label, rateValue, requireRate });
+  return Object.freeze({ WORK_CATEGORIES, PAYSLIP_CATEGORY, OPTIONAL_RATE_CATEGORIES, REQUIRED_RATE_CATEGORIES, DESCRIPTIONS, normalizeCategory, goldNormalCategory, label, rateValue, requireRate });
 });

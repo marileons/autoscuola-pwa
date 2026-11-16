@@ -252,7 +252,10 @@
       const details = doc.createElement("details"); details.className = "register-day-card";
       const summary = doc.createElement("summary");
       const title = doc.createElement("span"); title.textContent = formatDate(day.date);
-      const total = day.blocks.reduce((sum, block) => sum + (block.minutes || 0), 0);
+      const total = day.blocks.reduce((sum, block) => {
+        if (day.employmentType === "FULL_TIME" && Catalog.goldNormalCategory(block.category)) return sum;
+        return sum + (block.minutes || 0);
+      }, 0);
       const meta = doc.createElement("strong"); meta.textContent = formatMinutes(total);
       summary.append(title, meta); details.append(summary);
       const body = doc.createElement("div"); body.className = "register-day-body";

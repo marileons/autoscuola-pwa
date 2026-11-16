@@ -199,6 +199,15 @@
       const employment = employmentForDate(input.date);
       const existing = await getDay(input.date);
       const blocks = await normalizeBlocks(input.blocks, employment, input.date, existing);
+      if (employment.employmentType === "FULL_TIME") {
+        const minutes = code => blocks.reduce((sum, block) => sum + (block.category === code ? block.minutes : 0), 0);
+        for (const category of ["GOLD AUTO", "GOLD MOTO"]) {
+          const normal = Catalog.goldNormalCategory(category);
+          if (minutes(category) > minutes(normal)) {
+            throw new RangeError("Le ore " + category + " superano le ore " + normal + " della stessa giornata. Correggi le durate prima di salvare.");
+          }
+        }
+      }
       const absenceMinutes = blocks
         .filter((block) => ABSENCE_CATEGORIES.includes(block.category))
         .reduce((sum, block) => sum + block.minutes, 0);

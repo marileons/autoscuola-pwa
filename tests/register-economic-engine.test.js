@@ -71,10 +71,10 @@ test("straordinario è uniforme e indipendente dalla categoria", () => {
   ], [39000, 3800, 3000, 45800]);
 });
 test("blocco a cavallo della soglia viene diviso", () => {
-  const result = full([b("2026-08-31", 1, "LG/A", 38), b("2026-09-01", 1, "GOLD", 2)]);
-  const crossing = result.classifiedBlocks.find((item) => item.category === "GOLD AUTO");
+  const result = full([b("2026-08-31", 1, "LG/A", 38), b("2026-09-01", 1, "LG/A", 2), b("2026-09-01", 2, "GOLD", 2)]);
+  const crossing = result.classifiedBlocks.find((item) => item.date === "2026-09-01" && item.category === "LG/A");
   assert.deepEqual([crossing.ordinaryMinutes, crossing.overtimeMinutes], [60, 60]);
-  assert.equal(amount(result, "CATEGORY_PREMIUM"), 500);
+  assert.equal(amount(result, "GOLD_DIFFERENCE"), 1000);
   assert.equal(amount(result, "OVERTIME"), 1500);
 });
 test("categoria sotto LG/A non genera penalizzazione", () => {
@@ -98,7 +98,9 @@ test("ordine cronologico e manuale determina il superamento soglia", () => {
   ]);
   const lgm = result.classifiedBlocks.find((item) => item.category === "LG/M");
   const gold = result.classifiedBlocks.find((item) => item.category === "GOLD AUTO");
-  assert.deepEqual([lgm.ordinaryMinutes, lgm.overtimeMinutes, gold.ordinaryMinutes, gold.overtimeMinutes], [60, 0, 0, 120]);
+  assert.deepEqual([lgm.ordinaryMinutes, lgm.overtimeMinutes, gold.ordinaryMinutes, gold.overtimeMinutes], [60, 0, 0, 0]);
+  assert.equal(gold.matchedGoldMinutes, 0);
+  assert.equal(result.totals.workMinutes, 2340);
 });
 test("mezzo centesimo sale e l'aggregazione precede l'arrotondamento", () => {
   assert.equal(roundRationalCents(30), 1);

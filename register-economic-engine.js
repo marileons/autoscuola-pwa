@@ -74,7 +74,7 @@
     return { employmentType: input.employmentType, weekStart, rates: defaultRates, blocks };
   }
   function addComponent(map, block, component, minutes, rate) {
-    if (minutes <= 0 || rate <= 0) return;
+    if (minutes <= 0 || rate === 0) return;
     const key = [block.date, block.category, component, rate].join("|");
     let bucket = map.get(key);
     if (!bucket) {
@@ -86,7 +86,7 @@
   }
   function finalizeComponents(map) {
     return [...map.values()].map((bucket) => ({
-      ...bucket, amountCents: roundRationalCents(bucket.exactNumerator)
+      ...bucket, amountCents: Math.sign(bucket.exactNumerator) * roundRationalCents(Math.abs(bucket.exactNumerator))
     })).sort((a, b) => a.date.localeCompare(b.date) || a.category.localeCompare(b.category) || a.component.localeCompare(b.component));
   }
   function buildResult(model, components, totals, classifiedBlocks = []) {
@@ -110,7 +110,7 @@
     });
   }
   function calculateFullTime(model) {
-    const work = model.blocks.filter((block) => WORK_CATEGORIES.includes(block.category));
+    const work = model.blocks.filter((block) => WORK_CATEGORIES.includes(block.category) && !Catalog.goldNormalCategory(block.category));
     const absence = model.blocks.filter((block) => ABSENCE_CATEGORIES.includes(block.category));
     const workMinutes = work.reduce((sum, block) => sum + block.minutes, 0);
     const ordinaryWorkMinutes = Math.min(workMinutes, WEEK_MINUTES);
@@ -129,6 +129,28 @@
         Math.max(block.rates.categories[block.category] - baseRate, 0));
       addComponent(components, block, "OVERTIME", blockOvertime, block.rates.overtime);
       classifiedBlocks.push({ ...block, ordinaryMinutes, overtimeMinutes: blockOvertime });
+    }
+    // Gold designates minutes already recorded under the matching category on the same day.
+    const available = new Map();
+    for (const block of work) {
+      if (block.category !== "LG/A" && block.category !== "LG/M") continue;
+      const key = block.date + "|" + block.category;
+      if (!available.has(key)) available.set(key, []);
+      available.get(key).push({ minutes: block.minutes, rate: block.rates.categories[block.category] });
+    }
+    for (const gold of model.blocks) {
+      const normalCategory = Catalog.goldNormalCategory(gold.category);
+      if (!normalCategory) continue;
+      const queue = available.get(gold.date + "|" + normalCategory) || [];
+      let remaining = gold.minutes;
+      for (const normal of queue) {
+        if (!remaining) break;
+        const matched = Math.min(remaining, normal.minutes);
+        normal.minutes -= matched;
+        remaining -= matched;
+        addComponent(components, gold, "GOLD_DIFFERENCE", matched, gold.rates.categories[gold.category] - normal.rate);
+      }
+      classifiedBlocks.push({ ...gold, ordinaryMinutes: 0, overtimeMinutes: 0, matchedGoldMinutes: gold.minutes - remaining });
     }
     for (const block of absence) {
       const baseRate = block.rates.categories["LG/A"];
