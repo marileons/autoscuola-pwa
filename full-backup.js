@@ -125,6 +125,8 @@
       if(!student||typeof student!=="object"||typeof student.id!=="string"||!student.id||studentIds.has(student.id))throw new Error("Il backup contiene allievi duplicati o non validi.");
       if(!Array.isArray(student.lessons)||!Array.isArray(student.checklist))throw new Error("Scheda allievo incompleta nel backup.");
       if(Object.hasOwn(student,"accompaniedOrigin"))window.LessonActivities.validateGaOrigin(student.accompaniedOrigin,student.id);if(Object.hasOwn(student,"drivingLicense"))window.StudentLicense.normalize(student.drivingLicense,{strict:true});
+      window.LessonReminders.readIds([student]);
+      for(const lesson of student.lessons){window.LessonReminders.reminder(lesson.nextLessonReminder);window.LessonReminders.history(lesson.reminderHistory)}
       const lessonIds=new Set();
       for(const lesson of student.lessons){if(!lesson||typeof lesson!=="object"||typeof lesson.id!=="string"||!lesson.id||lessonIds.has(lesson.id)||!Array.isArray(lesson.route)||!Array.isArray(lesson.checklist)||!Array.isArray(lesson.errors||[]))throw new Error("Guida duplicata o non valida nel backup.");if(Object.hasOwn(lesson,"secretaryTransfer")){if(!window.LessonSecretaryTransfer)throw Error("Validazione trasferimenti non disponibile.");window.LessonSecretaryTransfer.metadata(lesson.secretaryTransfer)}if(lesson.gaProgram)window.LessonActivities.validateLesson(lesson);if(lesson.lessonContext)window.LessonActivities.validateContext(lesson.lessonContext);if(lesson.instructorTransfer)window.LessonSecretaryTransfer.metadata(lesson.instructorTransfer);lessonIds.add(lesson.id)}
       studentIds.add(student.id);
@@ -793,6 +795,7 @@
         checklist:cleanItems(student&&student.checklist),
         lessons:(Array.isArray(student&&student.lessons)?student.lessons:[]).map(lesson=>{
           const canonicalLesson={id:String(lesson&&lesson.id||""),createdAt:Number(lesson&&lesson.createdAt||0),notes:String(lesson&&lesson.notes||""),route:cleanRoute(lesson&&lesson.route),checklist:cleanItems(lesson&&lesson.checklist),errors:window.DrivingErrors.normalizeErrors(lesson&&lesson.errors)};
+          if(lesson.nextLessonReminder)canonicalLesson.nextLessonReminder=window.LessonReminders.reminder(lesson.nextLessonReminder);
           for(const key of ["activityBaseline","activitySnapshot","lessonActivities"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key].map(item=>({id:String(item.id),label:String(item.label),status:String(item.status),...(item.gaDetails?{gaDetails:window.GaCourse.details(item.gaDetails)}:{}),...(item.checklistDetails?{checklistDetails:{...item.checklistDetails}}:{})}));
           for(const key of ["instructorId","instructorName","completedDraftSignature"])if(Object.hasOwn(lesson,key))canonicalLesson[key]=lesson[key];
           if(lesson.gaProgram)canonicalLesson.gaProgram=window.GaCourse.program(lesson.gaProgram);if(lesson.activityDetailsIncomplete===true)canonicalLesson.activityDetailsIncomplete=true;if(typeof lesson?.duration==="string"&&lesson.duration.trim())canonicalLesson.duration=lesson.duration.trim();

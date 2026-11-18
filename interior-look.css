@@ -282,3 +282,17 @@
 
 /* Estimated tunnel geometry is visibly separate from real GPS samples. */
 #appShell .tunnel-estimate-notice{padding:10px 12px;border:1px dashed #ff8892;border-radius:10px;color:#fff7e8;background:#123f4a;font-size:.9rem;line-height:1.45;overflow-wrap:anywhere}
+
+#appShell #lesson .today-reminder{position:relative;background:#063441!important;border:2px solid #A7F3D0;color:#FFF7E6;padding:18px 56px 18px 18px;overflow-wrap:anywhere}
+#todayReminder h2{font-size:18px;margin:0 0 12px;color:#A7F3D0}
+#todayReminder p{white-space:pre-wrap;color:#FFF7E6;line-height:1.5}
+#todayReminder button{position:absolute;top:8px;right:8px;width:44px;height:44px;padding:0;background:#063441;color:#FFF7E6;border:1px solid #A7F3D0;border-radius:10px;font-size:26px}
+#nextLessonEditor{margin-block:12px}
+#nextLessonEditor summary{cursor:pointer;min-height:44px;box-sizing:border-box;padding:12px;border:1px solid #A7F3D0;border-radius:10px}
+#nextLessonHistory{white-space:pre-wrap;overflow-wrap:anywhere}
+
+body #appShell #lesson #todayReminder{background:#063441!important;border:2px solid #A7F3D0!important;padding:16px 58px 16px 16px!important}
+body #appShell #lesson #todayReminder h2{font-size:18px!important;line-height:1.3;margin:0 0 10px}
+body #appShell #lesson #todayReminder p{font-size:16px!important}
+body #appShell #lesson #todayReminder button{display:flex;align-items:center;justify-content:center;width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;font-size:26px!important;border:1px solid #A7F3D0!important}
+body #appShell #lesson #todayReminder button :is(svg,.ui-icon){display:none!important}
