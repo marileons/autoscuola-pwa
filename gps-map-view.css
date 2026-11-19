@@ -1,0 +1,11 @@
+body.gps-map-is-expanded{overflow:hidden}
+dialog.gps-map-dialog[open]{display:flex;position:fixed;inset:0;box-sizing:border-box;width:100vw;max-width:none;height:100dvh;max-height:none;margin:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);border:0;border-radius:0;background:#063441!important;overflow:hidden}
+.gps-map-dialog::backdrop{background:#063441}
+.gps-map-dialog .gps-map-expanded{position:relative!important;flex:1;min-width:0;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;border-radius:0!important}
+.gps-map-view-controls{display:flex;flex-direction:column;gap:6px;border:0!important;background:none!important;box-shadow:none!important}
+.gps-map-view-controls button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:44px;min-width:44px;margin:0;padding:8px 10px;background:#063441!important;border:2px solid #A7F3D0!important;border-radius:10px!important;color:#fff!important;font:700 13px/1.2 system-ui!important;cursor:pointer;box-shadow:0 2px 6px #001d2c40}
+.gps-map-view-controls button[hidden]{display:none!important}
+.gps-map-view-controls button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.gps-map-view-controls button svg,.gps-map-view-controls button .ui-icon{display:none!important}
+.gps-map-view-controls .gps-map-stop{background:#913747!important;border-color:#ffc2c8!important}
+.gps-map-dialog .gps-map-expand{align-self:flex-end;font-size:28px!important}

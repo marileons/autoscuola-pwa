@@ -2,14 +2,14 @@
 (()=>{
   const core=window.ExaminerRoutes,store=core.createStore(localStorage);let examinerId=null,routeId=null,draft=null,watch=null,map=null,line=null,orientation=null,livePositioned=false,timer=null,reportAbort=null,reportRunning=false;
   const accountId=()=>String(window.AgendaAuth?.currentUser?.()?.id||""),examiner=()=>state.examiners.find(x=>x.id===examinerId),routes=()=>store.routes(accountId(),examinerId),currentRoute=()=>routes().find(x=>x.id===routeId),fmtDuration=ms=>{const minutes=Math.max(0,Math.round(ms/60000)),hours=Math.floor(minutes/60);return hours?`${hours} h ${minutes%60} min`:`${minutes} min`},fmtDistance=metres=>metres>=1000?`${(metres/1000).toFixed(1).replace(".",",")} km`:`${Math.round(metres)} m`,fmtDate=value=>new Date(value).toLocaleString("it-IT",{dateStyle:"short",timeStyle:"short"});
-  function initMap(){if(!map){map=L.map("examinerRouteMap",window.GpsMapOrientation?.options(L)).setView([44.4056,8.9463],13);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map)}}
+  function initMap(){if(!map){map=L.map("examinerRouteMap",window.GpsMapOrientation?.options(L)).setView([44.4056,8.9463],13);window.GpsMapView.attach({L,map,isRecording:()=>watch!==null,stop:()=>$("finishExaminerRoute").click()});L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map)}}
   function draw(points,fit=true){
     initMap();
     const groups=[];let group=[];
     points.forEach(p=>{if(p.breakBefore&&group.length){groups.push(group);group=[]}group.push([p.lat,p.lng])});
     if(group.length)groups.push(group);
     if(line)line.setLatLngs(groups);
-    else line=L.polyline(groups,{weight:5,color:"#d88700"}).addTo(map);
+    else line=window.GpsMapView.routeLine(L,groups).addTo(map);
     if(fit){
       const bounds=line.getBounds();
       if(bounds.isValid())map.fitBounds(bounds,{padding:[18,18]});
@@ -32,6 +32,7 @@
   function closeExaminer(){examinerId=null;$("examinerRoutesSection").classList.add("hidden");$("examinerShareActions").classList.add("hidden")}
   function blankDraft(idValue=crypto.randomUUID()){return{id:idValue,examinerId,sequence:routes().length+1,title:"",note:"",startedAt:Date.now(),endedAt:null,durationMs:0,distanceMetres:0,points:[],segments:[],status:"saved",report:core.normalizeReport(null),createdAt:Date.now(),updatedAt:Date.now()}}
   function syncRecordingControls(){
+    window.GpsMapView?.sync(map);
     const recording=watch!==null;
     $("examinerRouteRecordingBadge").classList.toggle("hidden",!recording);
     $("finishExaminerRoute").textContent=recording?"FERMA GPS":"AVVIA GPS";
@@ -100,6 +101,7 @@
     if(watch===null)return;
     const watchId=watch;
     watch=null;
+    window.GpsMapView?.sync(map);
     navigator.geolocation.clearWatch(watchId);
     orientation?.dispose();
     orientation=null;

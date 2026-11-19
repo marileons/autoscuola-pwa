@@ -132,6 +132,6 @@ function gateDetail(data,route,gap,w){
   return session;
  }
 
- function layers(L,route,records){return visible(route,records).map(r=>L.polyline(r.geometry,{color:'#d70015',weight:5,dashArray:'8 8',opacity:.9}).bindPopup(caption+' · stima sperimentale, non rilevazione GPS. Dati © OpenStreetMap contributors, ODbL 1.0.'))}
+ function layers(L,route,records){return visible(route,records).map(r=>(globalThis.GpsMapView?globalThis.GpsMapView.routeLine(L,r.geometry,{dashArray:'8 8'}):L.polyline(r.geometry,{color:'#00A86B',weight:5,dashArray:'8 8',opacity:1})).bindPopup(caption+' · stima sperimentale, non rilevazione GPS. Dati © OpenStreetMap contributors, ODbL 1.0.'))}
  return{VERSION,METHOD,LEGACY_METHOD,RECORDING_METHOD,caption,validate,visible,match,createSession,layers,distance};
 });
