@@ -10,10 +10,10 @@
   group.setLatLngs=value=>{outline.setLatLngs(value);line.setLatLngs(value);return group};
   return group;
  }
- function attach({L,map,isRecording=()=>false,stop=()=>{}}){
+ function attach({L,map,isRecording=()=>false,stop=()=>{},reportError=null,closeOverlay=()=>{}}){
   if(entries.has(map))return entries.get(map);
   const container=map.getContainer();let dialog=null,placeholder=null,frame=null,previousFocus=null,disposed=false;
-  let expandButton,stopButton;
+  let expandButton,stopButton,errorButton,errorControl;
   function resize(){
    if(frame!==null)cancelAnimationFrame(frame);
    frame=requestAnimationFrame(()=>{
@@ -25,11 +25,13 @@
   }
   function sync(){
    const recording=isRecording();
+   if(errorButton)errorButton.hidden=!dialog;
    stopButton.hidden=!recording;
    stopButton.disabled=!recording;
   }
   function close(){
    if(!dialog)return;
+   closeOverlay();
    const current=dialog;dialog=null;
    placeholder.replaceWith(container);placeholder=null;
    container.classList.remove("gps-map-expanded");
@@ -39,7 +41,7 @@
    expandButton.textContent="\u26f6 Espandi mappa";
    expandButton.setAttribute("aria-label","Espandi mappa");
    expandButton.setAttribute("aria-expanded","false");
-   resize();previousFocus?.focus({preventScroll:true});
+   sync();resize();previousFocus?.focus({preventScroll:true});
   }
   function expand(){
    if(disposed||dialog)return;
@@ -79,6 +81,19 @@
     return box;
    }
   }))().addTo(map);
+  if(reportError){
+   errorControl=L.control({position:"bottomleft"});
+   errorControl.onAdd=()=>{
+    const box=L.DomUtil.create("div","leaflet-control gps-map-error-controls");
+    errorButton=L.DomUtil.create("button","gps-map-signal-error",box);
+    errorButton.type="button";errorButton.hidden=true;
+    errorButton.innerHTML='<svg class="mr-interior-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#mr-error"/></svg><span>SEGNALA ERRORE</span>';
+    errorButton.onclick=reportError;
+    L.DomEvent.disableClickPropagation(box);L.DomEvent.disableScrollPropagation(box);
+    return box;
+   };
+   errorControl.addTo(map);
+  }
   // Stop control clicks before Leaflet synthesizes a double-tap zoom.
   const controlContainer=map._controlContainer;
   L.DomEvent.on(controlContainer,"click",L.DomEvent.stopPropagation);
@@ -90,7 +105,7 @@
    if(frame!==null)cancelAnimationFrame(frame);
    L.DomEvent.off(controlContainer,"click",L.DomEvent.stopPropagation);
    observer.disconnect();root.removeEventListener("orientationchange",resize);root.removeEventListener("resize",resize);
-   control.remove();map.off("unload",dispose);entries.delete(map);
+   errorControl?.remove();control.remove();map.off("unload",dispose);entries.delete(map);
   }
   const api={expand,close,sync,dispose};
   map.on("unload",dispose);entries.set(map,api);sync();return api;

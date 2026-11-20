@@ -9,3 +9,21 @@ dialog.gps-map-dialog[open]{display:flex;position:fixed;inset:0;box-sizing:borde
 .gps-map-view-controls button svg,.gps-map-view-controls button .ui-icon{display:none!important}
 .gps-map-view-controls .gps-map-stop{background:#913747!important;border-color:#ffc2c8!important}
 .gps-map-dialog .gps-map-expand{align-self:flex-end;font-size:28px!important}
+
+.gps-map-error-controls button{display:flex;align-items:center;gap:8px;min-height:52px;margin:0;padding:12px 16px;border:2px solid #ffc2c8;border-radius:12px;background:#ad2638;color:#fff;font:800 14px/1.2 system-ui;box-shadow:0 2px 7px #001d2c70;cursor:pointer}
+.gps-map-error-controls button[hidden]{display:none!important}
+.gps-map-error-controls svg{display:block;width:24px;height:24px;flex:0 0 24px;color:#fff}
+.gps-map-error-controls button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.gps-map-dialog .leaflet-bottom.leaflet-left{margin-bottom:8px}
+body #appShell #lesson dialog.map-driving-error-dialog[open]{box-sizing:border-box;width:min(620px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);overflow:auto;overscroll-behavior:contain;padding:16px;border:2px solid #A7F3D0;border-radius:16px;background:#063441;color:#FFF7E6}
+.map-driving-error-dialog::backdrop{background:#001b25b3}
+body #appShell #lesson .map-driving-error-dialog>h2{margin:4px 48px 18px 0;color:#FFF7E6;font-size:18px}
+body #appShell #lesson .map-driving-error-dialog .map-driving-error-close{position:absolute;right:10px;top:8px;display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:0;border:2px solid #A7F3D0;border-radius:10px;background:#063441;color:#fff;font-size:28px}
+body #appShell #lesson .map-driving-error-dialog #drivingErrorsPanel{margin:0;min-width:0}
+body #appShell #lesson .map-driving-error-dialog #drivingErrorsPanel>summary,body #appShell #lesson .map-driving-error-dialog #manageDrivingErrorCatalog{display:none}
+body #appShell #lesson .map-driving-error-dialog :is(input,textarea,select){box-sizing:border-box;max-width:100%}
+
+body #appShell #lesson .map-driving-error-heading{position:sticky;top:-16px;z-index:3;margin:-16px -16px 14px;padding:16px 60px 16px 16px;background:#063441;border-bottom:1px solid #A7F3D0}
+body #appShell #lesson .map-driving-error-heading h2{margin:0;color:#FFF7E6;font-size:18px}
+body #appShell #lesson .map-driving-error-close svg{display:block;width:24px;height:24px;margin:0}
+body #appShell #lesson .map-driving-error-dialog .driving-error-card:not(:has(.driving-error-note)){display:none}

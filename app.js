@@ -280,7 +280,7 @@ function scheduleTunnelDeadline(){if(tunnelDeadline!==null)clearTimeout(tunnelDe
 function endTunnelSession(){if(tunnelDeadline!==null)clearTimeout(tunnelDeadline);tunnelDeadline=null;tunnelSession?.stop();if(tunnelSession?.diagnostics)tunnelLastDiagnostic=tunnelSession.diagnostics();tunnelSession=null;if(tunnelHeartbeat!==null)clearInterval(tunnelHeartbeat);tunnelHeartbeat=null}
 function collectTunnelReconstructions(){if(!tunnelSession)return;const found=tunnelSession.scan(state.tempRoute);if(found.length)state.tunnelReconstructions=[...(state.tunnelReconstructions||[]),...found];scheduleTunnelDeadline()}
 function tunnelMapLayers(route,records,mapId){const T=window.TunnelReconstruction,visible=T?.visible(route,records||[])||[];let note=$(mapId+"TunnelNotice");if(visible.length&&!note){note=document.createElement("p");note.id=mapId+"TunnelNotice";note.className="tunnel-estimate-notice";note.setAttribute("role","status");$(mapId).after(note)}if(note){note.hidden=!visible.length;note.textContent="Verde continuo: GPS rilevato. Verde tratteggiato: Tratto ricostruito in galleria (sperimentale). Dati © OpenStreetMap contributors, ODbL 1.0."}return T?T.layers(L,route,visible):[]}
-function initLiveMap(){if(!state.liveMap){state.liveFollow=true;state.livePositioned=false;const O=window.GpsMapOrientation;state.liveMap=L.map("liveMap",O?O.options(L):{}).setView([44.4056,8.9463],13);window.GpsMapView.attach({L,map:state.liveMap,isRecording:()=>state.watch!==null,stop:()=>stopGps()});L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(state.liveMap);state.liveOrientation=O?.attach({L,map:state.liveMap})||null;if(state.liveOrientation)state.liveMarker=state.liveOrientation.marker}syncLiveMapInteraction();if(!state.livePositionTimer)state.livePositionTimer=setInterval(()=>{if(state.watch!==null)refreshLiveGpsPosition()},1000);const map=state.liveMap;setTimeout(()=>{if(state.liveMap===map)map.invalidateSize()},80)}
+function initLiveMap(){if(!state.liveMap){state.liveFollow=true;state.livePositioned=false;const O=window.GpsMapOrientation;state.liveMap=L.map("liveMap",O?O.options(L):{}).setView([44.4056,8.9463],13);window.GpsMapView.attach({L,map:state.liveMap,isRecording:()=>state.watch!==null,stop:()=>stopGps(),reportError:signalMapDrivingError,closeOverlay:closeMapDrivingErrorEditor});L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(state.liveMap);state.liveOrientation=O?.attach({L,map:state.liveMap})||null;if(state.liveOrientation)state.liveMarker=state.liveOrientation.marker}syncLiveMapInteraction();if(!state.livePositionTimer)state.livePositionTimer=setInterval(()=>{if(state.watch!==null)refreshLiveGpsPosition()},1000);const map=state.liveMap;setTimeout(()=>{if(state.liveMap===map)map.invalidateSize()},80)}
 function disposeLiveGpsMap(){if(state.livePositionTimer){clearInterval(state.livePositionTimer);state.livePositionTimer=null}state.liveOrientation?.dispose();state.liveOrientation=null;if(state.liveMap)state.liveMap.remove();state.liveMap=null;state.liveMarker=null;state.liveLine=null;state.liveErrorLayer=null}
 function syncLiveMapInteraction(){const locked=state.liveFollow!==false;for(const key of ["dragging","boxZoom","keyboard"]){const handler=state.liveMap?.[key];if(handler)locked?handler.disable():handler.enable()}$("liveMap")?.classList.toggle("follow-position-locked",locked);updateLiveFollowButton()}
 function currentLiveGpsPosition(){const p=state.liveGpsPosition,age=p?Date.now()-p.time:Infinity;return state.watch!==null&&p&&age>=-2000&&age<=8000&&["active","degraded"].includes(state.gpsState)?p:null}
@@ -874,3 +874,33 @@ window.refreshLessonInstructorHeader=()=>{
  syncLessonInstructorHeader();
 };
 new MutationObserver(()=>{syncLessonInstructorHeader();measureStudentHeader()}).observe($("lessonInstructor"),{childList:true,subtree:true,characterData:true});
+
+let mapDrivingErrorEditor=null;
+function closeMapDrivingErrorEditor(){
+ const context=mapDrivingErrorEditor;if(!context)return;
+ mapDrivingErrorEditor=null;
+ context.placeholder.replaceWith(context.panel);
+ context.panel.open=context.wasOpen;
+ context.dialog.close();context.dialog.remove();
+ document.querySelector("#liveMap .gps-map-signal-error")?.focus({preventScroll:true});
+}
+function signalMapDrivingError(){
+ if(mapDrivingErrorEditor)return;
+ const before=state.tempErrors.length;
+ $("signalDrivingError").click();
+ if(state.tempErrors.length===before)return;
+ const item=state.tempErrors.at(-1),panel=$("drivingErrorsPanel");
+ state.editingErrorId=item.id;renderDrivingErrors();
+ const dialog=document.createElement("dialog"),heading=document.createElement("h2"),close=document.createElement("button"),placeholder=document.createComment("driving-errors-original-position");
+ dialog.className="map-driving-error-dialog";heading.id="mapDrivingErrorTitle";heading.textContent="ERRORE SEGNALATO";
+ dialog.setAttribute("aria-labelledby",heading.id);
+ close.type="button";close.className="map-driving-error-close";close.innerHTML='<svg class="mr-interior-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>';close.setAttribute("aria-label","Chiudi e torna alla mappa");close.onclick=closeMapDrivingErrorEditor;
+ const wasOpen=panel.open;panel.before(placeholder);panel.open=true;
+ const toolbar=document.createElement("div");toolbar.className="map-driving-error-heading";toolbar.append(heading,close);
+ dialog.append(toolbar,panel);$("lesson").append(dialog);
+ mapDrivingErrorEditor={dialog,panel,placeholder,wasOpen};
+ dialog.addEventListener("cancel",event=>{event.preventDefault();closeMapDrivingErrorEditor()});
+ dialog.addEventListener("close",()=>{if(mapDrivingErrorEditor?.dialog===dialog)closeMapDrivingErrorEditor()});
+ dialog.addEventListener("click",event=>{if(event.target.closest(".save-error,.cancel-error"))closeMapDrivingErrorEditor()});
+ dialog.showModal();close.focus({preventScroll:true});
+}
