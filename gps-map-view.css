@@ -70,3 +70,7 @@ body #appShell #lesson .map-driving-error-dialog .driving-error-card:not(:has(.d
 }
 
 .gps-map-footer .gps-map-stop :is(svg,.ui-icon){display:none!important}
+
+/* Local review: content-sized mint student badge. */
+.gps-map-dialog .gps-map-student{width:max-content;max-width:min(240px,calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 116px));background:rgba(167,243,208,.9);color:#063441;border:1px solid rgba(6,52,65,.32);box-shadow:0 2px 6px rgba(0,29,44,.2)}
+.gps-map-dialog .gps-map-student :is(svg,small,strong){color:#063441}
