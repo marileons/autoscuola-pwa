@@ -29,3 +29,9 @@
  .gps-orientation-toggle:focus-visible{outline:3px solid #a9e0ef;outline-offset:3px}
  .gps-orientation-toggle:disabled{opacity:.65}
 }
+
+/* Compact mode indicator; the same button and orientation actions are retained. */
+.gps-orientation-toggle{width:48px!important;min-width:48px!important;max-width:48px!important;height:48px!important;min-height:48px!important;justify-content:center;padding:8px!important;gap:0!important}
+.gps-orientation-toggle :is(.gps-orientation-label,small){display:none!important}
+.gps-orientation-toggle .gps-orientation-mode-icon{display:block!important;width:30px!important;height:30px!important;flex:0 0 30px;color:#fff}
+.gps-orientation-toggle[aria-pressed="true"] .mode-north,.gps-orientation-toggle[aria-pressed="false"] .mode-course{display:none}

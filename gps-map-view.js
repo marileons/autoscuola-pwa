@@ -10,14 +10,24 @@
   group.setLatLngs=value=>{outline.setLatLngs(value);line.setLatLngs(value);return group};
   return group;
  }
- function attach({L,map,isRecording=()=>false,stop=()=>{},reportError=null,closeOverlay=()=>{},readSpeed=()=>null}){
+ function attach({L,map,isRecording=()=>false,stop=()=>{},reportError=null,closeOverlay=()=>{},readSpeed=()=>null,readStudent=null}){
   if(entries.has(map))return entries.get(map);
   const container=map.getContainer();let dialog=null,placeholder=null,frame=null,previousFocus=null,disposed=false;
-  let expandButton,stopButton,errorButton,errorControl,speedBox,speedValue;
+  let expandButton,stopButton,errorButton,errorControl,speedBox,speedValue,studentControl,studentBox,studentName,footer=null,footerMoves=[];
+  function mountFooter(){
+   if(!reportError)return;
+   footer=L.DomUtil.create("div","leaflet-control gps-map-footer",container);
+   const left=L.DomUtil.create("div","gps-map-footer-left",footer),right=L.DomUtil.create("div","gps-map-footer-right");
+   const move=(node,parent)=>{if(!node)return;const mark=document.createComment("map-control-original");node.before(mark);footerMoves.push({node,mark});parent.append(node)};
+   move(errorButton,left);move(speedBox,footer);move(stopButton,right);move(container.querySelector(".gps-orientation-toggle"),right);footer.append(right);
+   L.DomEvent.disableClickPropagation(footer);L.DomEvent.disableScrollPropagation(footer);L.DomEvent.on(footer,'click',L.DomEvent.stopPropagation);
+  }
+  function restoreFooter(){for(const {node,mark}of footerMoves)mark.replaceWith(node);footerMoves=[];footer?.remove();footer=null}
   function resize(){
    if(frame!==null)cancelAnimationFrame(frame);
    frame=requestAnimationFrame(()=>{
     frame=null;if(disposed||map.getZoom()===undefined)return;
+    const zoomControl=container.querySelector('.leaflet-control-zoom');if(zoomControl)container.style.setProperty('--gps-zoom-height',zoomControl.offsetHeight+'px');
     const center=map.getCenter(),zoom=map.getZoom();
     map.invalidateSize({pan:true,animate:false});
     map.setView(center,zoom,{animate:false,reset:true});
@@ -25,6 +35,7 @@
   }
   function sync(){
    const recording=isRecording();
+   if(studentBox){const name=String(readStudent()||"").trim();studentBox.hidden=!dialog||!name;if(studentName.textContent!==name)studentName.textContent=name;}
    if(errorButton)errorButton.hidden=!dialog;
    if(speedBox){
     speedBox.hidden=!dialog;
@@ -36,7 +47,7 @@
   }
   function close(){
    if(!dialog)return;
-   closeOverlay();
+   closeOverlay();restoreFooter();
    const current=dialog;dialog=null;
    placeholder.replaceWith(container);placeholder=null;
    container.classList.remove("gps-map-expanded");
@@ -58,7 +69,7 @@
    placeholder=document.createComment("map-original-position");
    container.before(placeholder);
    container.classList.add("gps-map-expanded");
-   dialog.append(container);
+   dialog.append(container);mountFooter();
    const opened=dialog;
    dialog.addEventListener("cancel",event=>{event.preventDefault();close()});
    dialog.addEventListener("close",()=>{if(dialog===opened)close()});
@@ -101,6 +112,17 @@
    };
    errorControl.addTo(map);
   }
+  if(readStudent){
+   studentControl=L.control({position:"topleft"});
+   studentControl.onAdd=()=>{
+    studentBox=L.DomUtil.create("div","leaflet-control gps-map-student");studentBox.hidden=true;
+    studentBox.innerHTML='<svg class="mr-interior-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#mr-student"/></svg><div><small>ALLIEVO IN GUIDA</small><strong></strong></div>';
+    studentName=studentBox.querySelector("strong");
+    L.DomEvent.disableClickPropagation(studentBox);L.DomEvent.disableScrollPropagation(studentBox);
+    return studentBox;
+   };
+   studentControl.addTo(map);
+  }
   // Stop control clicks before Leaflet synthesizes a double-tap zoom.
   const controlContainer=map._controlContainer;
   L.DomEvent.on(controlContainer,"click",L.DomEvent.stopPropagation);
@@ -112,7 +134,7 @@
    if(frame!==null)cancelAnimationFrame(frame);
    L.DomEvent.off(controlContainer,"click",L.DomEvent.stopPropagation);
    observer.disconnect();root.removeEventListener("orientationchange",resize);root.removeEventListener("resize",resize);
-   errorControl?.remove();control.remove();map.off("unload",dispose);entries.delete(map);
+   studentControl?.remove();errorControl?.remove();control.remove();map.off("unload",dispose);entries.delete(map);
   }
   const api={expand,close,sync,dispose};
   map.on("unload",dispose);entries.set(map,api);sync();return api;

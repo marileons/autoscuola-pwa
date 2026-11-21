@@ -104,10 +104,18 @@
   const marker=L.marker(map.getCenter(),{icon:L.divIcon({html:node,className:'gps-heading-marker',iconSize:[MARKER_SIZE,MARKER_SIZE],iconAnchor:[MARKER_CENTER,MARKER_CENTER]}),opacity:0,interactive:false,keyboard:false,zIndexOffset:1000}).addTo(map);
   const svg=node.querySelector('svg'),control=L.control({position:'topright'});
   const button=document.createElement('button'),label=document.createTextNode('DIREZIONE DI MARCIA'),hint=document.createElement('small');
-  button.type='button';button.className='gps-orientation-toggle';button.append(label,hint);button.setAttribute('aria-pressed','true');
+  button.type='button';button.className='gps-orientation-toggle';const caption=document.createElement('span');caption.className='gps-orientation-label';caption.append(label);
+  const modeIcon=document.createElementNS('http://www.w3.org/2000/svg','svg');modeIcon.setAttribute('viewBox','0 0 32 32');modeIcon.setAttribute('aria-hidden','true');modeIcon.classList.add('gps-orientation-mode-icon');
+  modeIcon.innerHTML='<g class="mode-course" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m16 4 10 23-10-5-10 5Z" fill="#A7F3D0" stroke="#fff"/><path d="M16 12v9" stroke="#063441"/></g><g class="mode-north" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 13V4l10 9V4"/><path d="m16 17 6 11-6-3-6 3Z" fill="#A7F3D0" stroke="#fff"/></g>';
+  button.append(caption,hint,modeIcon);button.setAttribute('aria-pressed','true');
   function text(node,value){if(node.nodeValue!==value)node.nodeValue=value}
   function paint(){if(disposed)return;const target=heading===null?0:mode==='course'&&follow&&canRotate?0:norm(heading+(canRotate?map.getBearing():0));screenAngle+=delta(norm(screenAngle),target);const transform='rotate('+screenAngle+'deg)';if(svg.style.transform!==transform)svg.style.transform=transform;
    const value=heading!==null;if(value!==known){known=value;node.classList.toggle('gps-heading-known',known)}
+   const activeMode=mode==='course'?'DIREZIONE DI MARCIA':'NORD IN ALTO';
+   const action=mode==='course'?'Passa a Nord in alto':'Passa a direzione di marcia';
+   const accessible='Modalità attiva: '+activeMode+'. '+action+(heading===null?'. Direzione GPS non ancora disponibile':'');
+   if(button.getAttribute('aria-label')!==accessible)button.setAttribute('aria-label',accessible);
+   button.title=accessible;
    const status=!canRotate?'Solo Nord: rotazione non disponibile':!follow?'Esplorazione manuale':heading===null?'Nord · direzione non disponibile':!reliable?'Ultimo orientamento · in attesa GPS':'Orientamento da movimento GPS';
    if(hint.textContent!==status)hint.textContent=status;
    const title=known?'Posizione corrente; direzione stimata dal movimento':'Posizione corrente; direzione non disponibile';if(node.title!==title)node.title=title;

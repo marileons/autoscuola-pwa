@@ -34,3 +34,39 @@ body #appShell #lesson .map-driving-error-dialog .driving-error-card:not(:has(.d
 .gps-map-speed strong{font:800 32px/1 system-ui;color:#fff;font-variant-numeric:tabular-nums}
 .gps-map-speed span{font:700 12px/1.4 system-ui;color:#fff}
 @media(max-width:420px){.gps-map-error-controls button{padding:10px 12px;font-size:13px}.gps-map-error-controls .gps-map-speed{min-width:80px;padding-inline:8px}}
+
+.gps-map-student{box-sizing:border-box;display:flex;align-items:flex-start;gap:7px;width:min(260px,calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 172px));padding:10px;border:1px solid #A7F3D0;border-radius:12px;background:#063441;color:#fff;box-shadow:0 2px 7px #001d2c70}
+.gps-map-student[hidden]{display:none!important}
+.gps-map-student>svg{display:block;flex:0 0 20px;width:20px;height:24px;margin:0;color:#A7F3D0}
+.gps-map-student>div{min-width:0}
+.gps-map-student small{display:block;margin:0 0 4px;color:#fff;font:700 10px/1.3 system-ui}
+.gps-map-student strong{display:block;color:#A7F3D0;font:800 14px/1.35 system-ui;text-transform:uppercase;white-space:normal;word-break:normal;overflow-wrap:normal}
+
+.gps-map-dialog .gps-map-student{position:absolute;top:10px;left:52px;margin:0!important}
+
+/* Expanded lesson map: aligned identity and a single three-zone toolbar. */
+.gps-map-dialog .gps-map-student{height:var(--gps-zoom-height,64px);width:min(420px,calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 116px));padding:5px 8px;align-items:center;gap:6px}
+.gps-map-dialog .gps-map-student>div{max-height:100%;overflow-y:auto}
+.gps-map-dialog .gps-map-student small{font-size:9px;line-height:1.1;margin-bottom:2px}
+.gps-map-dialog .gps-map-student strong{font-size:13px;line-height:1.15}
+.gps-map-footer{position:absolute!important;left:10px;right:10px;bottom:20px;margin:0!important;float:none!important;clear:none!important;display:grid;grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr);align-items:center;gap:10px;pointer-events:none}
+.gps-map-footer>*{pointer-events:auto}
+.gps-map-footer-left{justify-self:start;min-width:0}
+.gps-map-footer-right{display:flex;align-items:center;justify-content:flex-end;gap:8px;justify-self:end;min-width:0}
+.gps-map-footer .gps-map-signal-error{display:flex;align-items:center;gap:7px;min-height:56px;box-sizing:border-box;margin:0;padding:10px 14px;border:2px solid #ffc2c8;border-radius:12px;background:#ad2638;color:#fff;font:800 13px/1.2 system-ui;cursor:pointer;box-shadow:0 2px 7px #001d2c70}
+.gps-map-footer .gps-map-signal-error svg{width:22px;height:22px;flex:0 0 22px;color:#fff}
+.gps-map-footer .gps-map-speed{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:56px;box-sizing:border-box;padding:4px;border:2px solid #A7F3D0;border-radius:12px;background:#063441;color:#fff;box-shadow:0 2px 7px #001d2c70}
+.gps-map-footer .gps-map-stop{box-sizing:border-box;min-height:48px;min-width:44px;padding:8px 10px;margin:0;border:2px solid #ffc2c8;border-radius:10px;background:#913747;color:#fff;font:800 12px/1.2 system-ui;cursor:pointer}
+.gps-map-footer button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.gps-map-footer [hidden]{display:none!important}
+@media(max-width:420px){
+ .gps-map-footer{grid-template-columns:minmax(0,1fr) 60px minmax(0,1fr);gap:6px}
+ .gps-map-footer-right{gap:4px}
+ .gps-map-footer .gps-map-signal-error{width:100%;padding:8px 6px;gap:5px;font-size:11px}
+ .gps-map-footer .gps-map-signal-error svg{width:20px;height:20px;flex-basis:20px}
+ .gps-map-footer .gps-map-stop{padding:8px 6px;font-size:10px}
+ .gps-map-footer .gps-map-speed strong{font-size:28px}
+ .gps-map-footer .gps-map-speed span{font-size:11px}
+}
+
+.gps-map-footer .gps-map-stop :is(svg,.ui-icon){display:none!important}
