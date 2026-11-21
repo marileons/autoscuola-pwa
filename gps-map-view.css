@@ -27,3 +27,10 @@ body #appShell #lesson .map-driving-error-heading{position:sticky;top:-16px;z-in
 body #appShell #lesson .map-driving-error-heading h2{margin:0;color:#FFF7E6;font-size:18px}
 body #appShell #lesson .map-driving-error-close svg{display:block;width:24px;height:24px;margin:0}
 body #appShell #lesson .map-driving-error-dialog .driving-error-card:not(:has(.driving-error-note)){display:none}
+
+.gps-map-error-controls{display:flex;align-items:stretch;gap:8px;max-width:calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 20px)}
+.gps-map-error-controls .gps-map-speed{display:flex;flex-direction:column;justify-content:center;align-items:center;box-sizing:border-box;min-width:84px;padding:5px 12px;border:2px solid #A7F3D0;border-radius:12px;background:#063441;color:#fff;box-shadow:0 2px 7px #001d2c70;line-height:1}
+.gps-map-error-controls .gps-map-speed[hidden]{display:none!important}
+.gps-map-speed strong{font:800 32px/1 system-ui;color:#fff;font-variant-numeric:tabular-nums}
+.gps-map-speed span{font:700 12px/1.4 system-ui;color:#fff}
+@media(max-width:420px){.gps-map-error-controls button{padding:10px 12px;font-size:13px}.gps-map-error-controls .gps-map-speed{min-width:80px;padding-inline:8px}}

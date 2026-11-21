@@ -10,10 +10,10 @@
   group.setLatLngs=value=>{outline.setLatLngs(value);line.setLatLngs(value);return group};
   return group;
  }
- function attach({L,map,isRecording=()=>false,stop=()=>{},reportError=null,closeOverlay=()=>{}}){
+ function attach({L,map,isRecording=()=>false,stop=()=>{},reportError=null,closeOverlay=()=>{},readSpeed=()=>null}){
   if(entries.has(map))return entries.get(map);
   const container=map.getContainer();let dialog=null,placeholder=null,frame=null,previousFocus=null,disposed=false;
-  let expandButton,stopButton,errorButton,errorControl;
+  let expandButton,stopButton,errorButton,errorControl,speedBox,speedValue;
   function resize(){
    if(frame!==null)cancelAnimationFrame(frame);
    frame=requestAnimationFrame(()=>{
@@ -26,6 +26,11 @@
   function sync(){
    const recording=isRecording();
    if(errorButton)errorButton.hidden=!dialog;
+   if(speedBox){
+    speedBox.hidden=!dialog;
+    const value=readSpeed(),label=Number.isFinite(value)&&value>=0?String(Math.round(value)):"\u2014";
+    if(speedValue.textContent!==label){speedValue.textContent=label;speedBox.setAttribute("aria-label","Velocità indicativa: "+label+" km/h")}
+   }
    stopButton.hidden=!recording;
    stopButton.disabled=!recording;
   }
@@ -89,6 +94,8 @@
     errorButton.type="button";errorButton.hidden=true;
     errorButton.innerHTML='<svg class="mr-interior-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#mr-error"/></svg><span>SEGNALA ERRORE</span>';
     errorButton.onclick=reportError;
+    speedBox=L.DomUtil.create("div","gps-map-speed",box);speedBox.hidden=true;speedBox.setAttribute("role","status");
+    speedBox.innerHTML="<strong>&mdash;</strong><span>km/h</span>";speedValue=speedBox.querySelector("strong");
     L.DomEvent.disableClickPropagation(box);L.DomEvent.disableScrollPropagation(box);
     return box;
    };
