@@ -65,7 +65,7 @@
    const global=selected==='global:',path=global?'/api/home-sections':'/api/home-sections/users/'+encodeURIComponent(selected.slice(5)),data=await api('GET',null,path);
    if(owner!==epoch||token!==selectionToken||!dialog().open||!primary())return;
    if(!global&&(!validEditor(data)||data.user?.id!==selected.slice(5)))throw Error('Configurazione personale non valida.');
-   management={global,id:global?selected:selected.slice(5),data,draft:[...data.enabled],reset:false,theme:data.christmasTheme?.mode,theme:data.christmasTheme?.mode};
+   management={global,id:global?selected:selected.slice(5),data,draft:[...data.enabled],reset:false,theme:data.christmasTheme?.mode};
    el('homeSectionsTarget').textContent=global?'Impostazioni predefinite globali':data.user.name+' · '+data.user.role;
    editorRows();message().textContent=global?'Sezioni: predefiniti per gli utenti senza assegnazione personale. Tema natalizio: tutti i profili e dispositivi.':'SALVA modifica solo questo utente. Dati e strumenti comuni restano invariati.';
   }catch(error){if(owner===epoch&&token===selectionToken)message().textContent=error.message||'Caricamento non riuscito.'}
@@ -73,14 +73,15 @@
  }
  async function open(){
   if(!primary()||dialog().open)return;
-  dialog().showModal();el('homeSectionsChristmas').hidden=true;management=null;selectionToken++;const owner=epoch,opening=selectionToken;el('homeSectionsList').replaceChildren();el('homeSectionsTarget').textContent='';el('homeSectionsSource').textContent='';el('homeSectionsUser').replaceChildren();managementLock(true);message().textContent='Caricamento utenti.';
+  dialog().showModal();el('homeSectionsChristmas').hidden=true;management=null;selectionToken++;const owner=epoch,opening=selectionToken;el('homeSectionsList').replaceChildren();el('homeSectionsTarget').textContent='';el('homeSectionsSource').textContent='';el('homeSectionsUser').replaceChildren();managementLock(true);message().textContent='Caricamento utenti.';let targetsReady=false;
   try{
    const data=await api('GET',null,'/api/home-sections/users');if(owner!==epoch||opening!==selectionToken||!dialog().open||!primary())return;
    const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='SELEZIONA UTENTE';el('homeSectionsUser').append(placeholder);
    for(const u of data.users){const option=document.createElement('option');option.value='user:'+u.id;option.textContent=u.name+' · '+u.role+(u.active?'':' · DISATTIVATO');option.disabled=!u.active||u.role==='USER_MANAGER';el('homeSectionsUser').append(option)}
-   const defaults=document.createElement('option');defaults.value='global:';defaults.textContent='IMPOSTAZIONI PREDEFINITE GLOBALI';el('homeSectionsUser').append(defaults);message().textContent='Scegli l’utente, amministratore compreso. Solo il principale può modificare le assegnazioni.';
+   const defaults=document.createElement('option');defaults.value='global:';defaults.textContent='IMPOSTAZIONI PREDEFINITE GLOBALI';el('homeSectionsUser').prepend(defaults);el('homeSectionsUser').value='global:';targetsReady=true;message().textContent='Scegli l’utente, amministratore compreso. Solo il principale può modificare le assegnazioni.';
   }catch(error){if(owner===epoch&&opening===selectionToken)message().textContent=error.message||'Elenco non disponibile.'}
   finally{if(owner===epoch&&opening===selectionToken){managementLock(false);el('homeSectionsSave').disabled=true;el('homeSectionsDefaults').disabled=true;}}
+  if(targetsReady&&owner===epoch&&opening===selectionToken&&dialog().open&&primary())await selectTarget();
  }
  async function save(){
   if(saving||!primary()||!management)return;
