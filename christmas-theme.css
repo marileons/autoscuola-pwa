@@ -1,0 +1,44 @@
+/* Local seasonal accents. No pointer interception, animation or functional recolouring. */
+.christmasHomeArt,.christmasLoginRoad,.christmasMenuRoad,#christmasMenuLogo{display:none}
+.christmas-preferences{margin:16px 0;padding:16px;border:1px solid #A7F3D0;border-radius:14px;background:#063441;color:#FFF7E6}
+.christmas-preferences[hidden]{display:none!important}
+.christmas-preferences h3{margin:0 0 14px;color:#FFD58A}
+.christmas-preferences label{display:grid;gap:8px;font-weight:800;color:#FFF7E6}
+.christmas-preferences select{box-sizing:border-box;width:100%;min-height:48px;background:#103e4a;color:#fff;border:2px solid #A7F3D0;border-radius:10px;padding:10px;font-size:16px}
+.christmas-preferences p{font-size:14px;line-height:1.5;color:#e5f3ec!important;opacity:1!important}
+.christmas-preferences p:last-child{margin-bottom:0}
+.christmas-theme .christmasHomeArt{display:block;width:100%;height:auto;max-height:245px;object-fit:cover;border-radius:18px;margin:0 0 14px;pointer-events:none}
+.christmas-theme .home-brand{position:relative}
+.christmas-theme .home-brand::before{content:"";position:absolute;left:24px;top:-7px;width:40px;height:34px;background:url("assets/christmas-hat.svg") center/contain no-repeat;pointer-events:none;z-index:2}
+.christmas-theme .auth-logo-frame{position:relative}
+.christmas-theme .auth-logo-frame::after{content:"";position:absolute;top:-10px;right:5%;width:65px;height:54px;background:url("assets/christmas-hat.svg") center/contain no-repeat;pointer-events:none}
+.christmas-theme .christmasLoginRoad{display:block;width:150px;height:75px;object-fit:contain;margin:0 auto;pointer-events:none}
+.christmas-theme #otherFunctions .side-menu-heading{position:sticky;padding-top:24px}
+.christmas-theme #otherFunctions .side-menu-heading::before{content:"";position:absolute;top:7px;left:4px;right:4px;height:11px;background:radial-gradient(circle,#ffe4a5 0 2px,#dba34f66 3px,transparent 7px) 0 0/43px 10px repeat-x;border-top:1px solid #d8b87580;pointer-events:none}
+.christmas-theme #christmasMenuLogo{display:block;position:relative;width:40px;height:40px;flex:0 0 40px;margin-right:8px}
+#christmasMenuLogo>img{width:40px;height:40px;border-radius:9px}
+.christmas-theme #christmasMenuLogo::after{content:"";position:absolute;top:-12px;right:-8px;width:30px;height:26px;background:url("assets/christmas-hat.svg") center/contain no-repeat;pointer-events:none}
+.christmas-theme #otherFunctions .side-menu-heading h2{flex:1;min-width:0}
+.christmas-theme .christmasMenuRoad{display:block;width:210px;height:75px;object-fit:cover;object-position:center bottom;margin:14px auto 4px;pointer-events:none}
+.christmas-car-hat{display:none}
+.christmas-theme .gps-heading-car .christmas-car-hat{display:inline}
+.christmas-theme .gps-map-student::after{content:"";position:absolute;right:-5px;top:-8px;width:23px;height:20px;background:url("assets/christmas-hat.svg") center/contain no-repeat;pointer-events:none}
+.christmas-theme body:has(#student.active) #activeStudentIdentity{position:relative}
+.christmas-theme body:has(#student.active) #activeStudentIdentity::after{content:"";position:absolute;right:7px;top:-5px;width:58px;height:42px;background:url("assets/christmas-branch.svg") center/contain no-repeat;pointer-events:none}
+.christmas-theme #todayReminder h2::after,.christmas-theme .christmas-december::after,.christmas-theme .christmas-saved::after{content:" ✦";display:inline-block;color:#FFD58A;font-size:1.05em;line-height:1;pointer-events:none}
+@media(max-width:420px){.christmas-theme .christmasHomeArt{max-height:none}.christmas-theme #otherFunctions .side-menu-heading h2{font-size:21px}.christmas-theme .home-brand::before{left:20px;top:-6px;width:34px;height:29px}}
+@media print{.christmasHomeArt,.christmasLoginRoad,.christmasMenuRoad,#christmasMenuLogo,.christmas-car-hat{display:none!important}}
+
+.christmas-theme .auth-logo-frame{overflow:visible}
+.christmas-theme .auth-logo{border-radius:18px}
+
+.christmas-theme .auth-logo-frame{width:min(300px,100%);margin:0 auto 6px}
+.christmas-theme .auth-logo{display:block;width:100%;height:128px!important;object-fit:contain}
+.christmas-theme .auth-logo-frame::after{top:0;right:calc(50% - 58px);width:44px;height:38px}
+
+#reservedAreaTools[hidden],#openChristmasTheme[hidden]{display:none!important}
+#reservedAreaTools #openChristmasTheme{display:flex;align-items:center;justify-content:center;gap:9px;min-height:48px;margin-top:8px;font-size:15px}
+#openChristmasTheme .ui-icon,#openChristmasTheme .ui-icon svg{width:22px;height:22px;flex:0 0 22px}
+dialog.christmas-preferences[open]{box-sizing:border-box;width:min(520px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);margin:auto;padding:20px;overflow:auto}
+dialog.christmas-preferences::backdrop{background:#001c28bb}
+.christmas-preferences-close{min-height:48px;width:100%;margin-top:14px}

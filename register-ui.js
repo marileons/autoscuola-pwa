@@ -319,6 +319,7 @@
       if (!ledger) return;
       getVault().touch();
       byId("registerPeriodLabel").textContent = periodLabel();
+      window.ChristmasTheme?.markMonth(byId("registerPeriodLabel"),currentRange().start.slice(5,7));
       const range = currentRange();
       const allDays = await ledger.listDays();
       const days = allDays.filter((day) => day.date >= range.start && day.date <= range.end);

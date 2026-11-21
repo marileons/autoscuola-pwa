@@ -114,7 +114,7 @@ async function adminPresence(request, env, session) {
   }catch{return json({peers:[],unavailable:true});}
 }
 function isPublicAsset(pathname) {
-  return pathname === "/" || pathname === "/index.html" || pathname === "/auth-client.js" || pathname === "/service-worker.js" || pathname === "/manifest.json" || pathname === "/favicon.ico" || /\.(?:css|png|jpg|jpeg|webp)$/i.test(pathname);
+  return ["/christmas-theme.js","/assets/christmas-hat.svg","/assets/christmas-road-tree.svg","/assets/christmas-branch.svg","/assets/christmas-home.svg"].includes(pathname) || pathname === "/" || pathname === "/index.html" || pathname === "/auth-client.js" || pathname === "/service-worker.js" || pathname === "/manifest.json" || pathname === "/favicon.ico" || /\.(?:css|png|jpg|jpeg|webp)$/i.test(pathname);
 }
 
 async function reservedAreaUnlocked(env, session) {
