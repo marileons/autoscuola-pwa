@@ -46,6 +46,10 @@ export default {
       const {handleCalendar}=await import("./shared-calendar-api.js");
       return handleCalendar(request,env,session,role,isPrimaryAdmin(session.user));
     }
+    if(url.pathname==="/api/public-config/christmas-theme"&&request.method==="GET"){
+      const {readChristmasTheme}=await import("./home-sections-api.js");const theme=await readChristmasTheme(env);
+      return json(theme,theme.available?200:503);
+    }
     if (!url.pathname.startsWith("/api/")) {
       if (isPublicAsset(url.pathname)) return env.ASSETS.fetch(request);
       const session = await requireSession(request, env);
@@ -394,7 +398,9 @@ async function requireSession(request, env, revokeInvalid = true) {
 }
 async function me(request, env) {
   const session = await requireSession(request, env);
-  return session.response || json({ user: calendarPublicUser(session.user,session.purpose,env) });
+  if(session.response)return session.response;
+  const {readChristmasTheme}=await import("./home-sections-api.js");
+  return json({ user: calendarPublicUser(session.user,session.purpose,env),christmasTheme:await readChristmasTheme(env) });
 }
 function calendarPublicUser(row,purpose,env) {
   const user=publicUser(row,purpose);

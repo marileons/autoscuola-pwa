@@ -37,7 +37,7 @@
   }catch(error){if(navigator.onLine===false)throw Error('Nessuna connessione: impossibile aggiornare le impostazioni delle sezioni.');throw error}
   finally{clearTimeout(timeout)}
  }
- function apply(data){enabled=new Set(data.enabled);version=data.version;known=true;loadError='';sync()}
+ function apply(data){window.ChristmasTheme?.receive(data.christmasTheme);enabled=new Set(data.enabled);version=data.version;known=true;loadError='';sync()}
  function refresh(){
   const u=user();if(!u?.id||!['ADMIN','ISTRUTTORE','SEGRETERIA'].includes(u.role)||u.mustChangePassword){reset();return Promise.resolve()}
   if(account!==u.id){reset();account=u.id}
@@ -51,28 +51,29 @@
  function managementLock(value){for(const node of dialog().querySelectorAll('button,input,select'))node.disabled=value;}
  function validEditor(m){return m&&Number.isSafeInteger(m.personalVersion)&&m.personalVersion>=0&&['default','personal'].includes(m.source)&&Array.isArray(m.global?.enabled)&&m.global.enabled.every(id=>ids.includes(id))&&Number.isSafeInteger(m.global.version)&&m.global.version>=0;}
  function editorRows(){
-  const list=el('homeSectionsList');list.replaceChildren();if(!management)return;
+  const list=el('homeSectionsList');list.replaceChildren();el('homeSectionsChristmas').hidden=!management?.global;if(!management)return;
+  if(management.global){if(!management.data.christmasTheme?.available)throw Error('Tema globale non disponibile.');el('globalChristmasMode').value=management.theme;}
   const values=management.reset?management.data.global.enabled:management.draft;
   for(const id of ids){const label=document.createElement('label'),text=document.createElement('span'),input=document.createElement('input'),state=document.createElement('small');text.textContent=document.querySelector('#category option[value="'+id+'"]')?.textContent||id;input.type='checkbox';input.value=id;input.checked=values.includes(id);input.setAttribute('role','switch');state.textContent=input.checked?'VISIBILE':'NASCOSTO';input.onchange=()=>{if(management.reset){management.draft=[...management.data.global.enabled];management.reset=false}management.draft=input.checked?[...new Set([...management.draft,id])]:management.draft.filter(x=>x!==id);state.textContent=input.checked?'VISIBILE':'NASCOSTO';el('homeSectionsSource').textContent=management.global?'PREDEFINITO GLOBALE':'PERSONALE (modifica da salvare)'};label.append(text,input,state);list.append(label)}
   el('homeSectionsSource').textContent=management.global?'PREDEFINITO GLOBALE':management.reset?'PREDEFINITA (ritorno da confermare con SALVA)':management.data.source==='personal'?'PERSONALE':'PREDEFINITA';
  }
  async function selectTarget(){
   if(!primary()||saving)return;
-  const token=++selectionToken,owner=epoch,selected=el('homeSectionsUser').value;management=null;el('homeSectionsList').replaceChildren();el('homeSectionsSource').textContent='';el('homeSectionsTarget').textContent='';managementLock(true);message().textContent='Caricamento delle sezioni selezionate.';
+  const token=++selectionToken,owner=epoch,selected=el('homeSectionsUser').value;management=null;el('homeSectionsChristmas').hidden=true;el('homeSectionsList').replaceChildren();el('homeSectionsSource').textContent='';el('homeSectionsTarget').textContent='';managementLock(true);message().textContent='Caricamento delle sezioni selezionate.';
   try{
    if(!selected)throw Error('Seleziona un utente.');
    const global=selected==='global:',path=global?'/api/home-sections':'/api/home-sections/users/'+encodeURIComponent(selected.slice(5)),data=await api('GET',null,path);
    if(owner!==epoch||token!==selectionToken||!dialog().open||!primary())return;
    if(!global&&(!validEditor(data)||data.user?.id!==selected.slice(5)))throw Error('Configurazione personale non valida.');
-   management={global,id:global?selected:selected.slice(5),data,draft:[...data.enabled],reset:false};
+   management={global,id:global?selected:selected.slice(5),data,draft:[...data.enabled],reset:false,theme:data.christmasTheme?.mode,theme:data.christmasTheme?.mode};
    el('homeSectionsTarget').textContent=global?'Impostazioni predefinite globali':data.user.name+' · '+data.user.role;
-   editorRows();message().textContent=global?'Il predefinito cambia solo per gli utenti senza assegnazione personale.':'SALVA modifica solo questo utente. Dati e strumenti comuni restano invariati.';
+   editorRows();message().textContent=global?'Sezioni: predefiniti per gli utenti senza assegnazione personale. Tema natalizio: tutti i profili e dispositivi.':'SALVA modifica solo questo utente. Dati e strumenti comuni restano invariati.';
   }catch(error){if(owner===epoch&&token===selectionToken)message().textContent=error.message||'Caricamento non riuscito.'}
   finally{if(owner===epoch&&token===selectionToken){managementLock(false);el('homeSectionsSave').disabled=!management;el('homeSectionsDefaults').disabled=!management||management.global;}}
  }
  async function open(){
   if(!primary()||dialog().open)return;
-  dialog().showModal();management=null;selectionToken++;const owner=epoch,opening=selectionToken;el('homeSectionsList').replaceChildren();el('homeSectionsTarget').textContent='';el('homeSectionsSource').textContent='';el('homeSectionsUser').replaceChildren();managementLock(true);message().textContent='Caricamento utenti.';
+  dialog().showModal();el('homeSectionsChristmas').hidden=true;management=null;selectionToken++;const owner=epoch,opening=selectionToken;el('homeSectionsList').replaceChildren();el('homeSectionsTarget').textContent='';el('homeSectionsSource').textContent='';el('homeSectionsUser').replaceChildren();managementLock(true);message().textContent='Caricamento utenti.';
   try{
    const data=await api('GET',null,'/api/home-sections/users');if(owner!==epoch||opening!==selectionToken||!dialog().open||!primary())return;
    const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='SELEZIONA UTENTE';el('homeSectionsUser').append(placeholder);
@@ -86,12 +87,13 @@
   const owner=epoch,m=management;saving=true;managementLock(true);message().textContent='Salvataggio in corso.';
   try{
    const path=m.global?'/api/home-sections':'/api/home-sections/users/'+encodeURIComponent(m.id),body={enabled:m.reset?null:m.draft,version:m.global?m.data.version:m.data.personalVersion};
-   await api('POST',body,path);if(owner!==epoch||!primary())return;
-   management=null;dialog().close();await refresh();
+   if(m.global)body.christmasTheme=m.theme;
+   const saved=await api('POST',body,path);if(owner!==epoch||!primary())return;
+   if(m.global){window.ChristmasTheme?.receive(saved.christmasTheme);management={...m,data:saved,draft:[...saved.enabled],theme:saved.christmasTheme.mode};message().textContent='Impostazioni globali salvate sul server. Tema valido per tutti i profili e dispositivi.';}else{management=null;dialog().close()}await refresh();
   }catch(error){if(owner===epoch){message().textContent=error.message||'Salvataggio non riuscito. Nessuna conferma ricevuta.';if(error.code==='HOME_SECTIONS_CONFLICT'){management=null;el('homeSectionsList').replaceChildren();}}}
   finally{if(owner===epoch){saving=false;managementLock(false);el('homeSectionsSave').disabled=!management;el('homeSectionsDefaults').disabled=!management||management.global;}}
  }
- function mount(){el('manageHomeSections').onclick=()=>void open();el('homeSectionsUser').onchange=()=>void selectTarget();el('homeSectionsSave').onclick=()=>void save();el('homeSectionsDefaults').onclick=()=>{if(!management||management.global||saving)return;if(!confirm('Usare le impostazioni predefinite per questo utente? La modifica sarà applicata solo con SALVA. Nessun dato viene cancellato.'))return;management.reset=true;editorRows();message().textContent='Ritorno ai predefiniti preparato. SALVA conferma; ANNULLA conserva l’assegnazione salvata.'};el('homeSectionsCancel').onclick=()=>{if(!saving){selectionToken++;management=null;dialog().close()}};dialog().oncancel=event=>{if(saving)event.preventDefault();else{selectionToken++;management=null}};sync()}
+ function mount(){el('globalChristmasMode').onchange=()=>{if(management?.global&&!saving)management.theme=el('globalChristmasMode').value};el('manageHomeSections').onclick=()=>void open();el('homeSectionsUser').onchange=()=>void selectTarget();el('homeSectionsSave').onclick=()=>void save();el('homeSectionsDefaults').onclick=()=>{if(!management||management.global||saving)return;if(!confirm('Usare le impostazioni predefinite per questo utente? La modifica sarà applicata solo con SALVA. Nessun dato viene cancellato.'))return;management.reset=true;editorRows();message().textContent='Ritorno ai predefiniti preparato. SALVA conferma; ANNULLA conserva l’assegnazione salvata.'};el('homeSectionsCancel').onclick=()=>{if(!saving){selectionToken++;management=null;dialog().close()}};dialog().oncancel=event=>{if(saving)event.preventDefault();else{selectionToken++;management=null}};sync()}
  function requirePath(id){if(allowed(id))return true;alert(known?'Questo percorso è temporaneamente nascosto. I dati restano conservati.':'Attendi il caricamento delle impostazioni delle sezioni oppure aggiorna la Home.');return false}
  window.HomeSections={mount,refresh,reset,sync,isEnabled:allowed,requirePath};
 })();
