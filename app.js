@@ -112,7 +112,7 @@ function bindLessonStudent(){
   if(!current||!current.id){lessonStudentId=null;$("lessonStudentIdentity").textContent="ALLIEVO NON DISPONIBILE";alert("Allievo non disponibile. Riapri la scheda corretta.");return false}
   lessonStudentId=current.id;
   $("lessonCategory").textContent=LABELS[lessonPathContext?.category||current.category]||current.category;
-  $("lessonStudentIdentity").textContent=`ALLIEVO: ${enteredName(current.firstName,current.lastName)}`;
+  $("lessonStudentIdentity").textContent=enteredName(current.firstName,current.lastName);
   return true;
 }
 function validLessonStudent(){return Boolean(lessonStudentId&&state.studentId===lessonStudentId&&student()&&(!state.lessonId||lesson()))}
