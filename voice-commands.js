@@ -1,4 +1,4 @@
-/* Opt-in, account-scoped on this device. Browser recognition; no recordings or transcripts stored. */
+/* Account-scoped on this device. Available by default; listening requires a tap. No recordings or transcripts stored. */
 (()=>{
 "use strict";
 const $=id=>document.getElementById(id),user=()=>window.AgendaAuth?.currentUser?.(),allowed=()=>["ADMIN","ISTRUTTORE"].includes(user()?.role)&&!user()?.mustChangePassword;
@@ -193,7 +193,7 @@ function attachMap(container){if(container.id!=="liveMap"||!(single||wake)||!all
 function sync(){
  const next=user()?.id||null,changed=next!==account;
  if(changed){panelOpen=false;stop();account=next;if($("voiceToast"))$("voiceToast").hidden=true;}
- try{wake=allowed()&&localStorage.getItem(key("wake"))==="on";single=wake;}catch{single=wake=false;}
+ try{wake=allowed()&&localStorage.getItem(key("wake"))!=="off";single=wake;}catch{single=wake=allowed();}
  if($("voiceSettings"))$("voiceSettings").hidden=!allowed();
  if($("voiceEnabled"))$("voiceEnabled").checked=single;if($("voiceWakeEnabled"))$("voiceWakeEnabled").checked=wake;
  if($("voiceHome"))$("voiceHome").hidden=!(single||wake);
@@ -209,7 +209,7 @@ function detachMap(){const container=map();container?.querySelector(".voice-map-
 function mount(){
  if($("voiceSettings"))return sync();
  const card=document.createElement("div");card.id="voiceSettings";card.className="card voice-settings";card.dataset.voiceUi="";
- card.innerHTML='<h2>COMANDI VOCALI</h2><label><input id="voiceWakeEnabled" type="checkbox" role="switch"> Abilita OK Agenda e Comando singolo</label><p>Facoltativo e inizialmente disattivato. Preferenza personale per questo account, su questo dispositivo. L’ascolto parte solo al primo tocco sul microfono. Un altro tocco apre i controlli; chiuderli non ferma l’ascolto.</p><p>Il browser può inviare l’audio al proprio servizio vocale e richiedere una connessione. Agenda non conserva audio o frasi. L’ascolto può interrompersi in background. Tutti i comandi manuali restano disponibili.</p><p id="voiceSettingStatus" role="status"></p>';
+ card.innerHTML='<h2>COMANDI VOCALI</h2><label><input id="voiceWakeEnabled" type="checkbox" role="switch"> Abilita OK Agenda e Comando singolo</label><p>Facoltativo: icona disponibile se non hai salvato una preferenza. Microfono sempre spento all\u2019accesso. Preferenza personale per questo account, su questo dispositivo. L’ascolto parte solo al primo tocco sul microfono. Un altro tocco apre i controlli; chiuderli non ferma l’ascolto.</p><p>Il browser può inviare l’audio al proprio servizio vocale e richiedere una connessione. Agenda non conserva audio o frasi. L’ascolto può interrompersi in background. Tutti i comandi manuali restano disponibili.</p><p id="voiceSettingStatus" role="status"></p>';
  $("settings").querySelector(".card").after(card);const b=panelButton("voiceHome");const help=helpButton();help.id="voiceHomeHelp";$("home").querySelector(".home-guide-intro").append(b);pageEntry=document.createElement("div");pageEntry.className="voice-page-entry";pageEntry.dataset.voiceUi="";pageEntry.hidden=true;pageEntry.append(panelButton("voicePageMic"));document.body.append(pageEntry);
  $("voiceWakeEnabled").onchange=()=>{try{if(!allowed())throw Error();const value=$("voiceWakeEnabled").checked;localStorage.setItem(key("wake"),value?"on":"off");$("voiceSettingStatus").textContent="Preferenza salvata su questo dispositivo.";sync();if(!value)stop();}catch{$("voiceSettingStatus").textContent="Preferenza non salvata. Riprova.";sync();}};
  bar=document.createElement("div");bar.id="voiceWakeBar";bar.className="voice-wake-bar";bar.dataset.voiceUi="";const label=document.createElement("span"),startButton=document.createElement("button"),stopButton=document.createElement("button"),once=document.createElement("button");label.setAttribute("role","status");startButton.type=stopButton.type=once.type="button";startButton.className="voice-start";stopButton.className="voice-stop";once.className="voice-once";startButton.textContent="ATTIVA ASCOLTO";stopButton.textContent="SPEGNI MICROFONO";once.textContent="COMANDO SINGOLO";startButton.onclick=activate;stopButton.onclick=()=>stop();once.onclick=()=>start("single");const panelClose=document.createElement("button");panelClose.type="button";panelClose.className="voice-home-close";panelClose.textContent="×";panelClose.setAttribute("aria-label","Chiudi riquadro comandi vocali");panelClose.onclick=()=>{panelOpen=false;update();(map()?.querySelector(".voice-microphone")||document.querySelector(".view.active .voice-microphone"))?.focus()};bar.append(label,startButton,stopButton,once,help,panelClose);document.body.append(bar);sync();
