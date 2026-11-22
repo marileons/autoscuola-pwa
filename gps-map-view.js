@@ -47,6 +47,7 @@
   }
   function close(){
    if(!dialog)return;
+   root.VoiceCommands?.detachMap();
    closeOverlay();restoreFooter();
    const current=dialog;dialog=null;
    placeholder.replaceWith(container);placeholder=null;
@@ -70,6 +71,7 @@
    container.before(placeholder);
    container.classList.add("gps-map-expanded");
    dialog.append(container);mountFooter();
+   root.VoiceCommands?.attachMap(container);
    const opened=dialog;
    dialog.addEventListener("cancel",event=>{event.preventDefault();close()});
    dialog.addEventListener("close",()=>{if(dialog===opened)close()});
