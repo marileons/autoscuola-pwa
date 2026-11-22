@@ -921,7 +921,7 @@ window.AgendaVoiceActions={
  async execute(c){
   if(!window.AgendaAuth?.can?.("operate"))throw Error("Operazione non consentita.");
   const visibleButton=id=>{const b=$(id);if(!b||b.disabled||b.hidden||b.classList.contains("hidden"))throw Error("Comando non disponibile.");b.click();};
-  if(c.id==="find"){if(!window.HomeSections.requirePath("auto"))return;selectStudentSection("auto");toggleStudentSearch(false);$("search").value=c.query;$("search").dispatchEvent(new Event("input",{bubbles:true}));return;}
+  if(c.id==="find"){if(!window.HomeSections.requirePath("auto"))return;selectStudentSection("auto");toggleStudentSearch(false);$("search").value=c.query;$("search").dispatchEvent(new Event("input",{bubbles:true}));requestAnimationFrame(()=>{if($("categoryHub").classList.contains("active")&&$("search").value===c.query)$("students").querySelector(".student-card")?.scrollIntoView({block:"start",behavior:"instant"})});return;}
   if(c.id==="all"){selectStudentSection("auto");showAllStudents();return;}
   if(c.id.startsWith("student:")||c.id.startsWith("newFor:")){
    const button=[...$("students").querySelectorAll("[data-voice-student-id]")].find(b=>b.dataset.voiceStudentId===c.studentId);if(!button)throw Error("Risultato non più disponibile.");button.click();if(c.id.startsWith("newFor:"))visibleButton("newLesson");return;
