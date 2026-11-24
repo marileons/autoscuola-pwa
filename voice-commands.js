@@ -107,6 +107,71 @@ function speechText(text){
   .replace(/^(?:per favore[ ,]*|per piacere[ ,]*|(?:mi )?puoi |(?:mi )?potresti )/iu,"").trim();
 }
 const personMatches=(query,student)=>[student.name,student.alternateName].filter(Boolean).some(n=>(" "+literal(n)+" ").includes(" "+literal(query)+" "));
+
+const uiButtonIds=new WeakMap();let uiButtonSequence=0;
+const UI_BUTTON_SELECTOR='button,input[type="button"],input[type="submit"],input[type="reset"],a[role="button"],a.home-pro-action,a.link-button,[role="button"]';
+function rendered(node){
+ if(!node?.isConnected||node.closest('[hidden],.hidden,[inert],.view:not(.active),dialog:not([open])'))return false;
+ if(!node.getClientRects().length)return false;
+ for(let p=node;p&&p.nodeType===1;p=p.parentElement){const s=getComputedStyle(p);if(s.display==="none"||s.visibility==="hidden"||s.visibility==="collapse"||Number(s.opacity)===0)return false}
+ return true;
+}
+function buttonScope(){
+ if(dialog?.open&&rendered(dialog))return dialog;
+ const native=[...document.querySelectorAll("dialog[open]")].filter(rendered);
+ const modal=native.filter(n=>{try{return n.matches(":modal")}catch{return true}});
+ if(modal.length)return modal.at(-1);
+ const overlays=[...document.querySelectorAll('.choice-modal,[role="dialog"][aria-modal="true"]')].filter(rendered);
+ return overlays.at(-1)||native.at(-1)||document.body;
+}
+function availableButton(node,scope=buttonScope()){
+ return !!node&&scope.contains(node)&&rendered(node)&&!node.matches(":disabled")&&!node.closest('[aria-disabled="true"],[disabled],fieldset:disabled')&&getComputedStyle(node).pointerEvents!=="none";
+}
+function buttonLabel(node){
+ if(node.matches('input'))return String(node.value||"").trim();
+ const source=node.querySelector(".home-pro-label")||node,words=[];
+ const walker=document.createTreeWalker(source,NodeFilter.SHOW_TEXT);
+ while(walker.nextNode()){
+  const text=walker.currentNode,parent=text.parentElement;
+  if(!parent||parent.closest('svg,[aria-hidden="true"],.ui-icon,.mr-interior-icon,[hidden],.hidden'))continue;
+  const style=getComputedStyle(parent);if(style.display==="none"||style.visibility==="hidden")continue;
+  words.push(text.nodeValue);
+ }
+ return words.join(" ").replace(/\s+/g," ").replace(/^[\s\u2190-\u2BFF\uFE0F\u{1F300}-\u{1FAFF}]+/u,"").trim();
+}
+function withVisibleButtons(base){
+ const scope=buttonScope(),overlay=scope!==document.body&&!scope.classList.contains("gps-map-dialog");
+ const commands=overlay?base.filter(c=>c.id==="help"||c.id==="closeHelp"||c.node&&scope.contains(c.node)):base;
+ const candidates=[...scope.querySelectorAll(UI_BUTTON_SELECTOR)].filter(rendered).map(node=>({node,label:buttonLabel(node)})).filter(x=>/\p{L}/u.test(x.label));
+ const bound=new Set(),ui=[];
+ const known={newLesson:"new",toggleLessons:"lessons",toggleLessonActivity:"activities",signalDrivingError:"error",saveLesson:"save",stopGps:"stopGps",restoreFullBackup:"restore",exportFullBackup:"backup",openOtherFunctions:"menu",openSettings:"settings",openRegister:"register"};
+ for(const {node,label} of candidates){
+  const text=literal(label),same=commands.find(c=>c.node===node);
+  const key=same?.id||known[node.id]||(["home"].includes(text)?"home":/^(indietro|torna indietro)$/.test(text)?"back":/^(esci|disconnetti|disconnettimi)$/.test(text)?"menu:logout":null);
+  const canonical=same||commands.find(c=>c.id===key)||commands.find(c=>!c.pattern&&!c.node&&commandAliases(c).some(p=>literal(p)===text));
+  if(canonical)bound.add(canonical.id);
+  if(!availableButton(node,scope))continue;
+  if(!uiButtonIds.has(node))uiButtonIds.set(node,++uiButtonSequence);
+  const index=candidates.filter(x=>literal(x.label)===text).findIndex(x=>x.node===node)+1;
+  const duplicate=candidates.filter(x=>literal(x.label)===text).length>1;
+  const container=node.closest("article,.card,form,dialog,.view"),heading=container?.querySelector("h1,h2,h3,legend")?.textContent.trim();
+  const dangerous=/^(?:esci|disconnett|termina (?:la )?sessione|salva(?:\s|$)|elimina(?:\s|$)|cancella(?:\s|$)|ripristina(?:\s|$)|ferma (?:il )?gps|arresta (?:il )?gps)/.test(text);
+  ui.push({
+   id:"ui:"+uiButtonIds.get(node),ui:true,node,scope,buttonLabel:label,actionId:canonical?.id,
+   phrases:[label],aliases:canonical?commandAliases(canonical):[],
+   action:"Usa il pulsante "+label+(heading?" · "+heading.slice(0,100):"")+(duplicate?" · pulsante "+index:"")+".",
+   confirm:!!canonical?.confirm||(!dialog?.contains(node)&&dangerous),
+   touch:!!canonical?.touch||node.tagName==="A",
+   available:()=>availableButton(node,scope)
+  });
+ }
+ for(const c of ui)if(c.actionId&&ui.filter(x=>x.actionId===c.actionId).length===1)c.id=c.actionId;
+ return [...commands.filter(c=>!bound.has(c.id)),...ui];
+}
+function currentButton(command){
+ return command.ui&&command.scope===buttonScope()&&availableButton(command.node,command.scope)&&buttonLabel(command.node)===command.buttonLabel;
+}
+
 function menuCommands(){
  const menuAllowed=outsideLesson();
  return [...document.querySelectorAll("#otherFunctions .home-pro-action")].filter(node=>!node.disabled&&!node.closest("[hidden],.hidden")&&getComputedStyle(node).display!=="none"&&getComputedStyle(node).visibility!=="hidden").map(node=>{
@@ -124,7 +189,7 @@ function menuCommands(){
 function availableCommands(){
  if(!allowed()||!wake||!window.AgendaAuth?.can?.("operate"))return[];
  if(pending)return[{id:"confirm",phrases:["Conferma"],aliases:VARIANTS.confirm,action:pending.command.touch?"Conferma al tocco richiesta dal dispositivo.":"Conferma l'operazione richiesta."},{id:"cancel",phrases:["Annulla"],aliases:VARIANTS.cancel,action:"Annulla l'operazione."}];
- if(dialog)return[{id:"closeHelp",phrases:["Chiudi"],aliases:VARIANTS.closeHelp,action:"Chiude questa finestra."}];
+ if(dialog)return withVisibleButtons([{id:"closeHelp",phrases:["Chiudi"],aliases:VARIANTS.closeHelp,action:"Chiude questa finestra."}]);
  const menu=menuCommands();
  const commands=COMMANDS.filter(c=>c.available()&&(!["settings","register"].includes(c.id)||menu.some(m=>m.id===c.id)));
  if(at("categoryHub"))for(const s of ctx().results){
@@ -133,7 +198,7 @@ function availableCommands(){
  }
  const merged=new Map(commands.map(c=>[c.id,c]));
  for(const c of menu)merged.set(c.id,c);
- return [...merged.values()];
+ return withVisibleButtons([...merged.values()]);
 }
 function matches(text){
  const raw=speechText(text),s=literal(raw);
@@ -147,7 +212,7 @@ function parse(text){return matches(text)[0]||null;}
 function showCommands(){
  panelOpen=false;closeDialog();dialog=document.createElement("dialog");dialog.className="voice-dialog";dialog.dataset.voiceUi="";dialog.setAttribute("aria-label","Comandi disponibili");
  const h=document.createElement("h2"),p=document.createElement("p"),list=document.createElement("dl"),close=document.createElement("button");
- h.textContent="COMANDI DISPONIBILI";p.textContent="Le frasi sono esempi: puoi usare formulazioni equivalenti. Comando singolo: di’ direttamente la frase, senza «OK Agenda». Con OK Agenda: di’ «OK Agenda» e la frase, insieme oppure dopo il segnale.";
+ h.textContent="COMANDI DISPONIBILI";p.textContent="Puoi pronunciare anche le etichette dei pulsanti disponibili qui. Le altre frasi sono esempi: puoi usare formulazioni equivalenti. Comando singolo: di’ direttamente la frase, senza «OK Agenda». Con OK Agenda: di’ «OK Agenda» e la frase, insieme oppure dopo il segnale.";
  // Build from the same current registry before marking this dialog as open.
  const own=dialog;dialog=null;const commands=availableCommands();dialog=own;
  const shown=new Set();for(const c of commands){const id=c.helpId||c.id;if(shown.has(id))continue;shown.add(id);const t=document.createElement("dt"),d=document.createElement("dd");t.textContent=(c.helpPhrases||c.phrases)[0];d.textContent=c.helpId==="student"?"Apre la scheda; se ci sono più corrispondenze, chiede quale.":c.helpId==="new"?"Apre una nuova guida per l’allievo scelto; in caso di ambiguità, chiede quale.":c.action;list.append(t,d);}
@@ -173,10 +238,10 @@ function update(){
   button.setAttribute("aria-label",(panelOpen?"Chiudi":"Apri")+" comandi vocali · "+(listening?"ascolto attivo":"microfono non in ascolto"));
  }
 }
-function stop(message="Microfono spento."){
+function stop(message="Microfono spento.",keepDialog=false){
  listening=false;epoch++;clearTimeout(timer);timer=null;clearArmed();const r=recognition;recognition=null;kind=null;
  if(r){r.onresult=r.onerror=r.onend=r.onstart=null;try{r.abort()}catch{}}
- closeDialog();status=message;update();
+ if(!keepDialog)closeDialog();status=message;update();
 }
 function navigation(){panelOpen=false;update();}
 function feedback(text){
@@ -209,16 +274,18 @@ function run(command,owner,confirmed=false){
 
  if(!allowed()||!wake||user()?.id!==owner){feedback("Comando annullato: account o impostazione cambiati.");return;}
  if(command.id==="confirm"){finishConfirmation(true);return;}if(command.id==="cancel"){finishConfirmation(false);return;}
- if(command.id==="closeHelp"){closeDialog();idle();return;}
+ if(command.id==="closeHelp"&&!command.ui){closeDialog();idle();return;}
  const canonical=availableCommands().find(c=>c.id===command.id);if(!canonical){feedback("Comando non disponibile in questa schermata o per questo profilo.");idle();return;}
  command={...canonical,...command};
- if(command.id==="help"){showCommands();idle();return;}
- const leaving=ctx().view==="lesson"&&["home","back"].includes(command.id);
+ if(command.id==="help"&&!command.ui){showCommands();idle();return;}
+ if(command.ui&&!currentButton(command)){feedback("Pulsante non più disponibile in questa finestra.");idle();return;}
+ const leaving=ctx().view==="lesson"&&["home","back"].includes(command.actionId||command.id);
  if(!confirmed&&(command.confirm||leaving)){requestConfirmation(command,owner);return;}
- const wasSingle=kind==="single";if(wasSingle)stop();else closeDialog();panelOpen=false;update();
+ const wasSingle=kind==="single",ownButton=!!(command.ui&&dialog?.contains(command.node));if(wasSingle&&!ownButton)stop();else if(!ownButton)closeDialog();panelOpen=false;update();
  feedback("Ho capito: «"+command.label+"»");
  try{
-  if(command.node){if(command.node.disabled||command.node.closest("[hidden],.hidden"))throw Error("Voce non più disponibile.");if(command.node.tagName!=="A"&&!$("otherFunctions").open)$("openOtherFunctions").click();command.node.click();}
+  if(command.ui){if(!currentButton(command))throw Error("Pulsante non più disponibile.");command.node.click();}
+  else if(command.node){if(command.node.disabled||command.node.closest("[hidden],.hidden"))throw Error("Voce non più disponibile.");if(command.node.tagName!=="A"&&!$("otherFunctions").open)$("openOtherFunctions").click();command.node.click();}
   else Promise.resolve(window.AgendaVoiceActions.execute(command)).catch(e=>feedback(e.message||"Comando non disponibile."));
  }catch(e){feedback(e.message||"Comando non disponibile.");}
  idle();if(wasSingle){status="Comando singolo terminato. Premi ATTIVA ASCOLTO per OK Agenda.";update();}
@@ -235,7 +302,7 @@ function choose(result,owner,spoken){
 }
 function start(mode){
  if(!allowed()||mode==="wake"&&!wake||mode==="single"&&!(single||wake))return;
- stop();const owner=user().id,token=epoch;kind=mode;
+ stop(undefined,!!(pending||dialog));const owner=user().id,token=epoch;kind=mode;
  if(!supported()){kind=null;status="Microfono vocale non disponibile in questo browser o collegamento HTTPS.";feedback(status);update();return;}
  if(document.hidden){kind=null;status="Torna ad Agenda e premi ATTIVA ASCOLTO.";update();return;}
  const valid=()=>token===epoch&&user()?.id===owner&&allowed();
@@ -247,13 +314,13 @@ function start(mode){
   if(!valid()||document.hidden)return;
   for(let i=e.resultIndex??0;i<e.results.length;i++){
    const result=e.results[i];if(!result.isFinal)continue;
-   if(mode==="single"&&handled)return;
+   if(mode==="single"&&handled&&!pending&&!dialog)return;
    const text=String(result[0]?.transcript||"").trim();if(!text)continue;
    const activation=text.match(/^\s*(?:ok|okay|okei|okey|o\s*key)\s+agenda\b[\s,:;.!?-]*(.*)$/iu);
    if(mode==="wake"&&!armed&&!pending&&!dialog&&!activation){idle();continue;}
 
    if(pending){const answer=literal(text).replace(/^(?:ok|okay|okei) agenda[ ,:]*/,"");const choice=matches(answer)[0];if(choice?.id==="confirm")finishConfirmation(true);else if(choice?.id==="cancel")finishConfirmation(false);continue;}
-   if(dialog){if(matches(text).some(c=>c.id==="closeHelp")){closeDialog();idle();}continue;}
+   if(dialog){const options=Array.from(result).map(a=>({transcript:a.transcript.replace(/^\s*(?:ok|okay|okei|okey|o\s*key)\s+agenda\b[\s,:;.!?-]*/iu,""),confidence:a.confidence}));choose(options,owner,text);continue;}
    if(mode==="single"){handled=true;clearTimeout(timer);choose(result,owner,text);return;}
    const match=activation;
    if(match){
