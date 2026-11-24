@@ -67,6 +67,16 @@
 
  @media(max-width:600px){body:has(.interior-view.active) #appShell>main{padding:16px max(14px,env(safe-area-inset-right)) 24px max(14px,env(safe-area-inset-left))}.interior-view .top{flex-direction:row}#appShell .interior-view :is(.card,.document-card){padding:15px;}#appShell .interior-view .lesson-card:has(.auto-summary){grid-template-columns:minmax(0,1fr)}#appShell .interior-view .auto-summary{border-left:0;border-top:1px solid var(--mr-border);padding:14px 0 0}body:has(.interior-view.active) .home-brand{display:grid;grid-template-columns:44px minmax(0,1.3fr) minmax(0,1fr);gap:10px}body:has(.interior-view.active) .home-brand>img{width:44px;height:44px}body:has(.interior-view.active) .home-wordmark{font-size:21px}body:has(.interior-view.active) .home-brand-user{font-size:12px!important;max-width:none;margin:0;overflow-wrap:anywhere}#appShell .interior-view .driving-error-actions .delete-error{margin-left:0}#appShell .interior-view .document-global-actions{grid-template-columns:repeat(2,minmax(0,1fr));}}
 }
+
+/* Current lesson selection is independent from the cumulative history. */
+#lessonChecklist .activity-selection-hint{color:#f0faf7;font-size:14px;line-height:1.45;margin:8px 0 14px}
+#lessonChecklist .activity-label{min-width:0;overflow-wrap:break-word}
+#lessonChecklist .activity-current-label{cursor:pointer}
+#lessonChecklist .activity-history-badge{display:inline-flex;align-items:center;gap:3px;max-width:100%;margin-left:8px;padding:2px 6px;border:1px solid #64f29c70;border-radius:9px;background:#064333;color:#64F29C!important;font-size:12px;font-weight:700;white-space:normal;vertical-align:middle}
+#appShell #lessonChecklist .activity-today-toggle[aria-pressed="true"]{color:#fff!important;background:#075fa2!important;border:2px solid #7dd3fc!important}
+#appShell #lessonChecklist .activity-today-toggle[aria-pressed="false"]{color:#eaf6f2!important;background:#254e5b!important;border:1px solid #8ca7af!important}
+#lessonChecklist .activity-current-grade{grid-column:2;max-width:350px;min-width:0;width:100%;margin:0;padding:8px;color:#fff;background:#103e49;border:1px solid #6ea0ac;font-size:14px}
+#lessonChecklist .activity-current-grade[hidden]{display:none!important}
 @media screen{
  #appShell #lesson.interior-view .map{background:#0b3541!important;border-color:#416b76;}
  #appShell #lesson.interior-view .driving-error-quick{background:rgba(16,62,74,.97);border:1px solid #628895;}
