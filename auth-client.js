@@ -266,7 +266,7 @@
       await loadScript("shared-calendar-store.js?v=1");
       await loadScript("lesson-secretary-transfer-ui.js?v=site-labels-1");
       window.LessonSecretaryTransferUI.mount();
-      await loadScript("voice-commands.js?v=3-home-caption");
+      await loadScript("voice-commands.js?v=4-natural-variants");
       window.VoiceCommands.mount();
       applicationLoaded = true;
       await activateRegisterVault();

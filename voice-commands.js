@@ -11,7 +11,7 @@ const map=()=>document.querySelector(".gps-map-dialog #liveMap");
 const ctx=()=>window.AgendaVoiceActions?.context?.()||{view:"",results:[]};
 const at=(...views)=>views.includes(ctx().view)&&!ctx().overlay;
 const outsideLesson=()=>!ctx().map&&ctx().view!=="lesson"&&!ctx().overlay;
-const literal=s=>String(s).trim().replace(/[.!?]+$/,"").replace(/\s+/g," ").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("it-IT");
+const literal=s=>String(s).replace(/[’‘]/g,"\x27").trim().replace(/[.!?]+$/,"").replace(/\s+/g," ").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("it-IT");
 
 const COMMANDS=[
 {id:"find",phrases:["Trova [nome o cognome]"],pattern:/^(?:trova|cerca)\s+([\p{L}\p{M}'’ -]{1,100})$/u,action:"Cerca gli allievi attivi e mostra i risultati.",available:()=>at("home","categoryHub")&&window.HomeSections?.isEnabled("auto")},
@@ -42,31 +42,115 @@ const COMMANDS=[
 {id:"restore",phrases:["Ripristina backup"],action:"Chiede conferma, poi apre la selezione del file; restano le verifiche del ripristino.",confirm:true,touch:true,available:()=>at("settings")&&!$("restoreFullBackup")?.disabled},
 {id:"help",phrases:["Cosa posso dire","Comandi disponibili"],action:"Mostra i comandi disponibili in questo momento.",available:()=>true}
 ];
+
+// Examples are concise help text; aliases and slot patterns live in the same registry.
+const VARIANTS={
+ find:["Cerca [nome o cognome]"],
+ all:["Fammi vedere tutti gli allievi","Apri tutti gli allievi","Elenco allievi","Mostrami tutti gli allievi","Vedi tutti gli allievi","Fammi vedere gli allievi"],
+ new:["Nuova lezione","Apri una nuova lezione","Apri nuova guida","Apri una nuova guida","Crea una nuova guida","Crea nuova lezione","Inizia una nuova guida","Inizia una nuova lezione"],
+ lessons:["Apri tutte le guide","Mostrami le lezioni","Fammi vedere le guide","Mostra lo storico delle guide","Apri le lezioni","Vedi tutte le lezioni"],
+ last:["Apri ultima lezione","Apri l'ultima lezione","Mostra l'ultima guida","Fammi vedere l'ultima lezione","Mostrami l'ultima guida"],
+ path:["Mostra percorso didattico","Apri il percorso didattico","Mostra il percorso dell'allievo","Fammi vedere il percorso didattico","Mostrami il percorso didattico"],
+ activities:["Mostra le attività","Mostrami le attività","Fammi vedere le attività","Apri le attività","Apri le attività didattiche","Mostra elenco attività","Apri l'elenco delle attività"],
+ activityFind:["Trova attività [nome]"],
+ notes:["Mostra le note","Fammi vedere le note","Vai alle note","Mostrami le note","Apri le note della guida"],
+ reminder:["Apri il promemoria","Mostra prossima lezione","Mostra il promemoria della prossima lezione","Fammi vedere cosa faremo la prossima volta","Apri il promemoria della prossima lezione"],
+ expand:["Allarga la mappa","Apri la mappa a tutto schermo","Metti la mappa a schermo intero","Espandi la mappa","Mostra la mappa a tutto schermo"],
+ error:["Segnala un errore","Registra un errore","Aggiungi un errore","Ho visto un errore","Apri la classificazione degli errori"],
+ north:["Metti il nord in alto","Orienta la mappa a nord","Mostra il nord in alto","Imposta nord in alto"],
+ course:["Metti la direzione di marcia","Imposta direzione di marcia","Orienta la mappa nella direzione di marcia","Metti la direzione di marcia in alto","Segui la direzione di marcia"],
+ reduce:["Riduci la mappa","Chiudi la mappa espansa","Esci dalla mappa a tutto schermo","Torna alla mappa normale"],
+ menu:["Mostra altre funzioni","Apri il menu","Mostrami tutte le voci","Fammi vedere tutte le voci","Mostra il menu altre funzioni","Apri il menu altre funzioni"],
+ settings:["Apri le impostazioni","Vai alle impostazioni","Mostrami le impostazioni"],
+ register:["Apri ore e compensi","Mostra il registro ore","Vai al registro ore","Apri il registro","Vai al registro"],
+ backup:["Fai un backup","Crea un backup","Prepara un backup","Fai il backup completo","Crea il backup completo","Prepara il backup"],
+ quick:["Fai un backup rapido","Prepara un backup rapido","Esegui backup rapido"],
+ home:["Torna alla schermata iniziale","Torna alla home","Apri la home","Vai alla schermata iniziale","Torna all'inizio","Portami alla home"],
+ back:["Torna alla schermata precedente","Vai alla pagina precedente","Indietro","Portami indietro"],
+ close:["Chiudi la finestra","Chiudi questa finestra","Chiudi il pannello","Chiudi questa schermata"],
+ save:["Salva la guida","Salva la lezione","Salva questa guida","Salva questa lezione","Registra la guida"],
+ stopGps:["Ferma il gps","Arresta il gps","Interrompi la registrazione gps","Ferma la registrazione gps","Stop gps"],
+ restore:["Ripristina il backup","Ripristina un backup","Recupera il backup","Importa un backup completo"],
+ help:["Che cosa posso dire","Quali comandi posso usare","Mostra i comandi disponibili","Fammi vedere i comandi","Aiuto comandi vocali"],
+ confirm:["Confermo","Sì confermo","Procedi","Sì procedi"],
+ cancel:["Annulla operazione","Non confermo","No annulla","Lascia perdere"],
+ closeHelp:["Chiudi la finestra","Chiudi elenco comandi","Chiudi i comandi"]
+};
+const MENU_NAMES={
+ openGeneralStudentManagement:["Gestione allievi","Gestione degli allievi"],
+ openArchive:["Archivio allievi","Archivio","Allievi in archivio"],
+ manageChecklists:["Percorso didattico","Catalogo attività"],
+ openExams:["Gli esami","Elenco esami"],
+ openExaminers:["Gli esaminatori","Elenco esaminatori"],
+ openDocuments:["Documenti","Documenti vari","I documenti"],
+ manageHomeSections:["Gestione funzioni","Impostazioni predefinite globali"],
+ openSettings:["Impostazioni","Le impostazioni"],
+ openRegister:["Registro ore","Registro ore e compensi","Ore e compensi","Il registro"],
+ openUserManagement:["Area riservata","L'area riservata"]
+};
+const OPENERS=["Apri ","Aprimi ","Vai a ","Vai in ","Vai al ","Vai alla ","Vai alle ","Vai agli ","Vai ai ","Mostra ","Mostrami ","Fammi vedere ","Portami a ","Portami in ","Apri la sezione ","Vai alla sezione "];
+const openAliases=names=>names.flatMap(n=>OPENERS.map(prefix=>prefix+n));
+const commandAliases=c=>[...c.phrases,...(c.aliases||[])];
+for(const c of COMMANDS){
+ c.aliases=[...(VARIANTS[c.id]||[]),...c.phrases];
+ c.phrases=c.phrases.slice(0,2);
+}
+COMMANDS.find(c=>c.id==="find").phrases=["Trova [nome o cognome]","Cerca l’allievo [nome o cognome]"];
+COMMANDS.find(c=>c.id==="new").phrases=["Nuova guida","Apri una nuova lezione"];
+COMMANDS.find(c=>c.id==="activities").phrases=["Apri elenco attività","Fammi vedere le attività"];
+COMMANDS.find(c=>c.id==="home").phrases=["Vai alla Home","Torna alla schermata iniziale"];
+COMMANDS.find(c=>c.id==="backup").phrases=["Prepara backup","Fai un backup"];
+COMMANDS.find(c=>c.id==="find").pattern=/^(?:trova|cerca|ricerca|cercami|trovami)(?:\s+(?:(?:l['’]\s*|(?:il|la|un|una|gli|le)\s+)?alliev[oaie]))?\s+([\p{L}\p{M}'’ -]{1,100})$/iu;
+COMMANDS.find(c=>c.id==="activityFind").pattern=/^(?:cerca|trova|filtra)(?:\s+(?:l['’]\s*|le\s+))?\s*attivit[aà]\s+(.{1,100})$/iu;
+function speechText(text){
+ return String(text).trim().replace(/[.!?]+$/,"").replace(/\s+/g," ")
+  .replace(/^(?:per favore[ ,]*|per piacere[ ,]*|(?:mi )?puoi |(?:mi )?potresti )/iu,"").trim();
+}
+const personMatches=(query,student)=>[student.name,student.alternateName].filter(Boolean).some(n=>(" "+literal(n)+" ").includes(" "+literal(query)+" "));
 function menuCommands(){
  const menuAllowed=outsideLesson();
  return [...document.querySelectorAll("#otherFunctions .home-pro-action")].filter(node=>!node.disabled&&!node.closest("[hidden],.hidden")&&getComputedStyle(node).display!=="none"&&getComputedStyle(node).visibility!=="hidden").map(node=>{
   const name=node.querySelector(".home-pro-label")?.textContent.trim();if(!name)return null;
   const logout=literal(name)==="esci",link=node.tagName==="A";
-  return{id:"menu:"+(node.id||node.getAttribute("href")),phrases:logout?["Esci"]:["Apri "+name,"Vai a "+name],action:logout?"Chiede conferma prima di disconnettersi.":link?"Apre il link con conferma al tocco.":"Usa il pulsante "+name+(node.id==="openUserManagement"?" e lo sblocco previsto.":"."),confirm:logout||link,touch:link,node,available:()=>true};
+  const id=node.id==="openSettings"?"settings":node.id==="openRegister"?"register":"menu:"+(node.id||node.getAttribute("href"));
+  const canonical=COMMANDS.find(c=>c.id===id);
+  const names=[name,...(MENU_NAMES[node.id]||[])];
+  if(link&&/codice della strada/i.test(name))names.push("Codice della Strada","Il codice della strada");
+  if(link&&/turni operativi/i.test(name))names.push("Turni esaminatori","Turni operativi","I turni degli esaminatori");
+  const phrases=canonical?.phrases||(logout?["Esci","Disconnettimi"]:["Apri "+name,"Vai a "+name]);
+  return{id,phrases,aliases:logout?["Disconnetti","Termina la sessione","Chiudi la sessione","Voglio uscire"]:[...(canonical?commandAliases(canonical):[]),...openAliases(names)],action:canonical?.action||(logout?"Chiede conferma prima di disconnettersi.":link?"Apre il link con conferma al tocco.":"Usa il pulsante "+name+(node.id==="openUserManagement"?" e lo sblocco previsto.":".")),confirm:logout||link,touch:link,node,available:()=>true};
  }).filter(command=>command&&(menuAllowed||command.id==="menu:logout"));
 }
 function availableCommands(){
  if(!allowed()||!wake||!window.AgendaAuth?.can?.("operate"))return[];
- if(pending)return[{id:"confirm",phrases:["Conferma"],action:pending.command.touch?"Conferma al tocco richiesta dal dispositivo.":"Conferma l’operazione richiesta."},{id:"cancel",phrases:["Annulla"],action:"Annulla l’operazione."}];
- if(dialog)return[{id:"closeHelp",phrases:["Chiudi"],action:"Chiude questa finestra."}];
- const commands=COMMANDS.filter(c=>c.available());
- if(at("categoryHub"))for(const s of ctx().results){commands.push({id:"student:"+s.id,studentId:s.id,phrases:[...new Set(["Apri "+s.name,"Apri "+s.alternateName])],action:"Apre "+s.name+" · "+s.hint,available:()=>true});if(!s.archived)commands.push({id:"newFor:"+s.id,studentId:s.id,phrases:[...new Set(["Nuova guida per "+s.name,"Nuova guida per "+s.alternateName])],action:"Nuova guida · "+s.name+" · "+s.hint,available:()=>true});}
- return [...commands,...menuCommands()];
+ if(pending)return[{id:"confirm",phrases:["Conferma"],aliases:VARIANTS.confirm,action:pending.command.touch?"Conferma al tocco richiesta dal dispositivo.":"Conferma l'operazione richiesta."},{id:"cancel",phrases:["Annulla"],aliases:VARIANTS.cancel,action:"Annulla l'operazione."}];
+ if(dialog)return[{id:"closeHelp",phrases:["Chiudi"],aliases:VARIANTS.closeHelp,action:"Chiude questa finestra."}];
+ const menu=menuCommands();
+ const commands=COMMANDS.filter(c=>c.available()&&(!["settings","register"].includes(c.id)||menu.some(m=>m.id===c.id)));
+ if(at("categoryHub"))for(const s of ctx().results){
+  commands.push({id:"student:"+s.id,studentId:s.id,helpId:"student",helpPhrases:["Apri [nome o cognome]","Mostra la scheda di [nome e cognome]"],phrases:["Apri "+s.name],aliases:openAliases([s.name,s.alternateName].filter(Boolean)),pattern:/^(?:apri|mostra|mostrami|fammi vedere)(?:\s+(?:la\s+)?scheda(?:\s+di)?)?\s+(.{1,100})$/iu,accept:m=>personMatches(m[1],s),action:"Apre "+s.name+" · "+s.hint,available:()=>true});
+  if(!s.archived)commands.push({id:"newFor:"+s.id,studentId:s.id,helpId:"new",helpPhrases:["Nuova guida per [nome o cognome]","Apri una nuova lezione per [nome o cognome]"],phrases:["Nuova guida per "+s.name],aliases:[...new Set([s.name,s.alternateName].filter(Boolean).flatMap(n=>["Nuova guida per "+n,"Nuova lezione per "+n,"Apri una nuova lezione per "+n])),...(ctx().results.filter(r=>!r.archived).length>1?commandAliases(COMMANDS.find(c=>c.id==="new")):[])],pattern:/^(?:(?:apri|crea|inizia|avvia)\s+(?:una\s+)?nuova\s+(?:guida|lezione)|nuova\s+(?:guida|lezione))(?:\s+(?:per|con|a))?\s+(.{1,100})$/iu,accept:m=>personMatches(m[1],s),action:"Nuova guida · "+s.name+" · "+s.hint,available:()=>true});
+ }
+ const merged=new Map(commands.map(c=>[c.id,c]));
+ for(const c of menu)merged.set(c.id,c);
+ return [...merged.values()];
 }
-function matches(text){const raw=String(text).trim().replace(/[.!?]+$/,"").replace(/\s+/g," "),s=literal(raw);return availableCommands().flatMap(c=>{const m=c.pattern?.exec(s);if(m)return[{...c,query:c.id==="find"?raw.replace(/^(?:trova|cerca)\s+/iu,""):m[1],label:raw}];return c.phrases.some(p=>literal(p)===s)?[{...c,label:text.trim()}]:[];});}
+function matches(text){
+ const raw=speechText(text),s=literal(raw);
+ return availableCommands().flatMap(c=>{
+  const m=c.pattern?.exec(raw);
+  if(m&&(!c.accept||c.accept(m)))return[{...c,...(["find","activityFind"].includes(c.id)?{query:m[1]}:{}),label:raw}];
+  return commandAliases(c).some(p=>literal(p)===s)?[{...c,label:raw}]:[];
+ });
+}
 function parse(text){return matches(text)[0]||null;}
 function showCommands(){
  panelOpen=false;closeDialog();dialog=document.createElement("dialog");dialog.className="voice-dialog";dialog.dataset.voiceUi="";dialog.setAttribute("aria-label","Comandi disponibili");
  const h=document.createElement("h2"),p=document.createElement("p"),list=document.createElement("dl"),close=document.createElement("button");
- h.textContent="COMANDI DISPONIBILI";p.textContent="Comando singolo: di’ direttamente la frase, senza «OK Agenda». Con OK Agenda: di’ «OK Agenda» e la frase, insieme oppure dopo il segnale.";
+ h.textContent="COMANDI DISPONIBILI";p.textContent="Le frasi sono esempi: puoi usare formulazioni equivalenti. Comando singolo: di’ direttamente la frase, senza «OK Agenda». Con OK Agenda: di’ «OK Agenda» e la frase, insieme oppure dopo il segnale.";
  // Build from the same current registry before marking this dialog as open.
  const own=dialog;dialog=null;const commands=availableCommands();dialog=own;
- for(const c of commands){const t=document.createElement("dt"),d=document.createElement("dd");t.textContent=c.phrases.join(" / ");d.textContent=c.action;list.append(t,d);}
+ const shown=new Set();for(const c of commands){const id=c.helpId||c.id;if(shown.has(id))continue;shown.add(id);const t=document.createElement("dt"),d=document.createElement("dd");t.textContent=(c.helpPhrases||c.phrases)[0];d.textContent=c.helpId==="student"?"Apre la scheda; se ci sono più corrispondenze, chiede quale.":c.helpId==="new"?"Apre una nuova guida per l’allievo scelto; in caso di ambiguità, chiede quale.":c.action;list.append(t,d);}
  close.type="button";close.textContent="CHIUDI";close.onclick=()=>{closeDialog();idle();};dialog.append(h,p,list,close);dialog.addEventListener("cancel",e=>{e.preventDefault();closeDialog();idle();});document.body.append(dialog);dialog.showModal();update();
 }
 function helpButton(){const b=document.createElement("button");b.type="button";b.className="voice-help";b.dataset.voiceUi="";b.textContent="COMANDI DISPONIBILI";b.onclick=e=>{e.stopPropagation();showCommands();};return b;}
@@ -168,8 +252,8 @@ function start(mode){
    const activation=text.match(/^\s*(?:ok|okay|okei|okey|o\s*key)\s+agenda\b[\s,:;.!?-]*(.*)$/iu);
    if(mode==="wake"&&!armed&&!pending&&!dialog&&!activation){idle();continue;}
 
-   if(pending){const answer=literal(text).replace(/^(?:ok|okay|okei) agenda[ ,:]*/,"");if(answer==="conferma")finishConfirmation(true);else if(answer==="annulla")finishConfirmation(false);continue;}
-   if(dialog){if(literal(text)==="chiudi"){closeDialog();idle();}continue;}
+   if(pending){const answer=literal(text).replace(/^(?:ok|okay|okei) agenda[ ,:]*/,"");const choice=matches(answer)[0];if(choice?.id==="confirm")finishConfirmation(true);else if(choice?.id==="cancel")finishConfirmation(false);continue;}
+   if(dialog){if(matches(text).some(c=>c.id==="closeHelp")){closeDialog();idle();}continue;}
    if(mode==="single"){handled=true;clearTimeout(timer);choose(result,owner,text);return;}
    const match=activation;
    if(match){
