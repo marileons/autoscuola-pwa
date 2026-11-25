@@ -1,7 +1,7 @@
 "use strict";
 (function(root,factory){const api=factory();if(typeof module==="object"&&module.exports)module.exports=api;if(root)root.LessonActivities=api;})(typeof window!=="undefined"?window:globalThis,function(){
   const states=Object.freeze(["none","repeat","orange","good"]);
-  const labels=Object.freeze({none:"Non svolto",repeat:"Giallo — Da ripetere",orange:"Arancione — Rifatto 2 o più volte",good:"Verde — Acquisito"});
+  const labels=Object.freeze({none:"Non svolto",repeat:"Giallo — Da ripetere",orange:"Arancione — Rifatto",good:"Verde — Acquisito"});
   const checklistParts=Object.freeze([['tyres','PNEUMATICI'],['lights','FARI E CATADIOTTRI'],['controls','COMANDI E SPIE'],['bonnet','APERTURA COFANO'],['levels','LIVELLI'],['steering','STERZO/VOLANTE'],['brakes','FRENI'],['inspection','REVISIONE']].map(([id,label])=>Object.freeze({id,label})));
   function validateChecklistDetails(value){if(!value||typeof value!=="object"||Array.isArray(value)||Object.entries(value).some(([id,status])=>!checklistParts.some(part=>part.id===id)||!states.includes(status)))throw Error("Dettagli CHECK LIST non validi.");return {...value};}
   function isChecklist(item){return autoKey(item)==="auto:checklist";}

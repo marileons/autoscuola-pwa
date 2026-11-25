@@ -75,8 +75,17 @@
 #lessonChecklist .activity-history-badge{display:inline-flex;align-items:center;gap:3px;max-width:100%;margin-left:8px;padding:2px 6px;border:1px solid #64f29c70;border-radius:9px;background:#064333;color:#64F29C!important;font-size:12px;font-weight:700;white-space:normal;vertical-align:middle}
 #appShell #lessonChecklist .activity-today-toggle[aria-pressed="true"]{color:#fff!important;background:#075fa2!important;border:2px solid #7dd3fc!important}
 #appShell #lessonChecklist .activity-today-toggle[aria-pressed="false"]{color:#eaf6f2!important;background:#254e5b!important;border:1px solid #8ca7af!important}
-#lessonChecklist .activity-current-grade{grid-column:2;max-width:350px;min-width:0;width:100%;margin:0;padding:8px;color:#fff;background:#103e49;border:1px solid #6ea0ac;font-size:14px}
-#lessonChecklist .activity-current-grade[hidden]{display:none!important}
+#lessonChecklist .activity-grade-selector{grid-column:2;display:grid;gap:8px;min-width:0;margin:2px 0 8px}
+#lessonChecklist .activity-grade-dots{display:flex;gap:12px;align-items:center;padding:4px}
+#lessonChecklist button.activity-grade-dot{display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;min-height:44px;margin:0;padding:0;border:2px solid #e8f3f0!important;border-radius:50%!important;color:#fff!important;font:900 26px/1 system-ui;box-shadow:none!important}
+#lessonChecklist button.activity-grade-dot[data-status="repeat"],#appShell .lesson-items .activity-recorded-repeat{background:#B78700!important}
+#lessonChecklist button.activity-grade-dot[data-status="orange"],#appShell .lesson-items .activity-recorded-orange{background:#D46724!important}
+#lessonChecklist button.activity-grade-dot[data-status="good"],#appShell .lesson-items .activity-recorded-good{background:#00875A!important}
+#lessonChecklist button.activity-grade-dot[aria-checked="true"]{outline:2px solid #fff;outline-offset:2px}
+#lessonChecklist button.activity-grade-dot:focus-visible{outline:3px dashed #7dd3fc!important;outline-offset:4px}
+#lessonChecklist .activity-grade-label{font-size:14px;font-weight:700;line-height:1.35;color:#f1faf8!important}
+#appShell .lesson-items .activity-recorded-dot{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid #e8f3f0;border-radius:50%;color:#fff!important;font:900 14px/1 system-ui;vertical-align:middle}
+#appShell .lesson-items .activity-recorded-state{font-size:.9em;font-weight:650;color:inherit}
 @media screen{
  #appShell #lesson.interior-view .map{background:#0b3541!important;border-color:#416b76;}
  #appShell #lesson.interior-view .driving-error-quick{background:rgba(16,62,74,.97);border:1px solid #628895;}

@@ -1,6 +1,8 @@
 /* Home shortcut to the existing manual full-backup flow. No microphone access. */
 (()=>{
 "use strict";
+window.BackupVoice?.viewChanged?.("manual-backup-transition");
+document.getElementById("prepareBackupVoice")?.remove();document.getElementById("prepareBackupVoiceStatus")?.remove();
 const $=id=>document.getElementById(id),user=()=>window.AgendaAuth?.currentUser?.();
 const allowed=()=>["ADMIN","ISTRUTTORE"].includes(user()?.role)&&!user()?.mustChangePassword&&window.AgendaAuth?.can?.("operate");
 function status(text){const note=$("homeFullBackupStatus");if(note)note.textContent=text}

@@ -1,0 +1,3 @@
+/* Compatibility URL for cached app shells; no microphone UI. */
+@import url("home-backup.css?v=2-compatible");
+#prepareBackupVoice,#prepareBackupVoiceStatus{display:none!important}
