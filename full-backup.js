@@ -976,6 +976,12 @@
   }
 
   async function completePendingRestore(){
+    // Script loading precedes completion of the asynchronous archive initialization.
+    // Verify a restored archive only after students, exams and licenses are ready.
+    try{await window.AgendaAppReady}catch{
+      if(localStorage.getItem(PENDING_RESTORE_KEY))displayRestoreResult("La verifica del ripristino non può partire perché gli archivi non sono ancora disponibili. Conserva il file e riapri l'app per riprovare; la verifica resta in attesa.",true);
+      return;
+    }
     const interruptedRead=localStorage.getItem(INTERRUPTED_RESTORE_KEY);
     if(interruptedRead){
       localStorage.removeItem(INTERRUPTED_RESTORE_KEY);

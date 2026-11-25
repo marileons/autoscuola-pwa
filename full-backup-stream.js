@@ -1,6 +1,12 @@
 (function(root,factory){const api=factory();if(typeof module==="object"&&module.exports)module.exports=api;if(root)root.AgendaFullBackupStream=api})(typeof globalThis!=="undefined"?globalThis:this,function(){
 "use strict";
-const DEFAULT_CHUNK_BYTES=256*1024,MAX_HEADER_BYTES=32*1024*1024,MAX_DOCUMENT_METADATA_BYTES=256*1024;
+// Shared export/import budget. Photos in student records are part of this section,
+// not document attachments. 256 MiB accommodates archives above the former 32 MiB
+// cap while retaining a finite allocation guard for JSON parsing on mobile devices.
+const DEFAULT_CHUNK_BYTES=256*1024,MAX_HEADER_BYTES=256*1024*1024,MAX_DOCUMENT_METADATA_BYTES=256*1024;
+function checkMetadataSize(bytes,limit=MAX_HEADER_BYTES,label="Schede, fotografie e metadati"){
+ if(bytes>limit)throw backupError("METADATA_LIMIT",`${label} superano il limite di sicurezza di ${limit/1024/1024} MiB. Nessun backup incompleto viene prodotto o applicato.`);
+}
 const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
 function backupError(code,message){const error=new Error(message);error.code=code;return error}
 function abortError(){const error=new Error("Ripristino annullato dall’utente.");error.name="AbortError";return error}
@@ -38,7 +44,7 @@ class Reader{
  async json(limit,label="Metadati"){
   await this.ws();if(!await this.ensure())throw backupError("TRUNCATED","File troncato durante la lettura dei metadati.");
   const first=this.buffer[0],structured=first==="{"||first==="[",string=first==='"',stack=[],parts=[];let quoted=false,escaped=false,bytes=0,started=false,done=false;
-  const append=part=>{bytes+=new TextEncoder().encode(part).length;if(bytes>limit)throw backupError("METADATA_LIMIT",label+" oltre il limite di sicurezza ("+Math.floor(limit/1024)+" KB disponibili). Il file non è stato applicato.");parts.push(part)};
+  const append=part=>{bytes+=new TextEncoder().encode(part).length;checkMetadataSize(bytes,limit,label);parts.push(part)};
   while(!done){
    checkAbort(this.signal);if(!await this.ensure())throw backupError("TRUNCATED","File troncato durante i metadati JSON.");let used=0;
    for(;used<this.buffer.length;used++){
@@ -90,7 +96,7 @@ async function parseLegacyBackup(file,options={}){
     if(header.format!=="AgendaIstruttoriFullBackup")throw backupError("FORMAT","Il file non è un backup completo di Agenda Istruttori.");await reader.expect("[");
     let first=true;for(;;){await reader.ws();if(!await reader.ensure())throw backupError("TRUNCATED","File troncato: sezione documenti incompleta.");if(reader.buffer[0]==="]"){reader.take(1);break}if(!first)await reader.expect(",");await document();first=false}header.documents=[];
    }else{
-    const result=await reader.json(Math.max(0,limit-headerBytes));headerBytes+=result.bytes+key.length+3;if(headerBytes>limit)throw backupError("METADATA_LIMIT","Metadati del backup oltre il limite di sicurezza di "+Math.floor(limit/1024/1024)+" MB.");Object.defineProperty(header,key,{value:result.value,enumerable:true,configurable:true});
+    const result=await reader.json(Math.max(0,limit-headerBytes-key.length-3),"Schede, fotografie e metadati");headerBytes+=result.bytes+key.length+3;checkMetadataSize(headerBytes,limit);Object.defineProperty(header,key,{value:result.value,enumerable:true,configurable:true});
     if(key==="format"&&result.value!=="AgendaIstruttoriFullBackup")throw backupError("FORMAT","Il file non è un backup completo di Agenda Istruttori.");
     if(key==="formatVersion"&&![1,2,3,4].includes(result.value))throw backupError("VERSION","Versione del backup non supportata.");
    }
@@ -135,16 +141,21 @@ async function createLegacyFile(header,keys,readDocument,fileName,{onProgress=()
     if((offset+bytes.length)%(block*32)===0||offset+bytes.length===blob.size){onProgress("Preparazione documenti",index,keys.length,{loadedBytes:offset+bytes.length,totalBytes:blob.size});await pause()}
    }
    const metadata={id:String(record.id),originalName:String(record.originalName||"documento"),title:String(record.title||record.originalName||"Documento"),mimeType:String(record.mimeType||blob.type||"application/octet-stream"),size:blob.size,createdAt:Number(record.createdAt||Date.now()),section:String(record.section||"common"),sha256:hash.hex()};
-   if(index)parts.push(new Blob([',']));parts.push(new Blob([asciiJson(metadata).slice(0,-1)+',"dataBase64":"',...documentParts,'"}']));documentParts.length=0;onProgress("Documenti completati",index+1,keys.length);
+   const serializedMetadata=asciiJson(metadata);
+   const metadataBytes=serializedMetadata.length-2-Math.max(0,Object.keys(metadata).length-1);
+   checkMetadataSize(metadataBytes,MAX_DOCUMENT_METADATA_BYTES,"Metadati documento");
+   if(index)parts.push(new Blob([',']));parts.push(new Blob([serializedMetadata.slice(0,-1)+',"dataBase64":"',...documentParts,'"}']));documentParts.length=0;onProgress("Documenti completati",index+1,keys.length);
   }
   const body=new Blob(parts);parts.length=0;const cleanHeader={...header};delete cleanHeader.documents;delete cleanHeader.metadata;
   const metadata={...header.metadata,documents:keys.length,approximateBytes:0};onProgress("Preparazione schede e fotografie",0,0);
   const complete=await jsonBlob(cleanHeader);
-  if(complete.size>MAX_HEADER_BYTES)throw backupError("METADATA_LIMIT","Schede, fotografie e metadati superano il limite di sicurezza di 32 MB. Nessun backup incompleto è stato prodotto.");
+  // Match the reader's cumulative value + decoded field-name budget exactly.
+  const headerKeys=Object.keys(cleanHeader).filter(key=>cleanHeader[key]!==undefined);
+  const headerBytes=complete.size-2-Math.max(0,headerKeys.length-1)+headerKeys.reduce((n,key)=>n+key.length+2-asciiJson(key).length,0);
+  checkMetadataSize(headerBytes);
   const stem=complete.slice(0,complete.size-1);let prefix;
   for(let attempt=0;attempt<4;attempt++){checkAbort(signal);prefix=new Blob([stem,complete.size>2?',':'', '"metadata":'+asciiJson(metadata)+',"documents":[']);const size=prefix.size+body.size+2;if(metadata.approximateBytes===size)break;metadata.approximateBytes=size;}
-  // The reader applies the same cumulative header budget, including metadata and field names.
-  if(prefix.size>MAX_HEADER_BYTES)throw backupError("METADATA_LIMIT","Schede, fotografie e metadati superano il limite di sicurezza di 32 MB.");
+  checkMetadataSize(headerBytes+"metadata".length+3+asciiJson(metadata).length);
   const file=new File([prefix,body,']}'],fileName,{type:"application/json"});onProgress("Backup completo pronto",1,1);return{file,maxBufferBytes,maxEncodedChars,readBytes};
  }catch(error){if(error instanceof RangeError)throw backupError("MEMORY","Memoria insufficiente durante la preparazione del backup. I dati originali sono invariati.");throw error}
 }

@@ -1,0 +1,8 @@
+#homeFullBackup[hidden]{display:none!important}
+#home .home-guide-intro:has(#homeFullBackup:not([hidden])){display:grid;grid-template-columns:44px minmax(0,1fr) 84px;gap:8px}
+#homeFullBackup{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;justify-self:end;width:84px;min-height:68px;padding:6px;border:2px solid #A7F3D0;border-radius:14px;background:#064653;color:#fff;touch-action:manipulation}
+#homeFullBackup svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#homeFullBackup span{color:currentColor;font:700 10.5px/1.15 system-ui;text-align:center}
+#homeFullBackup:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#homeFullBackupStatus{font-size:14px;line-height:1.4;color:#f1faf8}
+#homeFullBackupStatus:empty{display:none}
